@@ -63,8 +63,8 @@ async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int =
 
     settings_text = (
         "» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Sᴇᴛᴛɪɴɢs</b>\n\n"
-        f"» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ:</b> {mode_status}\n"
-        f"» <b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ:</b> {timer_text}\n\n"
+        f"<blockquote>» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ:</b> {mode_status}</blockquote>\n"
+        f"<blockquote>» <b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ:</b> {timer_text}</blockquote>\n\n"
         "<b>Cʟɪᴄᴋ Bᴇʟᴏᴡ Bᴜᴛᴛᴏɴs Tᴏ Cʜᴀɴɢᴇ Sᴇᴛᴛɪɴɢs</b>"
     )
 
@@ -72,7 +72,7 @@ async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int =
         [
             [
                 InlineKeyboardButton("• Dɪsᴀʙʟᴇᴅ ❌" if auto_delete_mode else "• Eɴᴀʙʟᴇᴅ ✅", callback_data="auto_toggle"),
-                InlineKeyboardButton("• Sᴇᴛ Tɪᴍᴇʀ •", callback_data="auto_set_timer")
+                InlineKeyboardButton(" Sᴇᴛ Tɪᴍᴇʀ •", callback_data="auto_set_timer")
             ],
             [
                 InlineKeyboardButton("• Rᴇғʀᴇsʜ", callback_data="auto_refresh"),
@@ -133,26 +133,26 @@ async def auto_delete_callback(client: Bot, callback: CallbackQuery):
         new_mode = not current_mode
         await db.set_auto_delete_mode(new_mode)
         await show_auto_delete_settings(client, chat_id, callback.message.id)
-        await callback.answer(f"Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ {'Eɴᴀʙʟᴇᴅ' if new_mode else 'Dɪsᴀʙʟᴇᴅ'}!")
+        await callback.answer(f"<blockquote><b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ {'Eɴᴀʙʟᴇᴅ' if new_mode else 'Dɪsᴀʙʟᴇᴅ'}!</b></blockquote>")
     
     elif data == "auto_set_timer":
         # Set a state to indicate that we are expecting a timer input
         await db.set_temp_state(chat_id, "awaiting_timer_input")
         logger.info(f"Set state to 'awaiting_timer_input' for chat {chat_id}")
         await callback.message.reply(
-            "<b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ sᴇᴄᴏɴᴅs ғᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b>\n"
-            "Eᴄᴀᴍᴘʟᴇ: 300 (ғᴏʀ 5 ᴍɪɴᴜᴛᴇs)",
+            "<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ sᴇᴄᴏɴᴅs ғᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
+            "<blockquote><b>Exᴀᴄᴀᴍᴘʟᴇ: 300 (ғᴏʀ 5 ᴍɪɴᴜᴛᴇs)</b></blockquote>",
             parse_mode=ParseMode.HTML
         )
-        await callback.answer("Eɴᴛᴇʀ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ!")
+        await callback.answer("<blockquote><b>Eɴᴛᴇʀ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ!</b></blockquote>")
     
     elif data == "auto_refresh":
         await show_auto_delete_settings(client, chat_id, callback.message.id)
-        await callback.answer("Sᴇᴛᴛɪɴɢs ʀᴇғʀᴇsʜᴇᴅ!")
+        await callback.answer("<blockquote><b>Sᴇᴛᴛɪɴɢs ʀᴇғʀᴇsʜᴇᴅ!</b></blockquote>")
     
     elif data == "auto_back":
         await callback.message.delete()
-        await callback.answer("Bᴀᴄᴋ ᴛᴏ ᴘʀᴇᴠɪᴏᴜs ᴍᴇɴᴜ!")
+        await callback.answer("<blockquote><b>Bᴀᴄᴋ ᴛᴏ ᴘʀᴇᴠɪᴏᴜs ᴍᴇɴᴜ!</b></blockquote>")
 
 @Bot.on_message(filters.private & filters.regex(r"^\d+$") & admin)
 async def set_timer(client: Bot, message: Message):
@@ -166,7 +166,7 @@ async def set_timer(client: Bot, message: Message):
         try:
             duration = int(message.text)
             await db.set_del_timer(duration)
-            await message.reply(f"<b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀs ʙᴇᴇɴ sᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b>", parse_mode=ParseMode.HTML)
+            await message.reply(f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀs ʙᴇᴇɴ sᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>", parse_mode=ParseMode.HTML)
             logger.info(f"Set delete timer to {duration} seconds for chat {chat_id}")
             # Clear the state after processing
             await db.set_temp_state(chat_id, "")
