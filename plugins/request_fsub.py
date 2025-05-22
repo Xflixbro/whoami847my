@@ -18,12 +18,22 @@ from pyrogram.enums import ParseMode, ChatAction, ChatMemberStatus, ChatType
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatMemberUpdated, ChatPermissions, InputMediaPhoto
 from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant, InviteHashEmpty, ChatAdminRequired, PeerIdInvalid, UserIsBlocked, InputUserDeactivated, UserNotParticipant
 from bot import Bot
-from config import *
+from config import RANDOM_IMAGES, START_PIC
 from helper_func import *
 from database.database import *
 
 # Set up logging for this module
 logger = logging.getLogger(__name__)
+
+# Define message effect IDs
+MESSAGE_EFFECT_IDS = [
+    5104841245755180586,  # 🔥
+    5107584321108051014,  # 👍
+    5044134455711629726,  # ❤️
+    5046509860389126442,  # 🎉
+    5104858069142078462,  # 👎
+    5046589136895476101,  # 💩
+]
 
 # Function to show force-sub settings with channels list and buttons
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
@@ -58,14 +68,14 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         ]
     )
 
-    image_url = "https://i.postimg.cc/VLyZyg1z/57ccdb58.jpg"
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
 
     if message_id:
         try:
             await client.edit_message_media(
                 chat_id=chat_id,
                 message_id=message_id,
-                media=InputMediaPhoto(media=image_url, caption=settings_text),
+                media=InputMediaPhoto(media=selected_image, caption=settings_text),
                 reply_markup=buttons
             )
         except Exception as e:
@@ -76,17 +86,19 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 text=settings_text,
                 reply_markup=buttons,
                 parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
+                disable_web_page_preview=True,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
     else:
         try:
             await client.send_photo(
                 chat_id=chat_id,
-                photo=image_url,
+                photo=selected_image,
                 caption=settings_text,
                 reply_markup=buttons,
                 parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
+                disable_web_page_preview=True,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
         except Exception as e:
             logger.error(f"Failed to send photo: {e}")
@@ -95,7 +107,8 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 text=settings_text,
                 reply_markup=buttons,
                 parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
+                disable_web_page_preview=True,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
 
 @Bot.on_message(filters.command('forcesub') & filters.private & admin)
@@ -107,16 +120,16 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
     data = callback.data
     chat_id = callback.message.chat.id
     message_id = callback.message.id
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
 
     if data == "fsub_add_channel":
-        # Edit the current message to ask for channel ID with Back and Close buttons
         await db.set_temp_state(chat_id, "awaiting_add_channel_input")
         try:
             await client.edit_message_media(
                 chat_id=chat_id,
                 message_id=message_id,
                 media=InputMediaPhoto(
-                    media="https://i.postimg.cc/VLyZyg1z/57ccdb58.jpg",
+                    media=selected_image,
                     caption="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b></blockquote>"
                 ),
                 reply_markup=InlineKeyboardMarkup([
@@ -131,7 +144,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text="Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.",
+                text="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b></blockquote>",
                 reply_markup=InlineKeyboardMarkup([
                     [
                         InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
@@ -139,19 +152,19 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                     ]
                 ]),
                 parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
+                disable_web_page_preview=True,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
         await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b></blockquote>")
 
     elif data == "fsub_remove_channel":
-        # Edit the current message to ask for channel ID or 'all' with Back and Close buttons
         await db.set_temp_state(chat_id, "awaiting_remove_channel_input")
         try:
             await client.edit_message_media(
                 chat_id=chat_id,
                 message_id=message_id,
                 media=InputMediaPhoto(
-                    media="https://i.postimg.cc/VLyZyg1z/57ccdb58.jpg",
+                    media=selected_image,
                     caption="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs.</b></blockquote>"
                 ),
                 reply_markup=InlineKeyboardMarkup([
@@ -174,17 +187,17 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                     ]
                 ]),
                 parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
+                disable_web_page_preview=True,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
         await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ '[<code>all</code>]'.</b></blockquote>")
 
     elif data == "fsub_toggle_mode":
-        # Simulate /fsub_mode command
-        temp = await callback.message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
+        temp = await callback.message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True, message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
         channels = await db.show_channels()
 
         if not channels:
-            await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+            await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>", message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
             await callback.answer()
             return
 
@@ -204,7 +217,8 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
         await temp.edit(
             "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
             reply_markup=InlineKeyboardMarkup(buttons),
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
         await callback.answer()
 
@@ -231,6 +245,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
 async def handle_channel_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
     
     logger.info(f"Received input: {message.text} from chat {chat_id}, current state: {state}")
 
@@ -240,30 +255,76 @@ async def handle_channel_input(client: Client, message: Message):
             all_channels = await db.show_channels()
             channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
             if channel_id in channel_ids_only:
-                await message.reply(f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
+                try:
+                    await message.reply_photo(
+                        photo=selected_image,
+                        caption=f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>",
+                        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send photo: {e}")
+                    await message.reply_text(
+                        f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>",
+                        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    )
                 return
 
             chat = await client.get_chat(channel_id)
 
             if chat.type != ChatType.CHANNEL:
-                await message.reply("<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>")
+                try:
+                    await message.reply_photo(
+                        photo=selected_image,
+                        caption="<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>",
+                        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send photo: {e}")
+                    await message.reply_text(
+                        "<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>",
+                        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    )
                 return
 
             member = await client.get_chat_member(chat.id, "me")
             if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-                await message.reply("<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>")
+                try:
+                    await message.reply_photo(
+                        photo=selected_image,
+                        caption="<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>",
+                        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send photo: {e}")
+                    await message.reply_text(
+                        "<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>",
+                        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    )
                 return
 
             link = await client.export_chat_invite_link(chat.id) if not chat.username else f"https://t.me/{chat.username}"
             
             await db.add_channel(channel_id)
-            await message.reply(
-                f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
-                f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-                f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
-                disable_web_page_preview=True
-            )
-            # Reset state and go back to settings
+            try:
+                await message.reply_photo(
+                    photo=selected_image,
+                    caption=(
+                        f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
+                        f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                        f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>"
+                    ),
+                    disable_web_page_preview=True,
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
+            except Exception as e:
+                logger.error(f"Failed to send photo: {e}")
+                await message.reply_text(
+                    f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
+                    f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                    f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
+                    disable_web_page_preview=True,
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
@@ -271,45 +332,150 @@ async def handle_channel_input(client: Client, message: Message):
             all_channels = await db.show_channels()
             if message.text.lower() == "all":
                 if not all_channels:
-                    await message.reply("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+                    try:
+                        await message.reply_photo(
+                            photo=selected_image,
+                            caption="<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>",
+                            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send photo: {e}")
+                        await message.reply_text(
+                            "<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>",
+                            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                        )
                     return
                 for ch_id in all_channels:
                     await db.rem_channel(ch_id)
-                await message.reply("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
+                try:
+                    await message.reply_photo(
+                        photo=selected_image,
+                        caption="<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>",
+                        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send photo: {e}")
+                    await message.reply_text(
+                        "<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>",
+                        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    )
             else:
                 try:
                     ch_id = int(message.text)
                     if ch_id in all_channels:
                         await db.rem_channel(ch_id)
-                        await message.reply(f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+                        try:
+                            await message.reply_photo(
+                                photo=selected_image,
+                                caption=f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>",
+                                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to send photo: {e}")
+                            await message.reply_text(
+                                f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>",
+                                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                            )
                     else:
-                        await message.reply(f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+                        try:
+                            await message.reply_photo(
+                                photo=selected_image,
+                                caption=f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>",
+                                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to send photo: {e}")
+                            await message.reply_text(
+                                f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>",
+                                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                            )
                 except ValueError:
-                    await message.reply(
-                        "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
-                    )
+                    try:
+                        await message.reply_photo(
+                            photo=selected_image,
+                            caption="<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
+                            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send photo: {e}")
+                        await message.reply_text(
+                            "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
+                            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                        )
                 except Exception as e:
-                    await message.reply(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
-            # Reset state and go back to settings
+                    try:
+                        await message.reply_photo(
+                            photo=selected_image,
+                            caption=f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>",
+                            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                        )
+                    except Exception as e2:
+                        logger.error(f"Failed to send photo: {e2}")
+                        await message.reply_text(
+                            f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>",
+                            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                        )
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
     except ValueError:
-        await message.reply("<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>")
+        try:
+            await message.reply_photo(
+                photo=selected_image,
+                caption="<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>",
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
+            await message.reply_text(
+                "<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>",
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id)
     except Exception as e:
-        await message.reply(f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>")
+        try:
+            await message.reply_photo(
+                photo=selected_image,
+                caption=f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>",
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e2:
+            logger.error(f"Failed to send photo: {e2}")
+            await message.reply_text(
+                f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>",
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id)
 
 @Bot.on_message(filters.command('fsub_mode') & filters.private & admin)
 async def change_force_sub_mode(client: Client, message: Message):
-    temp = await message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    temp = await message.reply_photo(
+        photo=selected_image,
+        caption="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>",
+        quote=True,
+        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+    )
     channels = await db.show_channels()
 
     if not channels:
-        return await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        try:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>"
+                ),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit photo: {e}")
+            await temp.edit(
+                "<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>",
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        return
 
     buttons = []
     for ch_id in channels:
@@ -324,11 +490,23 @@ async def change_force_sub_mode(client: Client, message: Message):
 
     buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
 
-    await temp.edit(
-        "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
-        reply_markup=InlineKeyboardMarkup(buttons),
-        disable_web_page_preview=True
-    )
+    try:
+        await temp.edit_media(
+            media=InputMediaPhoto(
+                media=selected_image,
+                caption="<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>"
+            ),
+            reply_markup=InlineKeyboardMarkup(buttons),
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+        )
+    except Exception as e:
+        logger.error(f"Failed to edit photo: {e}")
+        await temp.edit(
+            "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
+            reply_markup=InlineKeyboardMarkup(buttons),
+            disable_web_page_preview=True,
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+        )
 
 @Bot.on_chat_member_updated()
 async def handle_Chatmembers(client, chat_member_updated: ChatMemberUpdated):    
@@ -357,92 +535,313 @@ async def handle_join_request(client, chat_join_request):
 
 @Bot.on_message(filters.command('addchnl') & filters.private & admin)
 async def add_force_sub(client: Client, message: Message):
-    temp = await message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    temp = await message.reply_photo(
+        photo=selected_image,
+        caption="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>",
+        quote=True,
+        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+    )
     args = message.text.split(maxsplit=1)
 
     if len(args) != 2:
         buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
-        return await temp.edit(
-            "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        try:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>"
+                ),
+                reply_markup=InlineKeyboardMarkup(buttons),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit photo: {e}")
+            await temp.edit(
+                "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>",
+                reply_markup=InlineKeyboardMarkup(buttons),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        return
 
     try:
         channel_id = int(args[1])
     except ValueError:
-        return await temp.edit("<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>")
+        try:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>"
+                ),
+                message_effect_id=random.choice(MESSAGE EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit photo: {e}")
+            await temp.edit(
+                "<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>",
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        return
 
     all_channels = await db.show_channels()
     channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
     if channel_id in channel_ids_only:
-        return await temp.edit(f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
+        try:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption=f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>"
+                ),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit photo: {e}")
+            await temp.edit(
+                f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>",
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        return
 
     try:
         chat = await client.get_chat(channel_id)
 
         if chat.type != ChatType.CHANNEL:
-            return await temp.edit("<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>")
+            try:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption="<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>"
+                    ),
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
+            except Exception as e:
+                logger.error(f"Failed to edit photo: {e}")
+                await temp.edit(
+                    "<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>",
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
+            return
 
         member = await client.get_chat_member(chat.id, "me")
         if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-            return await temp.edit("<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>")
+            try:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption="<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>"
+                    ),
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
+            except Exception as e:
+                logger.error(f"Failed to edit photo: {e}")
+                await temp.edit(
+                    "<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>",
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
+            return
 
         link = await client.export_chat_invite_link(chat.id) if not chat.username else f"https://t.me/{chat.username}"
         
         await db.add_channel(channel_id)
-        return await temp.edit(
-            f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
-            f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-            f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
-            disable_web_page_preview=True
-        )
-
+        try:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption=(
+                        f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
+                        f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                        f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>"
+                    )
+                ),
+                disable_web_page_preview=True,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit photo: {e}")
+            await temp.edit(
+                f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
+                f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
+                disable_web_page_preview=True,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
     except Exception as e:
-        return await temp.edit(f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>")
+        try:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption=f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>"
+                ),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e2:
+            logger.error(f"Failed to edit photo: {e2}")
+            await temp.edit(
+                f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
 
 @Bot.on_message(filters.command('delchnl') & filters.private & admin)
 async def del_force_sub(client: Client, message: Message):
-    temp = await message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    temp = await message.reply_photo(
+        photo=selected_image,
+        caption="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>",
+        quote=True,
+        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+    )
     args = message.text.split(maxsplit=1)
     all_channels = await db.show_channels()
 
     if len(args) < 2:
         buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
-        return await temp.edit(
-            "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        try:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>"
+                ),
+                reply_markup=InlineKeyboardMarkup(buttons),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit photo: {e}")
+            await temp.edit(
+                "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
+                reply_markup=InlineKeyboardMarkup(buttons),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        return
 
     if args[1].lower() == "all":
         if not all_channels:
-            return await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+            try:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption="<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>"
+                    ),
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
+            except Exception as e:
+                logger.error(f"Failed to edit photo: {e}")
+                await temp.edit(
+                    "<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>",
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
+            return
         for ch_id in all_channels:
             await db.rem_channel(ch_id)
-        return await temp.edit("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
+        try:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>"
+                ),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit photo: {e}")
+            await temp.edit(
+                "<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>",
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        return
 
     try:
         ch_id = int(args[1])
         if ch_id in all_channels:
             await db.rem_channel(ch_id)
-            return await temp.edit(f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+            try:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption=f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>"
+                    ),
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
+            except Exception as e:
+                logger.error(f"Failed to edit photo: {e}")
+                await temp.edit(
+                    f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>",
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
         else:
-            return await temp.edit(f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+            try:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption=f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>"
+                    ),
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
+            except Exception as e:
+                logger.error(f"Failed to edit photo: {e}")
+                await temp.edit(
+                    f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>",
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
     except ValueError:
         buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
-        return await temp.edit(
-            "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        try:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>"
+                ),
+                reply_markup=InlineKeyboardMarkup(buttons),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit photo: {e}")
+            await temp.edit(
+                "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
+                reply_markup=InlineKeyboardMarkup(buttons),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
     except Exception as e:
-        return await temp.edit(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
+        try:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption=f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>"
+                ),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e2:
+            logger.error(f"Failed to edit photo: {e2}")
+            await temp.edit(
+                f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>",
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
 
 @Bot.on_message(filters.command('listchnl') & filters.private & admin)
 async def list_force_sub_channels(client: Client, message: Message):
-    temp = await message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    temp = await message.reply_photo(
+        photo=selected_image,
+        caption="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>",
+        quote=True,
+        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+    )
     channels = await db.show_channels()
 
     if not channels:
-        return await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        try:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>"
+                ),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit photo: {e}")
+            await temp.edit(
+                "<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>",
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        return
 
     result = "<blockquote><b>⚡ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟs:</b></blockquote>\n\n"
     for ch_id in channels:
@@ -454,11 +853,23 @@ async def list_force_sub_channels(client: Client, message: Message):
             result += f"<b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʙʟᴇ</i>\n"
 
     buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
-    await temp.edit(
-        result, 
-        disable_web_page_preview=True, 
-        reply_markup=InlineKeyboardMarkup(buttons)
-    )
+    try:
+        await temp.edit_media(
+            media=InputMediaPhoto(
+                media=selected_image,
+                caption=result
+            ),
+            reply_markup=InlineKeyboardMarkup(buttons),
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+        )
+    except Exception as e:
+        logger.error(f"Failed to edit photo: {e}")
+        await temp.edit(
+            result, 
+            disable_web_page_preview=True, 
+            reply_markup=InlineKeyboardMarkup(buttons),
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+        )
 
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
