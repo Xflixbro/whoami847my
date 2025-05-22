@@ -57,7 +57,7 @@ class Bot(Client):
         except Exception as e:
             self.LOGGER(__name__).warning(e)
             self.LOGGER(__name__).warning(f"ᴍᴀᴋᴇ sᴜʀᴇ ʙᴏᴛ ɪs ᴀᴅᴍɪɴ ɪɴ ᴅʙ ᴄʜᴀɴɴᴇʟ, ᴀɴᴅ ᴅᴏᴜʙʟᴇ ᴄʜᴇᴄᴋ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ_ɪᴅ ᴠᴀʟᴜᴇ, ᴄᴜʀʀᴇɴᴛ ᴠᴀʟᴜᴇ {CHANNEL_ID}")
-            self.LOGGER(__name__).info("\nʙᴏᴛ sᴛᴏᴘᴘᴇᴅ. ᴊᴏɪɴ https://t.me/+3lpawaYvxBU4YTY1 ғᴏʀ sᴜᴘᴘᴏʀᴛ")
+            self.LOGGER(__name__).info("\nʙᴏᴛ sᴛᴏᴘᴘᴇᴅ. ᴊᴏɪɴ https://t.me/Anime_Lord_Support ғᴏʀ sᴜᴘᴘᴏʀᴛ")
             sys.exit()
 
         self.set_parse_mode(ParseMode.HTML)
@@ -87,9 +87,9 @@ class Bot(Client):
         loop.run_until_complete(self.start())
         self.LOGGER(__name__).info(f"ʙᴏᴛ ɪs ɴᴏᴡ ᴀʟɪᴠᴇ. ᴛʜᴀɴᴋs ᴛᴏ @ᴡʜᴏ-ᴀᴍ-ɪ")
         self.LOGGER(__name__).info(f"""
-▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄
+▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄
 |------------------『A N I M E  L O R D』----------------------|
-▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀
+▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀
                ◈◈◈◈◈◈ ɪ_s_ᴀ_ʟ_ɪ_ᴠ_ᴇ ◈◈◈◈◈◈  
                        ▼   ᴀᴄᴄᴇssɪɴɢ   ▼  
                          ███████] 99%  
