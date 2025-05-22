@@ -11,25 +11,27 @@ async def show_settings_message(client, message_or_callback, is_callback=False):
     settings = get_settings()
     
     # Create the settings text in the requested format
-    settings_text = "Fɪʟᴇs ʀᴇʟᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs:\n\n"
-    settings_text += f"›› Pʀᴏᴛᴇᴄᴛ ᴄᴏɴᴛᴇɴᴛ: {'Eɴᴀʙʟᴇᴅ' if settings['PROTECT_CONTENT'] else 'Dɪsᴀʙʟᴇᴅ'} {'✅' if settings['PROTECT_CONTENT'] else '❌'}\n"
+    settings_text = "<b>Fɪʟᴇs ʀᴇʟᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs:</b>\n\n"
+    settings_text += f"<blockquote><b>›› Pʀᴏᴛᴇᴄᴛ ᴄᴏɴᴛᴇɴᴛ: {'Eɴᴀʙʟᴇᴅ' if settings['PROTECT_CONTENT'] else 'Dɪsᴀʙʟᴇᴅ'} {'✅' if settings['PROTECT_CONTENT'] else '❌'}\n"
     settings_text += f"›› Hɪᴅᴇ ᴄᴀᴘᴛɪᴏɴ: {'Eɴᴀʙʟᴇᴅ' if settings['HIDE_CAPTION'] else 'Dɪsᴀʙʟᴇᴅ'} {'✅' if settings['HIDE_CAPTION'] else '❌'}\n"
     settings_text += f"›› Cʜᴀɴɴᴇʟ ʙᴜᴛᴛᴏɴ: {'Eɴᴀʙʟᴇᴅ' if not settings['DISABLE_CHANNEL_BUTTON'] else 'Dɪsᴀʙʟᴇᴅ'} {'✅' if not settings['DISABLE_CHANNEL_BUTTON'] else '❌'}\n\n"
     settings_text += f"›› Bᴜᴛᴛᴏɴ Nᴀᴍᴇ: {settings['BUTTON_NAME'] if settings['BUTTON_NAME'] else 'not set'}\n"
-    settings_text += f"›› Bᴜᴛᴛᴏɴ Lɪɴᴋ: {settings['BUTTON_LINK'] if settings['BUTTON_LINK'] else 'not set'}\n\n"
-    settings_text += "Cʟɪᴄᴋ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴs ᴛᴏ ᴄʜᴀɴɢᴇ sᴇᴛᴛɪɴɢs"
+    settings_text += f"›› Bᴜᴛᴛᴏɴ Lɪɴᴋ: {settings['BUTTON_LINK'] if settings['BUTTON_LINK'] else 'not set'}</b></blockquote>\n\n"
+    settings_text += "<b>Cʟɪᴄᴋ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴs ᴛᴏ ᴄʜᴀɴɢᴇ sᴇᴛᴛɪɴɢs</b>"
 
     # Create inline buttons for toggling settings
     buttons = [
         [
-            InlineKeyboardButton("PC", callback_data="toggle_protect_content"),
-            InlineKeyboardButton("HC", callback_data="toggle_hide_caption"),
-            InlineKeyboardButton("CB", callback_data="toggle_channel_button"),
-            InlineKeyboardButton("SB", callback_data="set_button"),
+            InlineKeyboardButton("•ᴘᴄ", callback_data="toggle_protect_content"),
+            InlineKeyboardButton("ʜᴄ•", callback_data="toggle_hide_caption"),
         ],
         [
-            InlineKeyboardButton("REFRESH", callback_data="refresh_settings"),
-            InlineKeyboardButton("back", callback_data="go_back"),
+            InlineKeyboardButton("•ᴄʙ", callback_data="toggle_channel_button"),
+            InlineKeyboardButton("sʙ•", callback_data="set_button"),
+        ],
+        [
+            InlineKeyboardButton("•ʀᴇꜰᴇʀsʜ•", callback_data="refresh_settings"),
+            InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="go_back"),
         ]
     ]
 
