@@ -27,33 +27,33 @@ logger = logging.getLogger(__name__)
 
 # Function to show force-sub settings with channels list and buttons
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
-    settings_text = "›› Rᴇǫᴜᴇsᴛ Fꜱᴜʙ Sᴇᴛᴛɪɴɢs:\n\n"
+    settings_text = "<b>›› Rᴇǫᴜᴇsᴛ Fꜱᴜʙ Sᴇᴛᴛɪɴɢs:</b>\n\n"
     channels = await db.show_channels()
     
     if not channels:
-        settings_text += "<i>Nᴏ ᴄʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ʏᴇᴛ. Uꜱᴇ 'ADD CHNL' ᴛᴏ ᴀᴅᴅ ᴀ ᴄʜᴀɴɴᴇʟ.</i>"
+        settings_text += "<i>Nᴏ ᴄʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ʏᴇᴛ. Uꜱᴇ 'ᴀᴅᴅ Cʜᴀɴɴᴇʟs' ᴛᴏ ᴀᴅᴅ ᴀ ᴄʜᴀɴɴᴇʟ.</i>"
     else:
         settings_text += "<blockquote><b>⚡ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟs:</b></blockquote>\n\n"
         for ch_id in channels:
             try:
                 chat = await client.get_chat(ch_id)
                 link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
-                settings_text += f"<b>•</b> <a href='{link}'>{chat.title}</a> [<code>{ch_id}</code>]\n"
+                settings_text += f"<blockquote><b>•</b> <a href='{link}'>{chat.title}</a> [<code>{ch_id}</code>]</blockquote>\n"
             except Exception:
-                settings_text += f"<b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʙʟᴇ</i>\n"
+                settings_text += f"<blockquote><b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʙʟᴇ</i></blockquote>\n"
 
     buttons = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("ADD CHNL", callback_data="fsub_add_channel"),
-                InlineKeyboardButton("REMOVE CHNL", callback_data="fsub_remove_channel")
+                InlineKeyboardButton("•ᴀᴅᴅ Cʜᴀɴɴᴇʟs", callback_data="fsub_add_channel"),
+                InlineKeyboardButton("ʀᴇᴍovᴇ Cʜᴀɴɴᴇʟs•", callback_data="fsub_remove_channel")
             ],
             [
-                InlineKeyboardButton("Tᴏɢɢʟᴇ Mᴏᴅᴇ", callback_data="fsub_toggle_mode"),
-                InlineKeyboardButton("REFRESH", callback_data="fsub_refresh")
+                InlineKeyboardButton("Tᴏɢɢʟᴇ Mᴏᴅᴇ•", callback_data="fsub_toggle_mode"),
+                InlineKeyboardButton("•ʀᴇꜰᴇʀsʜ•", callback_data="fsub_refresh")
             ],
             [
-                InlineKeyboardButton("CLOSE", callback_data="fsub_close")
+                InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
             ]
         ]
     )
@@ -117,12 +117,12 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 message_id=message_id,
                 media=InputMediaPhoto(
                     media="https://i.postimg.cc/VLyZyg1z/57ccdb58.jpg",
-                    caption="Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID."
+                    caption="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b></blockquote>"
                 ),
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("BACK", callback_data="fsub_back"),
-                        InlineKeyboardButton("CLOSE", callback_data="fsub_close")
+                        InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
+                        InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
                     ]
                 ])
             )
@@ -134,14 +134,14 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 text="Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.",
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("BACK", callback_data="fsub_back"),
-                        InlineKeyboardButton("CLOSE", callback_data="fsub_close")
+                        InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
+                        InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
                     ]
                 ]),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
-        await callback.answer("Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.")
+        await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b></blockquote>")
 
     elif data == "fsub_remove_channel":
         # Edit the current message to ask for channel ID or 'all' with Back and Close buttons
@@ -152,12 +152,12 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 message_id=message_id,
                 media=InputMediaPhoto(
                     media="https://i.postimg.cc/VLyZyg1z/57ccdb58.jpg",
-                    caption="Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs."
+                    caption="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs.</b></blockquote>"
                 ),
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("BACK", callback_data="fsub_back"),
-                        InlineKeyboardButton("CLOSE", callback_data="fsub_close")
+                        InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
+                        InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
                     ]
                 ])
             )
@@ -166,17 +166,17 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text="Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs.",
+                text="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs.</b></blockquote>",
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("BACK", callback_data="fsub_back"),
-                        InlineKeyboardButton("CLOSE", callback_data="fsub_close")
+                        InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
+                        InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
                     ]
                 ]),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
-        await callback.answer("Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all'.")
+        await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ '[<code>all</code>]'.</b></blockquote>")
 
     elif data == "fsub_toggle_mode":
         # Simulate /fsub_mode command
