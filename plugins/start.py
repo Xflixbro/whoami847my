@@ -70,7 +70,7 @@ async def start_command(client: Client, message: Message):
     banned_users = await db.get_ban_users()
     if user_id in banned_users:
         return await message.reply_text(
-            "<blockquote><b>ʏᴏᴜ ᴀʀᴇ ʙᴀɴɴᴇᴅ ғʀᴏᴍ ᴜsɪɴɢ ᴛʜɪs ʙᴏᴛ.\n\nᴄᴏɴᴛᴀᴄᴛ sᴜᴘᴘᴏʀᴛ ɪғ ʏᴏᴜ ᴛʜɪɴᴋ ᴛʜɪs ɪs ᴀ ᴍɪsᴛᴀᴋᴇ.</b></blockquote>",
+            "ʏᴏᴜ ᴀʀᴇ ʙᴀɴɴᴇᴅ ғʀᴏᴍ ᴜsɪɴɢ ᴛʜɪs ʙᴏᴛ.\n\nᴄᴏɴᴛᴀᴄᴛ sᴜᴘᴘᴏʀᴛ ɪғ ʏᴏᴜ ᴛʜɪɴᴋ ᴛʜɪs ɪs ᴀ ᴍɪsᴛᴀᴋᴇ.",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("ᴄᴏɴᴛᴀᴄᴛ sᴜᴘᴘᴏʀᴛ", url=BAN_SUPPORT)]])
         )
     if not await is_subscribed(client, user_id):
@@ -83,15 +83,13 @@ async def start_command(client: Client, message: Message):
             pass
 
     # Animation messages
-    m = await message.reply_text("<blockquote><b>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴍʏ ʙᴏᴛ.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...</blockquote></b>")
+    m = await message.reply_text("ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴍʏ ʙᴏᴛ.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...")
     await asyncio.sleep(0.4)
-    await m.edit_text("<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ...</blockquote></b>")
+    await m.edit_text("...")
     await asyncio.sleep(0.5)
-    await m.edit_text("<blockquote>🎊</blockquote>")
+    await m.edit_text("ᴄʜᴇᴄᴋɪɴɢ...")
     await asyncio.sleep(0.5)
-    await m.edit_text("<blockquote>⚡</blockquote>")
-    await asyncio.sleep(0.5)
-    await m.edit_text("<blockquote><b>sᴛᴀʀᴛɪɴɢ...</blockquote></b>")
+    await m.edit_text("sᴛᴀʀᴛɪɴɢ...")
     await asyncio.sleep(0.4)
     await m.delete()
 
@@ -128,10 +126,10 @@ async def start_command(client: Client, message: Message):
             except Exception as e:
                 print(f"ᴇʀʀᴏʀ ᴅᴇᴄᴏᴅɪɴɢ ɪᴅ: {e}")
                 return
-        temp_msg = await message.reply("<blockquote><b>ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ...</b></blockquote>")
+        temp_msg = await message.reply("ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ...")
         try:
             messages = await get_messages(client, ids)
-            except Exception as e:
+        except Exception as e:
             await message.reply_text("sᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ ᴡʀᴏɴɢ!")
             print(f"ᴇʀʀᴏʀ ɢᴇᴛᴛɪɴɢ ᴍᴇssᴀɢᴇs: {e}")
             return
