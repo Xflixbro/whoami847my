@@ -6,6 +6,7 @@
 # Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
 # All rights reserved
+#
 
 import asyncio
 import os
@@ -33,7 +34,7 @@ MESSAGE_EFFECT_IDS = [
     5046589136895476101,  # 💩
 ]
 
-# Function to show force-sub settings with channels list, buttons, and message effects
+# Function to show force-sub settings with channels list, buttons, image, and message effects
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
     settings_text = "<b>›› Rᴇǫᴜᴇsᴛ Fꜱᴜʙ Sᴇᴛᴛɪɴɢs:</b>\n\n"
     channels = await db.show_channels()
@@ -57,25 +58,19 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 InlineKeyboardButton("•ᴀᴅᴅ Cʜᴀɴɴᴇʟs", callback_data="fsub_add_channel"),
                 InlineKeyboardButton("ʀᴇᴍovᴇ Cʜᴀɴɴᴇʟs•", callback_data="fsub_remove_channel")
             ],
-            
             [
-                InlineKeyboardButton("• Tᴏɢɢʟᴇ Mᴏᴅᴇ •", callback_data="fsub_toggle_mode"),
+                InlineKeyboardButton("Tᴏɢɢʟᴇ Mᴏᴅᴇ•", callback_data="fsub_toggle_mode"),
+                InlineKeyboardButton("•ʀᴇꜰᴇʀsʜ•", callback_data="fsub_refresh")
             ],
-
             [
-                InlineKeyboardButton("• ʀᴇꜰᴇʀsʜ", callback_data="fsub_refresh"),
-                InlineKeyboardButton("ᴄʟosᴇ •", callback_data="fsub_close")
+                InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
             ]
         ]
     )
 
-    # Select random effect with validation
-    selected_effect = None
-    try:
-        if MESSAGE_EFFECT_IDS:
-            selected_effect = random.choice(MESSAGE_EFFECT_IDS)
-    except Exception as e:
-        logger.error(f"Failed to select message effect: {e}")
+    # Select random image and effect
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
 
     if message_id:
         try:
@@ -92,26 +87,39 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
             logger.error(f"Failed to edit message: {e}")
     else:
         try:
-            await client.send_message(
+            await client.send_photo(
                 chat_id=chat_id,
-                text=settings_text,
+                photo=selected_image,
+                caption=settings_text,
                 reply_markup=buttons,
                 parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True,
                 message_effect_id=selected_effect
             )
-            logger.info(f"Sent text-only message with effect {selected_effect}")
+            logger.info(f"Sent photo message with image {selected_image} and effect {selected_effect}")
         except Exception as e:
-            logger.error(f"Failed to send message with effect {selected_effect}: {e}")
-            # Fallback to sending without effect
-            await client.send_message(
-                chat_id=chat_id,
-                text=settings_text,
-                reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
-            )
-            logger.info("Sent text-only message without effect as fallback")
+            logger.error(f"Failed to send photo message with image {selected_image}: {e}")
+            # Fallback to text-only message
+            try:
+                await client.send_message(
+                    chat_id=chat_id,
+                    text=settings_text,
+                    reply_markup=buttons,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    message_effect_id=selected_effect
+                )
+                logger.info(f"Sent text-only message with effect {selected_effect} as fallback")
+            except Exception as e:
+                logger.error(f"Failed to send text-only message with effect {selected_effect}: {e}")
+                # Final fallback without effect
+                await client.send_message(
+                    chat_id=chat_id,
+                    text=settings_text,
+                    reply_markup=buttons,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+                logger.info("Sent text-only message without effect as final fallback")
 
 @Bot.on_message(filters.command('forcesub') & filters.private & admin)
 async def force_sub_settings(client: Client, message: Message):
@@ -138,7 +146,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
-        await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b></blockquote>")
+        await callback.answer("<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b></blockquote>")
 
     elif data == "fsub_remove_channel":
         await db.set_temp_state(chat_id, "awaiting_remove_channel_input")
@@ -148,8 +156,8 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
             text="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ '<code>all</code>' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs.</b></blockquote>",
             reply_markup=InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("• ʙᴀᴄᴋ •", callback_data="fsub_back"),
-                    InlineKeyboardButton("• ᴄʟosᴇ •", callback_data="fsub_close")
+                    InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
+                    InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
                 ]
             ]),
             parse_mode=ParseMode.HTML,
@@ -178,7 +186,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
                 buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
 
-        buttons.append([InlineKeyboardButton("• cʟᴏsᴇ •", callback_data="close")])
+        buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
 
         await temp.edit(
             "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
@@ -239,7 +247,7 @@ async def handle_channel_input(client: Client, message: Message):
             await message.reply(
                 f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
                 f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-                f"<blockquote><b>Iᴅ:</b> <code>{channel_id}</code></blockquote>",
+                f"<blockquote><b>Iᴅ: <code>{channel_id}</code></b></blockquote>",
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
