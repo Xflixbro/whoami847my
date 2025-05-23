@@ -13,10 +13,11 @@ import random
 import sys
 import time
 import logging
+from urllib.parse import urlparse
 from pyrogram import Client, filters, __version__
 from pyrogram.enums import ParseMode, ChatAction, ChatMemberStatus, ChatType
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatMemberUpdated, ChatPermissions, InputMediaPhoto
-from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant, InviteHashEmpty, ChatAdminRequired, PeerIdInvalid, UserIsBlocked, InputUserDeactivated, UserNotParticipant
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto
+from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant, InviteHashEmpty, ChatAdminRequired, PeerIdInvalid, UserIsBlocked, InputUserDeactivated
 from bot import Bot
 from config import RANDOM_IMAGES, START_PIC
 from helper_func import *
@@ -34,6 +35,17 @@ MESSAGE_EFFECT_IDS = [
     5104858069142078462,  # 👎
     5046589136895476101,  # 💩
 ]
+
+# Function to validate if a URL is likely valid
+def is_valid_url(url):
+    if not url or not isinstance(url, str):
+        return False
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc]) and result.scheme in ['http', 'https']
+    except Exception as e:
+        logger.error(f"URL validation failed for {url}: {e}")
+        return False
 
 # Function to show force-sub settings with channels list and buttons
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
@@ -68,18 +80,36 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         ]
     )
 
+    # Select a random image and validate
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    if not is_valid_url(selected_image):
+        logger.warning(f"Selected image URL invalid: {selected_image}. Falling back to START_PIC: {START_PIC}")
+        selected_image = START_PIC
+    if not is_valid_url(selected_image):
+        logger.error(f"START_PIC URL invalid: {START_PIC}. Sending text message instead.")
+        selected_image = None
 
     if message_id:
         try:
-            await client.edit_message_media(
-                chat_id=chat_id,
-                message_id=message_id,
-                media=InputMediaPhoto(media=selected_image, caption=settings_text),
-                reply_markup=buttons
-            )
+            if selected_image:
+                await client.edit_message_media(
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    media=InputMediaPhoto(media=selected_image, caption=settings_text),
+                    reply_markup=buttons
+                )
+            else:
+                await client.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    text=settings_text,
+                    reply_markup=buttons,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
         except Exception as e:
-            logger.error(f"Failed to edit message with image: {e}")
+            logger.error(f"Failed to edit message with image {selected_image}: {e}")
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
@@ -91,17 +121,30 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
             )
     else:
         try:
-            await client.send_photo(
-                chat_id=chat_id,
-                photo=selected_image,
-                caption=settings_text,
-                reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
+            if selected_image:
+                logger.info(f"Attempting to send photo with URL: {selected_image}")
+                await client.send_photo(
+                    chat_id=chat_id,
+                    photo=selected_image,
+                    caption=settings_text,
+                    reply_markup=buttons,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
+                logger.info(f"Successfully sent photo with URL: {selected_image}")
+            else:
+                logger.warning("No valid image URL available. Sending text message.")
+                await client.send_message(
+                    chat_id=chat_id,
+                    text=settings_text,
+                    reply_markup=buttons,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
         except Exception as e:
-            logger.error(f"Failed to send photo: {e}")
+            logger.error(f"Failed to send photo with URL {selected_image}: {e}")
             await client.send_message(
                 chat_id=chat_id,
                 text=settings_text,
