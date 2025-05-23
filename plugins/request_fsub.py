@@ -17,7 +17,11 @@ from pyrogram import Client, filters, __version__
 from pyrogram.enums import ParseMode, ChatAction, ChatMemberStatus, ChatType
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatMemberUpdated, ChatPermissions, InputMediaPhoto
 from bot import Bot
-from config import RANDOM_IMAGES, MESSAGE_EFFECT_IDS, START_PIC
+from config import RANDOM_IMAGES, START_PIC
+try:
+    from config import MESSAGE_EFFECT_IDS
+except ImportError:
+    MESSAGE_EFFECT_IDS = []  # Fallback to empty list if not defined in config
 from helper_func import *
 from database.database import *
 
@@ -38,7 +42,8 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 chat = await client.get_chat(ch_id)
                 link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
                 settings_text += f"<blockquote><b>•</b> <a href='{link}'>{chat.title}</a> [<code>{ch_id}</code>]</blockquote>\n"
-            except Exception:
+            except Exception as e:
+                logger.error(f"Failed to fetch chat {ch_id}: {e}")
                 settings_text += f"<blockquote><b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʙʟᴇ</i></blockquote>\n"
 
     buttons = InlineKeyboardMarkup(
@@ -133,7 +138,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text="Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.",
+                text="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b></blockquote>",
                 reply_markup=InlineKeyboardMarkup([
                     [
                         InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
@@ -196,7 +201,8 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 status = "🟢" if mode == "on" else "🔴"
                 title = f"{status} {chat.title}"
                 buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
-            except:
+            except Exception as e:
+                logger.error(f"Failed to fetch chat {ch_id}: {e}")
                 buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
 
         buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
@@ -288,6 +294,7 @@ async def handle_channel_input(client: Client, message: Message):
                         "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
                     )
                 except Exception as e:
+                    logger.error(f"Error removing channel {message.text}: {e}")
                     await message.reply(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
@@ -297,6 +304,7 @@ async def handle_channel_input(client: Client, message: Message):
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id)
     except Exception as e:
+        logger.error(f"Failed to process channel input {message.text}: {e}")
         await message.reply(f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>")
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id)
@@ -317,7 +325,8 @@ async def change_force_sub_mode(client: Client, message: Message):
             status = "🟢" if mode == "on" else "🔴"
             title = f"{status} {chat.title}"
             buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
-        except:
+        except Exception as e:
+            logger.error(f"Failed to fetch chat {ch_id}: {e}")
             buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
 
     buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
@@ -396,6 +405,7 @@ async def add_force_sub(client: Client, message: Message):
         )
 
     except Exception as e:
+        logger.error(f"Failed to add channel {channel_id}: {e}")
         return await temp.edit(f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>")
 
 @Bot.on_message(filters.command('delchnl') & filters.private & admin)
@@ -432,6 +442,7 @@ async def del_force_sub(client: Client, message: Message):
             reply_markup=InlineKeyboardMarkup(buttons)
         )
     except Exception as e:
+        logger.error(f"Error removing channel {args[1]}: {e}")
         return await temp.edit(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
 
 @Bot.on_message(filters.command('listchnl') & filters.private & admin)
@@ -448,7 +459,8 @@ async def list_force_sub_channels(client: Client, message: Message):
             chat = await client.get_chat(ch_id)
             link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
             result += f"<b>•</b> <a href='{link}'>{chat.title}</a> [<code>{ch_id}</code>]\n"
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to fetch chat {ch_id}: {e}")
             result += f"<b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʙʟᴇ</i>\n"
 
     buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
