@@ -16,17 +16,27 @@ import logging
 from pyrogram import Client, filters, __version__
 from pyrogram.enums import ParseMode, ChatAction, ChatMemberStatus, ChatType
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatMemberUpdated, ChatPermissions, InputMediaPhoto
+from pyrogram.errors.exceptions.bad_request_400 import MediaEmpty
 from bot import Bot
 from config import RANDOM_IMAGES, START_PIC
-try:
-    from config import MESSAGE_EFFECT_IDS
-except ImportError:
-    MESSAGE_EFFECT_IDS = []  # Fallback to empty list if not defined in config
 from helper_func import *
 from database.database import *
 
 # Set up logging for this module
 logger = logging.getLogger(__name__)
+
+# Define message effect IDs (same as in start.py)
+MESSAGE_EFFECT_IDS = [
+    5104841245755180586,  # 🔥
+    5107584321108051014,  # 👍
+    5044134455711629726,  # ❤️
+    5046509860389126442,  # 🎉
+    5104858069142078462,  # 👎
+    5046589136895476101,  # 💩
+]
+
+# Fallback image URL in case RANDOM_IMAGES and START_PIC fail
+FALLBACK_IMAGE = "https://i.postimg.cc/VLyZyg1z/57ccdb58.jpg"
 
 # Function to show force-sub settings with channels list, buttons, random images, and message effects
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
@@ -62,9 +72,20 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         ]
     )
 
-    # Select random image with fallback to START_PIC
-    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-    # Select random effect with fallback to None
+    # Select random image with fallback to START_PIC and then FALLBACK_IMAGE
+    selected_image = None
+    if RANDOM_IMAGES:
+        try:
+            selected_image = random.choice(RANDOM_IMAGES)
+        except Exception as e:
+            logger.error(f"Failed to select random image from RANDOM_IMAGES: {e}")
+    if not selected_image and START_PIC:
+        selected_image = START_PIC
+    if not selected_image:
+        selected_image = FALLBACK_IMAGE
+        logger.warning("No valid image in RANDOM_IMAGES or START_PIC, using fallback image")
+
+    # Select random effect
     selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
 
     if message_id:
@@ -74,6 +95,16 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 message_id=message_id,
                 media=InputMediaPhoto(media=selected_image, caption=settings_text),
                 reply_markup=buttons
+            )
+        except MediaEmpty as e:
+            logger.error(f"MediaEmpty error for image {selected_image}: {e}")
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
             )
         except Exception as e:
             logger.error(f"Failed to edit message with image {selected_image}: {e}")
@@ -95,6 +126,15 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
                 message_effect_id=selected_effect
+            )
+        except MediaEmpty as e:
+            logger.error(f"MediaEmpty error for image {selected_image}: {e}")
+            await client.send_message(
+                chat_id=chat_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
             )
         except Exception as e:
             logger.error(f"Failed to send photo {selected_image} with effect {selected_effect}: {e}")
@@ -123,7 +163,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 chat_id=chat_id,
                 message_id=message_id,
                 media=InputMediaPhoto(
-                    media="https://i.postimg.cc/VLyZyg1z/57ccdb58.jpg",
+                    media=FALLBACK_IMAGE,
                     caption="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b></blockquote>"
                 ),
                 reply_markup=InlineKeyboardMarkup([
@@ -134,7 +174,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 ])
             )
         except Exception as e:
-            logger.error(f"Failed to edit message with image: {e}")
+            logger.error(f"Failed to edit message with image {FALLBACK_IMAGE}: {e}")
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
@@ -157,7 +197,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 chat_id=chat_id,
                 message_id=message_id,
                 media=InputMediaPhoto(
-                    media="https://i.postimg.cc/VLyZyg1z/57ccdb58.jpg",
+                    media=FALLBACK_IMAGE,
                     caption="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs.</b></blockquote>"
                 ),
                 reply_markup=InlineKeyboardMarkup([
@@ -168,7 +208,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 ])
             )
         except Exception as e:
-            logger.error(f"Failed to edit message with image: {e}")
+            logger.error(f"Failed to edit message with image {FALLBACK_IMAGE}: {e}")
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
