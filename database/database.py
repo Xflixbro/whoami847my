@@ -147,20 +147,36 @@ class Mehedi:
         return bool(found)
 
     async def add_channel(self, channel_id: int):
-        if not await self.channel_exist(channel_id):
-            await self.fsub_data.insert_one({'_id': channel_id, 'mode': 'off'})
-            logger.info(f"Added channel {channel_id} to force-sub list")
-            return
+        try:
+            if not await self.channel_exist(channel_id):
+                await self.fsub_data.insert_one({'_id': channel_id, 'mode': 'off'})
+                logger.info(f"Successfully added channel {channel_id} to force-sub list")
+            else:
+                logger.warning(f"Channel {channel_id} already exists in force-sub list")
+        except Exception as e:
+            logger.error(f"Failed to add channel {channel_id}: {e}")
+            raise
 
     async def rem_channel(self, channel_id: int):
-        if await self.channel_exist(channel_id):
-            await self.fsub_data.delete_one({'_id': channel_id})
-            logger.info(f"Removed channel {channel_id} from force-sub list")
-            return
+        try:
+            if await self.channel_exist(channel_id):
+                await self.fsub_data.delete_one({'_id': channel_id})
+                logger.info(f"Successfully removed channel {channel_id} from force-sub list")
+            else:
+                logger.warning(f"Channel {channel_id} not found in force-sub list")
+        except Exception as e:
+            logger.error(f"Failed to remove channel {channel_id}: {e}")
+            raise
 
     async def show_channels(self):
-        channel_docs = await self.fsub_data.find().to_list(length=None)
-        return [doc['_id'] for doc in channel_docs]
+        try:
+            channel_docs = await self.fsub_data.find().to_list(length=None)
+            channels = [doc['_id'] for doc in channel_docs]
+            logger.info(f"Retrieved channels: {channels}")
+            return channels
+        except Exception as e:
+            logger.error(f"Failed to retrieve channels: {e}")
+            return []
 
     async def get_channel_mode(self, channel_id: int):
         data = await self.fsub_data.find_one({'_id': channel_id})
@@ -275,4 +291,4 @@ db = Mehedi(os.environ.get("DATABASE_URL", ""), os.environ.get("DATABASE_NAME", 
 # Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
 # All rights reserved.
-#
+# 
