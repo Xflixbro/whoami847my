@@ -16,9 +16,8 @@ import logging
 from pyrogram import Client, filters, __version__
 from pyrogram.enums import ParseMode, ChatAction, ChatMemberStatus, ChatType
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatMemberUpdated, ChatPermissions, InputMediaPhoto
-from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant, InviteHashEmpty, ChatAdminRequired, PeerIdInvalid, UserIsBlocked, InputUserDeactivated, UserNotParticipant
 from bot import Bot
-from config import *
+from config import RANDOM_IMAGES, MESSAGE_EFFECT_IDS, START_PIC
 from helper_func import *
 from database.database import *
 
@@ -58,7 +57,10 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         ]
     )
 
+    # Select random image with fallback to START_PIC
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    # Select random effect with fallback to None
+    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
 
     if message_id:
         try:
@@ -69,7 +71,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 reply_markup=buttons
             )
         except Exception as e:
-            logger.error(f"Failed to edit message with image: {e}")
+            logger.error(f"Failed to edit message with image {selected_image}: {e}")
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
@@ -87,10 +89,10 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 reply_markup=buttons,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                message_effect_id=selected_effect
             )
         except Exception as e:
-            logger.error(f"Failed to send photo: {e}")
+            logger.error(f"Failed to send photo {selected_image} with effect {selected_effect}: {e}")
             await client.send_message(
                 chat_id=chat_id,
                 text=settings_text,
@@ -110,7 +112,6 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
     message_id = callback.message.id
 
     if data == "fsub_add_channel":
-        # Edit the current message to ask for channel ID with Back and Close buttons
         await db.set_temp_state(chat_id, "awaiting_add_channel_input")
         try:
             await client.edit_message_media(
@@ -145,7 +146,6 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
         await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b></blockquote>")
 
     elif data == "fsub_remove_channel":
-        # Edit the current message to ask for channel ID or 'all' with Back and Close buttons
         await db.set_temp_state(chat_id, "awaiting_remove_channel_input")
         try:
             await client.edit_message_media(
@@ -180,7 +180,6 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
         await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ '[<code>all</code>]'.</b></blockquote>")
 
     elif data == "fsub_toggle_mode":
-        # Simulate /fsub_mode command
         temp = await callback.message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
         channels = await db.show_channels()
 
@@ -264,7 +263,6 @@ async def handle_channel_input(client: Client, message: Message):
                 f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
                 disable_web_page_preview=True
             )
-            # Reset state and go back to settings
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
@@ -291,7 +289,6 @@ async def handle_channel_input(client: Client, message: Message):
                     )
                 except Exception as e:
                     await message.reply(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
-            # Reset state and go back to settings
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
@@ -321,7 +318,7 @@ async def change_force_sub_mode(client: Client, message: Message):
             title = f"{status} {chat.title}"
             buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
         except:
-            buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
+ tempos.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
 
     buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
 
