@@ -135,6 +135,15 @@ RANDOM_IMAGES = [
     "https://i.postimg.cc/VLPChddR/b7dcd4a1.jpg"
 ]
 
+MESSAGE_EFFECT_IDS = [
+    5104841245755180586,  # 🔥
+    5107584321108051014,  # 👍
+    5044134455711629726,  # ❤️
+    5046509860389126442,  # 🎉
+    5104858069142078462,  # 👎
+    5046589136895476101,  # 💩
+]
+
 SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "linkshortify.com")
 SHORTLINK_API = os.environ.get("SHORTLINK_API", "")
 TUT_VID = os.environ.get("TUT_VID", "https://t.me/hwdownload/3")
