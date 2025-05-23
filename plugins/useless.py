@@ -56,7 +56,10 @@ WAIT_MSG = "<b>Wᴏʀᴋɪɴɢ...</b>"
 @Bot.on_message(filters.command('users') & filters.private & admin)
 async def get_users(client: Bot, message: Message):
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    logger.info(f"Processing /users command from user {message.from_user.id}")
+    
     try:
+        # Send initial "Working..." message
         msg = await client.send_photo(
             chat_id=message.chat.id,
             photo=selected_image,
@@ -64,25 +67,45 @@ async def get_users(client: Bot, message: Message):
             message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
     except Exception as e:
-        logger.error(f"Failed to send photo: {e}")
+        logger.error(f"Failed to send initial photo for /users: {e}")
         msg = await client.send_message(
             chat_id=message.chat.id,
             text=WAIT_MSG,
             message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
-    users = await db.full_userbase()
+
     try:
-        await msg.edit_media(
-            media=InputMediaPhoto(
-                media=selected_image,
-                caption=f"{len(users)} Uꜱᴇʀꜱ ᴀʀᴇ ᴜꜱɪɴɢ ᴛʜɪꜱ ʙᴏᴛ"
-            ),
+        # Fetch userbase with a timeout to prevent hanging
+        logger.info("Attempting to fetch userbase from database")
+        users = await asyncio.wait_for(db.full_userbase(), timeout=10.0)
+        user_count = len(users)
+        caption = f"{user_count} Uꜱᴇʀꜱ ᴀʀᴇ ᴜꜱɪɴɢ ᴛʜɪꜱ ʙᴏᴛ"
+        logger.info(f"Successfully fetched {user_count} users")
+        
+        try:
+            await msg.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption=caption
+                ),
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit message with image: {e}")
+            await msg.edit(
+                text=caption,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+    except asyncio.TimeoutError:
+        logger.error("Database query timed out while fetching userbase")
+        await msg.edit(
+            text="Error: Database query timed out. Please check the database connection and try again.",
             message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
     except Exception as e:
-        logger.error(f"Failed to edit message with image: {e}")
+        logger.error(f"Failed to fetch userbase: {e}")
         await msg.edit(
-            text=f"{len(users)} Uꜱᴇʀꜱ ᴀʀᴇ ᴜꜱɪɴɢ ᴛʜɪꜱ ʙᴏᴛ",
+            text=f"Error: Could not fetch user data. Details: {str(e)}",
             message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
 
