@@ -158,7 +158,12 @@ async def user_callback(client: Client, callback: CallbackQuery):
                 except:
                     user_list += f"<b><blockquote><code>{user_id}</code> — <i>Cᴏᴜʟᴅ ɴᴏᴛ ғᴇᴛᴄʜ ɴᴀᴍᴇ</i></blockquote></b>\n"
 
-        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Cʟᴏꜱᴇ", callback_data="user_close")]])
+        reply_markup = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("• Bᴀᴄᴋ •", callback_data="user_back"),
+                InlineKeyboardButton("Cʟᴏꜱᴇ", callback_data="user_close")
+            ]
+        ])
         await client.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
@@ -184,7 +189,12 @@ async def user_callback(client: Client, callback: CallbackQuery):
                 except:
                     result += f"<b><blockquote><code>{uid}</code> — <i>Cᴏᴜʟᴅ ɴᴏᴛ ғᴇᴛᴄʜ ɴᴀᴍᴇ</i></blockquote></b>\n"
 
-        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Cʟᴏꜱᴇ", callback_data="user_close")]])
+        reply_markup = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("• Bᴀᴄᴋ •", callback_data="user_back"),
+                InlineKeyboardButton("Cʟᴏꜱᴇ", callback_data="user_close")
+            ]
+        ])
         await client.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
@@ -338,7 +348,7 @@ async def add_banuser(client: Client, message: Message):
     if success_count:
         await pro.edit(f"<b>✅ Bᴀɴɴᴇᴅ Uꜱᴇʀꜱ Uᴘᴅᴀᴛᴇᴅ:</b>\n\n{report}", reply_markup=reply_markup)
     else:
-        await pro.edit(f"<b>❌ Nᴏ ᴜꜱᴇʀꜱ ᴡᴇʟʀᴇ ʙᴀɴɴᴇᴅ:</b>\n\n{report}", reply_markup=reply_markup)
+        await pro.edit(f"<b>❌ Nᴏ ᴜꜱᴇʀꜱ ᴡᴇʀᴇ ʙᴀɴɴᴇᴅ:</b>\n\n{report}", reply_markup=reply_markup)
 
 @Bot.on_message(filters.private & filters.command('unban') & admin)
 async def delete_banuser(client: Client, message: Message):        
