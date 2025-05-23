@@ -107,7 +107,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                     reply_markup=buttons,
                     parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True,
-                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)  # Effect only here
                 )
         except Exception as e:
             logger.error(f"Failed to edit message with image {selected_image}: {e}")
@@ -118,7 +118,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 reply_markup=buttons,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)  # Effect only here
             )
     else:
         try:
@@ -131,7 +131,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                     reply_markup=buttons,
                     parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True,
-                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)  # Effect only here
                 )
                 logger.info(f"Successfully sent photo with URL: {selected_image}")
             else:
@@ -142,7 +142,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                     reply_markup=buttons,
                     parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True,
-                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)  # Effect only here
                 )
         except Exception as e:
             logger.error(f"Failed to send photo with URL {selected_image}: {e}")
@@ -152,7 +152,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 reply_markup=buttons,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)  # Effect only here
             )
 
 @Bot.on_message(filters.command('forcesub') & filters.private & admin)
@@ -163,22 +163,43 @@ async def force_sub_settings(client: Client, message: Message):
 async def force_sub_callback(client: Client, callback: CallbackQuery):
     data = callback.data
     chat_id = callback.message.chat.id
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    if not is_valid_url(selected_image):
+        logger.warning(f"Selected image URL invalid: {selected_image}. Falling back to START_PIC: {START_PIC}")
+        selected_image = START_PIC
+    if not is_valid_url(selected_image):
+        logger.error(f"START_PIC URL invalid: {START_PIC}. Using text message.")
+        selected_image = None
 
     if data == "fsub_add_channel":
         await db.set_temp_state(chat_id, "awaiting_channel_input")
         logger.info(f"Set state to 'awaiting_channel_input' for chat {chat_id}")
         try:
-            await callback.message.reply(
-                "<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ɪᴅ ᴏʀ ᴜsᴇʀɴᴀᴍᴇ ᴛᴏ ᴀᴅᴅ ғᴏʀ ғᴏʀᴄᴇ-sᴜʙ.</b></blockquote>\n"
-                "<blockquote><b>Eɴsᴜʀᴇ ᴛʜᴇ ʙᴏᴛ ɪs ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b></blockquote>\n"
-                "<blockquote><b>Eɴᴛᴇʀ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b></blockquote>\n\n"
-                "<b>E x ᴀ ᴍ ᴘ ʟ ᴇ:</b>\n"
-                "<code>-100XXXXXXXXXX</code>\n"
-                "<code>@ChannelUsername</code>",
-                parse_mode=ParseMode.HTML
-            )
+            if selected_image:
+                await callback.message.reply_photo(
+                    photo=selected_image,
+                    caption=(
+                        "<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ɪᴅ ᴏʀ ᴜsᴇʀɴᴀᴍᴇ ᴛᴏ ᴀᴅᴅ ғᴏʀ ғᴏʀᴄᴇ-sᴜʙ.</b></blockquote>\n"
+                        "<blockquote><b>Eɴsᴜʀᴇ ᴛʜᴇ ʙᴏᴛ ɪs ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b></blockquote>\n"
+                        "<blockquote><b>Eɴᴛᴇʀ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b></blockquote>\n\n"
+                        "<b>E x ᴀ ᴍ ᴘ ʟ ᴇ:</b>\n"
+                        "<code>-100XXXXXXXXXX</code>\n"
+                        "<code>@ChannelUsername</code>"
+                    ),
+                    parse_mode=ParseMode.HTML
+                )
+            else:
+                await callback.message.reply(
+                    "<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ɪᴅ ᴏʟ ᴜsᴇʀɴᴀᴍᴇ ᴛᴏ ᴀᴅᴅ ғᴏʀ ғᴏʀᴄᴇ-sᴜʙ.</b></blockquote>\n"
+                    "<blockquote><b>Eɴsᴜʀᴇ ᴛʜᴇ ʙᴏᴛ ɪs ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b></blockquote>\n"
+                    "<blockquote><b>Eɴᴛᴇʀ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b></blockquote>\n\n"
+                    "<b>E x ᴀ ᴍ ᴘ ʟ ᴇ:</b>\n"
+                    "<code>-100XXXXXXXXXX</code>\n"
+                    "<code>@ChannelUsername</code>",
+                    parse_mode=ParseMode.HTML
+                )
         except Exception as e:
-            logger.error(f"Failed to send channel input prompt: {e}")
+            logger.error(f"Failed to send photo for channel input prompt: {e}")
             await callback.message.reply(
                 "<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ɪᴅ ᴏʀ ᴜsᴇʀɴᴀᴍᴇ ᴛᴏ ᴀᴅᴅ ғᴏʀ ғᴏʀᴄᴇ-sᴜʙ.</b></blockquote>\n"
                 "<blockquote><b>Eɴsᴜʀᴇ ᴛʜᴇ ʙᴏᴛ ɪs ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b></blockquote>\n"
@@ -213,6 +234,13 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
 async def handle_channel_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    if not is_valid_url(selected_image):
+        logger.warning(f"Selected image URL invalid: {selected_image}. Falling back to START_PIC: {START_PIC}")
+        selected_image = START_PIC
+    if not is_valid_url(selected_image):
+        logger.error(f"START_PIC URL invalid: {START_PIC}. Using text message.")
+        selected_image = None
 
     if state == "awaiting_channel_input":
         channel_input = message.text
@@ -226,12 +254,19 @@ async def handle_channel_input(client: Client, message: Message):
 
             if chat.type != ChatType.CHANNEL:
                 try:
-                    await message.reply(
-                        "<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>",
-                        parse_mode=ParseMode.HTML
-                    )
+                    if selected_image:
+                        await message.reply_photo(
+                            photo=selected_image,
+                            caption="<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>",
+                            parse_mode=ParseMode.HTML
+                        )
+                    else:
+                        await message.reply(
+                            "<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>",
+                            parse_mode=ParseMode.HTML
+                        )
                 except Exception as e:
-                    logger.error(f"Failed to send invalid channel type message: {e}")
+                    logger.error(f"Failed to send photo for invalid channel type: {e}")
                     await message.reply(
                         "<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>",
                         parse_mode=ParseMode.HTML
@@ -241,12 +276,19 @@ async def handle_channel_input(client: Client, message: Message):
             member = await client.get_chat_member(chat.id, "me")
             if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
                 try:
-                    await message.reply(
-                        "<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>",
-                        parse_mode=ParseMode.HTML
-                    )
+                    if selected_image:
+                        await message.reply_photo(
+                            photo=selected_image,
+                            caption="<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>",
+                            parse_mode=ParseMode.HTML
+                        )
+                    else:
+                        await message.reply(
+                            "<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>",
+                            parse_mode=ParseMode.HTML
+                        )
                 except Exception as e:
-                    logger.error(f"Failed to send non-admin bot message: {e}")
+                    logger.error(f"Failed to send photo for non-admin bot: {e}")
                     await message.reply(
                         "<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>",
                         parse_mode=ParseMode.HTML
@@ -257,12 +299,19 @@ async def handle_channel_input(client: Client, message: Message):
             channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
             if channel_id in channel_ids_only:
                 try:
-                    await message.reply(
-                        f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <code>{channel_id}</code>",
-                        parse_mode=ParseMode.HTML
-                    )
+                    if selected_image:
+                        await message.reply_photo(
+                            photo=selected_image,
+                            caption=f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <code>{channel_id}</code>",
+                            parse_mode=ParseMode.HTML
+                        )
+                    else:
+                        await message.reply(
+                            f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <code>{channel_id}</code>",
+                            parse_mode=ParseMode.HTML
+                        )
                 except Exception as e:
-                    logger.error(f"Failed to send existing channel message: {e}")
+                    logger.error(f"Failed to send photo for existing channel: {e}")
                     await message.reply(
                         f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <code>{channel_id}</code>",
                         parse_mode=ParseMode.HTML
@@ -272,17 +321,29 @@ async def handle_channel_input(client: Client, message: Message):
             link = await client.export_chat_invite_link(chat.id) if not chat.username else f"https://t.me/{chat.username}"
             await db.add_channel(channel_id)
             try:
-                await message.reply(
-                    f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
-                    f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-                    f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
-                    parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True
-                )
+                if selected_image:
+                    await message.reply_photo(
+                        photo=selected_image,
+                        caption=(
+                            f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
+                            f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                            f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>"
+                        ),
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True
+                    )
+                else:
+                    await message.reply(
+                        f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʬʲʟʟʏ!</b></blockquote>\n\n"
+                        f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                        f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True
+                    )
             except Exception as e:
-                logger.error(f"Failed to send channel added message: {e}")
+                logger.error(f"Failed to send photo for channel added: {e}")
                 await message.reply(
-                    f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
+                    f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʬʲʟʟʏ!</b></blockquote>\n\n"
                     f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
                     f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
                     parse_mode=ParseMode.HTML,
@@ -291,12 +352,19 @@ async def handle_channel_input(client: Client, message: Message):
             await db.set_temp_state(chat_id, "")
         except Exception as e:
             try:
-                await message.reply(
-                    f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_input}</code>\n\n<i>{e}</i>",
-                    parse_mode=ParseMode.HTML
-                )
+                if selected_image:
+                    await message.reply_photo(
+                        photo=selected_image,
+                        caption=f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_input}</code>\n\n<i>{e}</i>",
+                        parse_mode=ParseMode.HTML
+                    )
+                else:
+                    await message.reply(
+                        f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_input}</code>\n\n<i>{e}</i>",
+                        parse_mode=ParseMode.HTML
+                    )
             except Exception as e2:
-                logger.error(f"Failed to send channel add failure message: {e2}")
+                logger.error(f"Failed to send photo for channel add failure: {e2}")
                 await message.reply(
                     f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_input}</code>\n\n<i>{e}</i>",
                     parse_mode=ParseMode.HTML
@@ -330,18 +398,28 @@ async def handle_join_request(client: Client, chat_join_request):
 
 @Bot.on_message(filters.command('addchnl') & filters.private & admin)
 async def add_force_sub(client: Client, message: Message):
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    if not is_valid_url(selected_image):
+        logger.warning(f"Selected image URL invalid: {selected_image}. Falling back to START_PIC: {START_PIC}")
+        selected_image = START_PIC
+    if not is_valid_url(selected_image):
+        logger.error(f"START_PIC URL invalid: {START_PIC}. Using text message.")
+        selected_image = None
+
     try:
-        temp = await client.send_message(
+        temp = await client.send_photo(
             chat_id=message.chat.id,
-            text="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>",
-            parse_mode=ParseMode.HTML
+            photo=selected_image,
+            caption="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>"
+        ) if selected_image else await client.send_message(
+            chat_id=message.chat.id,
+            text="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>"
         )
     except Exception as e:
-        logger.error(f"Failed to send initial message: {e}")
+        logger.error(f"Failed to send initial message/photo: {e}")
         temp = await client.send_message(
             chat_id=message.chat.id,
-            text="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>",
-            parse_mode=ParseMode.HTML
+            text="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>"
         )
 
     args = message.text.split(maxsplit=1)
@@ -349,11 +427,20 @@ async def add_force_sub(client: Client, message: Message):
     if len(args) != 2:
         buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
         try:
-            await temp.edit(
-                "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>",
-                reply_markup=InlineKeyboardMarkup(buttons),
-                parse_mode=ParseMode.HTML
-            )
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption="<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>"
+                    ),
+                    reply_markup=InlineKeyboardMarkup(buttons)
+                )
+            else:
+                await temp.edit(
+                    "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>",
+                    reply_markup=InlineKeyboardMarkup(buttons),
+                    parse_mode=ParseMode.HTML
+                )
         except Exception as e:
             logger.error(f"Failed to edit message for usage: {e}")
             await temp.edit(
@@ -367,10 +454,18 @@ async def add_force_sub(client: Client, message: Message):
         channel_id = int(args[1])
     except ValueError:
         try:
-            await temp.edit(
-                "<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>",
-                parse_mode=ParseMode.HTML
-            )
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption="<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>"
+                    )
+                )
+            else:
+                await temp.edit(
+                    "<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>",
+                    parse_mode=ParseMode.HTML
+                )
         except Exception as e:
             logger.error(f"Failed to edit message for invalid channel ID: {e}")
             await temp.edit(
@@ -383,14 +478,22 @@ async def add_force_sub(client: Client, message: Message):
     channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
     if channel_id in channel_ids_only:
         try:
-            await temp.edit(
-                f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <code>{channel_id}</code>",
-                parse_mode=ParseMode.HTML
-            )
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption=f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <code>{channel_id}</code>"
+                    )
+                )
+            else:
+                await temp.edit(
+                    f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <code>{channel_id}</code>",
+                    parse_mode=ParseMode.HTML
+                )
         except Exception as e:
             logger.error(f"Failed to edit message for existing channel: {e}")
             await temp.edit(
-                f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <code>{channel_id}</code>",
+                f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <code>{channel_id}</code>",
                 parse_mode=ParseMode.HTML
             )
         return
@@ -400,10 +503,18 @@ async def add_force_sub(client: Client, message: Message):
 
         if chat.type != ChatType.CHANNEL:
             try:
-                await temp.edit(
-                    "<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>",
-                    parse_mode=ParseMode.HTML
-                )
+                if selected_image:
+                    await temp.edit_media(
+                        media=InputMediaPhoto(
+                            media=selected_image,
+                            caption="<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>"
+                        )
+                    )
+                else:
+                    await temp.edit(
+                        "<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>",
+                        parse_mode=ParseMode.HTML
+                    )
             except Exception as e:
                 logger.error(f"Failed to edit message for non-channel type: {e}")
                 await temp.edit(
@@ -415,10 +526,18 @@ async def add_force_sub(client: Client, message: Message):
         member = await client.get_chat_member(chat.id, "me")
         if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
             try:
-                await temp.edit(
-                    "<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>",
-                    parse_mode=ParseMode.HTML
-                )
+                if selected_image:
+                    await temp.edit_media(
+                        media=InputMediaPhoto(
+                            media=selected_image,
+                            caption="<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>"
+                        )
+                    )
+                else:
+                    await temp.edit(
+                        "<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>",
+                        parse_mode=ParseMode.HTML
+                    )
             except Exception as e:
                 logger.error(f"Failed to edit message for non-admin bot: {e}")
                 await temp.edit(
@@ -431,17 +550,30 @@ async def add_force_sub(client: Client, message: Message):
         
         await db.add_channel(channel_id)
         try:
-            await temp.edit(
-                f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
-                f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-                f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
-                disable_web_page_preview=True,
-                parse_mode=ParseMode.HTML
-            )
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption=(
+                            f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʬʲʟʟʏ!</b></blockquote>\n\n"
+                            f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                            f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>"
+                        )
+                    ),
+                    disable_web_page_preview=True
+                )
+            else:
+                await temp.edit(
+                    f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʬʲʟʟʏ!</b></blockquote>\n\n"
+                    f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                    f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
+                    disable_web_page_preview=True,
+                    parse_mode=ParseMode.HTML
+                )
         except Exception as e:
             logger.error(f"Failed to edit message for channel added: {e}")
             await temp.edit(
-                f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʬʟʏ!</b></blockquote>\n\n"
+                f"<blockquote><b>✅ Fᴏʤʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʬʲʟʟʏ!</b></blockquote>\n\n"
                 f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
                 f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
                 disable_web_page_preview=True,
@@ -449,10 +581,18 @@ async def add_force_sub(client: Client, message: Message):
             )
     except Exception as e:
         try:
-            await temp.edit(
-                f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
-                parse_mode=ParseMode.HTML
-            )
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption=f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>"
+                    )
+                )
+            else:
+                await temp.edit(
+                    f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
+                    parse_mode=ParseMode.HTML
+                )
         except Exception as e2:
             logger.error(f"Failed to edit message for channel add failure: {e2}")
             await temp.edit(
@@ -462,18 +602,28 @@ async def add_force_sub(client: Client, message: Message):
 
 @Bot.on_message(filters.command('delchnl') & filters.private & admin)
 async def del_force_sub(client: Client, message: Message):
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    if not is_valid_url(selected_image):
+        logger.warning(f"Selected image URL invalid: {selected_image}. Falling back to START_PIC: {START_PIC}")
+        selected_image = START_PIC
+    if not is_valid_url(selected_image):
+        logger.error(f"START_PIC URL invalid: {START_PIC}. Using text message.")
+        selected_image = None
+
     try:
-        temp = await client.send_message(
+        temp = await client.send_photo(
             chat_id=message.chat.id,
-            text="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>",
-            parse_mode=ParseMode.HTML
+            photo=selected_image,
+            caption="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>"
+        ) if selected_image else await client.send_message(
+            chat_id=message.chat.id,
+            text="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>"
         )
     except Exception as e:
-        logger.error(f"Failed to send initial message: {e}")
+        logger.error(f"Failed to send initial message/photo: {e}")
         temp = await client.send_message(
             chat_id=message.chat.id,
-            text="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>",
-            parse_mode=ParseMode.HTML
+            text="<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>"
         )
 
     args = message.text.split(maxsplit=1)
@@ -481,11 +631,20 @@ async def del_force_sub(client: Client, message: Message):
     if len(args) != 2:
         buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
         try:
-            await temp.edit(
-                "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl -100XXXXXXXXXX</code>\n<b>Rᴇᴍᴏᴠᴇ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>",
-                reply_markup=InlineKeyboardMarkup(buttons),
-                parse_mode=ParseMode.HTML
-            )
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption="<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl -100XXXXXXXXXX</code>\n<b>Rᴇᴍᴏᴠᴇ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>"
+                    ),
+                    reply_markup=InlineKeyboardMarkup(buttons)
+                )
+            else:
+                await temp.edit(
+                    "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl -100XXXXXXXXXX</code>\n<b>Rᴇᴍᴏᴠᴇ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>",
+                    reply_markup=InlineKeyboardMarkup(buttons),
+                    parse_mode=ParseMode.HTML
+                )
         except Exception as e:
             logger.error(f"Failed to edit message for usage: {e}")
             await temp.edit(
@@ -499,10 +658,18 @@ async def del_force_sub(client: Client, message: Message):
         channel_id = int(args[1])
     except ValueError:
         try:
-            await temp.edit(
-                "<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>",
-                parse_mode=ParseMode.HTML
-            )
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption="<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>"
+                    )
+                )
+            else:
+                await temp.edit(
+                    "<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>",
+                    parse_mode=ParseMode.HTML
+                )
         except Exception as e:
             logger.error(f"Failed to edit message for invalid channel ID: {e}")
             await temp.edit(
@@ -515,10 +682,18 @@ async def del_force_sub(client: Client, message: Message):
     channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
     if channel_id not in channel_ids_only:
         try:
-            await temp.edit(
-                f"<blockquote><b>Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{channel_id}</code>",
-                parse_mode=ParseMode.HTML
-            )
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption=f"<blockquote><b>Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{channel_id}</code>"
+                    )
+                )
+            else:
+                await temp.edit(
+                    f"<blockquote><b>Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{channel_id}</code>",
+                    parse_mode=ParseMode.HTML
+                )
         except Exception as e:
             logger.error(f"Failed to edit message for channel not found: {e}")
             await temp.edit(
@@ -531,26 +706,46 @@ async def del_force_sub(client: Client, message: Message):
         chat = await client.get_chat(channel_id)
         await db.del_channel(channel_id)
         try:
-            await temp.edit(
-                f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ sᴜᴄᴄᴇssғᴜʬʟʏ!</b></blockquote>\n\n"
-                f"<blockquote><b>Nᴀᴍᴇ:</b> {chat.title}</blockquote>\n"
-                f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
-                parse_mode=ParseMode.HTML
-            )
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption=(
+                            f"<blockquote><b>✅ Fᴏʤʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ sᴜᴄᴄᴇssғᴜʬʲʟʟʏ!</b></blockquote>\n\n"
+                            f"<blockquote><b>Nᴀᴍᴇ:</b> {chat.title}</blockquote>\n"
+                            f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>"
+                        )
+                    )
+                )
+            else:
+                await temp.edit(
+                    f"<blockquote><b>✅ Fᴏʤʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ sᴜᴄᴄᴇssғᴜʬʲʟʟʏ!</b></blockquote>\n\n"
+                    f"<blockquote><b>Nᴀᴍᴇ:</b> {chat.title}</blockquote>\n"
+                    f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
+                    parse_mode=ParseMode.HTML
+                )
         except Exception as e:
             logger.error(f"Failed to edit message for channel removed: {e}")
             await temp.edit(
-                f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ sᴜᴄᴄᴇssғᴜʬʟʏ!</b></blockquote>\n\n"
+                f"<blockquote><b>✅ Fᴏʤʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ sᴜᴄᴄᴇssғᴜʬʲʟʟʏ!</b></blockquote>\n\n"
                 f"<blockquote><b>Nᴀᴍᴇ:</b> {chat.title}</blockquote>\n"
                 f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
                 parse_mode=ParseMode.HTML
             )
     except Exception as e:
         try:
-            await temp.edit(
-                f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
-                parse_mode=ParseMode.HTML
-            )
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption=f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>"
+                    )
+                )
+            else:
+                await temp.edit(
+                    f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
+                    parse_mode=ParseMode.HTML
+                )
         except Exception as e2:
             logger.error(f"Failed to edit message for channel remove failure: {e2}")
             await temp.edit(
@@ -560,22 +755,37 @@ async def del_force_sub(client: Client, message: Message):
 
 @Bot.on_message(filters.command('listchnl') & filters.private & admin)
 async def list_force_sub_channels(client: Client, message: Message):
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    if not is_valid_url(selected_image):
+        logger.warning(f"Selected image URL invalid: {selected_image}. Falling back to START_PIC: {START_PIC}")
+        selected_image = START_PIC
+    if not is_valid_url(selected_image):
+        logger.error(f"START_PIC URL invalid: {START_PIC}. Using text message.")
+        selected_image = None
+
     channels = await db.show_channels()
     if not channels:
         try:
-            await message.reply(
-                "<b>Nᴏ ᴄʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ғᴏʀ ғᴏʀᴄᴇ-sᴜʙ.</b>",
-                parse_mode=ParseMode.HTML
-            )
+            if selected_image:
+                await message.reply_photo(
+                    photo=selected_image,
+                    caption="<b>Nᴏ ᴄʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ғᴏʀ ғᴏʀᴄᴇ-sᴜʬ.</b>",
+                    parse_mode=ParseMode.HTML
+                )
+            else:
+                await message.reply(
+                    "<b>Nᴏ ᴄʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ғᴏʀ ғᴏʀᴄᴇ-sᴜʬ.</b>",
+                    parse_mode=ParseMode.HTML
+                )
         except Exception as e:
-            logger.error(f"Failed to send no channels message: {e}")
+            logger.error(f"Failed to send photo for no channels: {e}")
             await message.reply(
-                "<b>Nᴏ ᴄʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ғᴏʀ ғᴏʀᴄᴇ-sᴜʬ.</b>",
+                "<b>Nᴏ ᴄʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ғᴏʀ ғᴏʤʀᴄᴇ-sᴜʬ.</b>",
                 parse_mode=ParseMode.HTML
             )
         return
 
-    settings_text = "<b>›› Fᴏʀᴄᴇ-Sᴜʙ Cʜᴀɴɴᴇʟs:</b>\n\n"
+    settings_text = "<b>›› Fᴏʤʀᴄᴇ-Sᴜʬ Cʜᴀɴɴᴇʟs:</b>\n\n"
     for ch_id in channels:
         try:
             chat = await client.get_chat(ch_id)
@@ -586,13 +796,21 @@ async def list_force_sub_channels(client: Client, message: Message):
             settings_text += f"<blockquote><b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʙʟᴇ</i></blockquote>\n"
 
     try:
-        await message.reply(
-            settings_text,
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
-        )
+        if selected_image:
+            await message.reply_photo(
+                photo=selected_image,
+                caption=settings_text,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+        else:
+            await message.reply(
+                settings_text,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
     except Exception as e:
-        logger.error(f"Failed to send channel list: {e}")
+        logger.error(f"Failed to send photo for channel list: {e}")
         await message.reply(
             settings_text,
             parse_mode=ParseMode.HTML,
