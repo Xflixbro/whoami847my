@@ -133,6 +133,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
 
     if data == "fsub_add_channel":
         await db.set_temp_state(chat_id, "awaiting_add_channel_input")
+        logger.info(f"Set state to 'awaiting_add_channel_input' for chat {chat_id}")
         await client.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
@@ -150,6 +151,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
 
     elif data == "fsub_remove_channel":
         await db.set_temp_state(chat_id, "awaiting_remove_channel_input")
+        logger.info(f"Set state to 'awaiting_remove_channel_input' for chat {chat_id}")
         await client.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
@@ -218,8 +220,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
 async def handle_channel_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
-    
-    logger.info(f"Received input: {message.text} from chat {chat_id}, current state: {state}")
+    logger.info(f"Handling input: {message.text} for state: {state} in chat {chat_id}")
 
     try:
         if state == "awaiting_add_channel_input":
@@ -264,29 +265,24 @@ async def handle_channel_input(client: Client, message: Message):
                     await db.rem_channel(ch_id)
                 await message.reply("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
             else:
-                try:
-                    ch_id = int(message.text)
-                    if ch_id in all_channels:
-                        await db.rem_channel(ch_id)
-                        await message.reply(f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <blockquote><code>{ch_id}</code></blockquote>")
-                    else:
-                        await message.reply(f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <blockquote><code>{ch_id}</code></blockquote>")
-                except ValueError:
-                    await message.reply("<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>")
-                except Exception as e:
-                    logger.error(f"Error removing channel {message.text}: {e}")
-                    await message.reply(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
+                ch_id = int(message.text)
+                if ch_id in all_channels:
+                    await db.rem_channel(ch_id)
+                    await message.reply(f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <blockquote><code>{ch_id}</code></blockquote>")
+                else:
+                    await message.reply(f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <blockquote><code>{ch_id}</code></blockquote>")
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
     except ValueError:
+        logger.error(f"Invalid input received: {message.text}")
         await message.reply("<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>")
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id)
     except Exception as e:
         logger.error(f"Failed to process channel input {message.text}: {e}")
         await message.reply(
-            f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>",
+            f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴘʀᴏᴄᴇss ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>",
             parse_mode=ParseMode.HTML
         )
         await db.set_temp_state(chat_id, "")
