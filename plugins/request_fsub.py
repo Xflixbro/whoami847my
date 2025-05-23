@@ -133,46 +133,44 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
 
     if data == "fsub_add_channel":
         await db.set_temp_state(chat_id, "awaiting_add_channel_input")
-        logger.info(f"Set state to 'awaiting_add_channel_input' for chat {chat_id}")
         await client.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
-            text="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b></blockquote>",
+            text="<blockquote><b>চ্যানেল আইডি দিন।</b>\n<b>একবারে শুধুমাত্র একটি চ্যানেল যোগ করুন।</b></blockquote>",
             reply_markup=InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
-                    InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
+                    InlineKeyboardButton("•ব্যাক•", callback_data="fsub_back"),
+                    InlineKeyboardButton("•বন্ধ•", callback_data="fsub_close")
                 ]
             ]),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
-        await callback.answer("<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b></blockquote>")
+        await callback.answer("চ্যানেল আইডি দিন।")
 
     elif data == "fsub_remove_channel":
         await db.set_temp_state(chat_id, "awaiting_remove_channel_input")
-        logger.info(f"Set state to 'awaiting_remove_channel_input' for chat {chat_id}")
         await client.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
-            text="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ '<code>all</code>' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs.</b></blockquote>",
+            text="<blockquote><b>চ্যানেল আইডি দিন অথবা '<code>all</code>' টাইপ করুন সব চ্যানেল মুছে ফেলতে।</b></blockquote>",
             reply_markup=InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
-                    InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
+                    InlineKeyboardButton("•ব্যাক•", callback_data="fsub_back"),
+                    InlineKeyboardButton("•বন্ধ•", callback_data="fsub_close")
                 ]
             ]),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
-        await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ '<code>all</code>'.</b></blockquote>")
+        await callback.answer("চ্যানেল আইডি বা 'all' দিন।")
 
     elif data == "fsub_toggle_mode":
-        temp = await callback.message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
+        temp = await callback.message.reply("<b><i>একটু অপেক্ষা করুন...</i></b>", quote=True)
         channels = await db.show_channels()
 
         if not channels:
-            await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+            await temp.edit("<blockquote><b>❌ কোনো ফোর্স-সাব চ্যানেল পাওয়া যায়নি।</b></blockquote>")
             await callback.answer()
             return
 
@@ -186,12 +184,12 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
             except Exception as e:
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
-                buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
+                buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (অনুপলব্ধ)", callback_data=f"rfs_ch_{ch_id}")])
 
-        buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
+        buttons.append([InlineKeyboardButton("বন্ধ ✖️", callback_data="close")])
 
         await temp.edit(
-            "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
+            "<blockquote><b>⚡ ফোর্স-সাব মোড টগল করতে একটি চ্যানেল নির্বাচন করুন:</b></blockquote>",
             reply_markup=InlineKeyboardMarkup(buttons),
             disable_web_page_preview=True
         )
@@ -199,45 +197,32 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
 
     elif data == "fsub_refresh":
         await show_force_sub_settings(client, chat_id, callback.message.id)
-        await callback.answer("Sᴇᴛᴛɪɴɢs ʀᴇғʀᴇsʜᴇᴅ!")
+        await callback.answer("সেটিংস রিফ্রেশ করা হয়েছে!")
 
     elif data == "fsub_close":
         await db.set_temp_state(chat_id, "")
         await callback.message.delete()
-        await callback.answer("Sᴇᴛᴛɪɴɢs ᴄʟᴏsᴇᴅ!")
+        await callback.answer("সেটিংস বন্ধ করা হয়েছে!")
 
     elif data == "fsub_back":
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id, message_id)
-        await callback.answer("Bᴀᴄᴋ ᴛᴏ sᴇᴛᴛɪɴɢs!")
+        await callback.answer("সেটিংসে ফিরে গেছেন!")
 
     elif data == "fsub_cancel":
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id, message_id)
-        await callback.answer("Aᴄᴛɪᴏɴ ᴄᴀɴᴄᴇʟʟᴇᴅ!")
+        await callback.answer("অ্যাকশন বাতিল করা হয়েছে!")
 
-@Bot.on_message(filters.private & filters.text & admin)
+@Bot.on_message(filters.private & filters.regex(r"^\s*-?\d+\s*$|^\s*all\s*$") & admin)
 async def handle_channel_input(client: Client, message: Message):
     chat_id = message.chat.id
-    user_id = message.from_user.id
     state = await db.get_temp_state(chat_id)
+    
+    logger.info(f"Received input: '{message.text}' from chat {chat_id}, current state: {state}")
+    
     input_text = message.text.strip()
-    logger.info(f"Handling input: '{input_text}' for state: {state} in chat {chat_id} by user {user_id}")
-
-    # Check if user is admin
-    if not await db.admin_exist(user_id):
-        logger.warning(f"User {user_id} is not an admin")
-        await message.reply("<blockquote><b>❌ You are not authorized to perform this action.</b></blockquote>")
-        return
-
-    # Validate input
-    if not (input_text.lower() == "all" or input_text.strip().lstrip('-').isdigit()):
-        logger.error(f"Invalid input received: {input_text}")
-        await message.reply("<blockquote><b>❌ Invalid input! Please provide a valid channel ID (e.g., -100123456789) or type 'all'.</b></blockquote>")
-        await db.set_temp_state(chat_id, "")
-        await show_force_sub_settings(client, chat_id)
-        return
-
+    
     try:
         if state == "awaiting_add_channel_input":
             channel_id = int(input_text)
@@ -245,35 +230,42 @@ async def handle_channel_input(client: Client, message: Message):
             all_channels = await db.show_channels()
             channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
             if channel_id in channel_ids_only:
-                await message.reply(f"<blockquote><b>Channel already exists:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
-                logger.info(f"Channel {channel_id} already exists")
+                await message.reply(f"<blockquote><b>চ্যানেল ইতিমধ্যে বিদ্যমান:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
                 return
 
-            chat = await client.get_chat(channel_id)
-            logger.info(f"Fetched chat info for {channel_id}: {chat.title}")
+            try:
+                chat = await client.get_chat(channel_id)
+                logger.info(f"Retrieved chat: {chat.title} ({chat.id})")
+            except Exception as e:
+                logger.error(f"Failed to get chat {channel_id}: {e}")
+                await message.reply(f"<blockquote><b>চ্যানেল তথ্য পাওয়া যায়নি:</b></blockquote>\n <code>{e}</code>")
+                return
 
             if chat.type != ChatType.CHANNEL:
-                await message.reply("<b>❌ Only public or private channels are allowed.</b>")
-                logger.warning(f"Chat {channel_id} is not a channel")
+                await message.reply("<b>❌ শুধুমাত্র পাবলিক বা প্রাইভেট চ্যানেল অনুমোদিত।</b>")
                 return
 
-            member = await client.get_chat_member(chat.id, "me")
-            if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-                await message.reply("<b>❌ Bot must be an admin in that channel.</b>")
-                logger.warning(f"Bot is not admin in channel {channel_id}")
+            try:
+                member = await client.get_chat_member(chat.id, "me")
+                logger.info(f"Bot status in channel {chat.id}: {member.status}")
+                if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+                    await message.reply("<b>❌ বটকে ঐ চ্যানেলে অ্যাডমিন করতে হবে।</b>")
+                    return
+            except Exception as e:
+                logger.error(f"Failed to check bot status in channel {channel_id}: {e}")
+                await message.reply(f"<blockquote><b>বটের স্ট্যাটাস চেক করতে ব্যর্থ:</b></blockquote>\n <code>{e}</code>")
                 return
 
             link = await client.export_chat_invite_link(chat.id) if not chat.username else f"https://t.me/{chat.username}"
             
             await db.add_channel(channel_id)
             await message.reply(
-                f"<blockquote><b>✅ Force-sub Channel added successfully!</b></blockquote>\n\n"
-                f"<blockquote><b>Name:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-                f"<blockquote><b>ID: <code>{channel_id}</code></b></blockquote>",
+                f"<blockquote><b>✅ ফোর্স-সাব চ্যানেল সফলভাবে যোগ করা হয়েছে!</b></blockquote>\n\n"
+                f"<blockquote><b>নাম:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                f"<blockquote><b>আইডি: <code>{channel_id}</code></b></blockquote>",
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
-            logger.info(f"Successfully added channel {channel_id}")
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
@@ -281,38 +273,35 @@ async def handle_channel_input(client: Client, message: Message):
             all_channels = await db.show_channels()
             if input_text.lower() == "all":
                 if not all_channels:
-                    await message.reply("<blockquote><b>❌ No force-sub channels found.</b></blockquote>")
-                    logger.info("No channels to remove")
+                    await message.reply("<blockquote><b>❌ কোনো ফোর্স-সাব চ্যানেল পাওয়া যায়নি।</b></blockquote>")
                     return
                 for ch_id in all_channels:
                     await db.rem_channel(ch_id)
-                await message.reply("<blockquote><b>✅ All force-sub channels removed.</b></blockquote>")
-                logger.info("Removed all channels")
+                await message.reply("<blockquote><b>✅ সব ফোর্স-সাব চ্যানেল মুছে ফেলা হয়েছে।</b></blockquote>")
             else:
-                ch_id = int(input_text)
-                if ch_id in all_channels:
-                    await db.rem_channel(ch_id)
-                    await message.reply(f"<blockquote><b>✅ Channel removed:</b></blockquote>\n <blockquote><code>{ch_id}</code></blockquote>")
-                    logger.info(f"Removed channel {ch_id}")
-                else:
-                    await message.reply(f"<blockquote><b>❌ Channel not found:</b></blockquote>\n <blockquote><code>{ch_id}</code></blockquote>")
-                    logger.warning(f"Channel {ch_id} not found")
+                try:
+                    ch_id = int(input_text)
+                    if ch_id in all_channels:
+                        await db.rem_channel(ch_id)
+                        await message.reply(f"<blockquote><b>✅ চ্যানেল মুছে ফেলা হয়েছে:</b></blockquote>\n <blockquote><code>{ch_id}</code></blockquote>")
+                    else:
+                        await message.reply(f"<blockquote><b>❌ চ্যানেল পাওয়া যায়নি:</b></blockquote>\n <blockquote><code>{ch_id}</code></blockquote>")
+                except ValueError:
+                    await message.reply("<blockquote><b>ব্যবহার:</b></blockquote>\n <code>/delchnl <channel_id | all</code>")
+                except Exception as e:
+                    logger.error(f"Error removing channel {input_text}: {e}")
+                    await message.reply(f"<blockquote><b>❌ ত্রুটি:</b></blockquote>\n <code>{e}</code>")
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
-        else:
-            logger.warning(f"No valid state for input handling: {state}")
-            await message.reply("<blockquote><b>❌ No action pending. Please use /forcesub to start.</b></blockquote>")
-
-    except ValueError as ve:
-        logger.error(f"Invalid channel ID: {input_text}, Error: {ve}")
-        await message.reply("<blockquote><b>❌ Invalid channel ID!</b></blockquote>")
+    except ValueError:
+        await message.reply("<blockquote><b>❌ অবৈধ চ্যানেল আইডি!</b></blockquote>")
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id)
     except Exception as e:
-        logger.error(f"Failed to process channel input {input_text}: {e}", exc_info=True)
+        logger.error(f"Failed to process channel input {input_text}: {e}")
         await message.reply(
-            f"<blockquote><b>❌ Failed to process channel:</b></blockquote>\n<code>{input_text}</code>\n\n<i>{e}</i>",
+            f"<blockquote><b>❌ চ্যানেল যোগ করতে ব্যর্থ:</b></blockquote>\n<code>{input_text}</code>\n\n<i>{e}</i>",
             parse_mode=ParseMode.HTML
         )
         await db.set_temp_state(chat_id, "")
@@ -320,11 +309,11 @@ async def handle_channel_input(client: Client, message: Message):
 
 @Bot.on_message(filters.command('fsub_mode') & filters.private & admin)
 async def change_force_sub_mode(client: Client, message: Message):
-    temp = await message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
+    temp = await message.reply("<b><i>একটু অপেক্ষা করুন...</i></b>", quote=True)
     channels = await db.show_channels()
 
     if not channels:
-        await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        await temp.edit("<blockquote><b>❌ কোনো ফোর্স-সাব চ্যানেল পাওয়া যায়নি।</b></blockquote>")
         return
 
     buttons = []
@@ -337,12 +326,12 @@ async def change_force_sub_mode(client: Client, message: Message):
             buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
         except Exception as e:
             logger.error(f"Failed to fetch chat {ch_id}: {e}")
-            buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
+            buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (অনুপলব্ধ)", callback_data=f"rfs_ch_{ch_id}")])
 
-    buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
+    buttons.append([InlineKeyboardButton("বন্ধ ✖️", callback_data="close")])
 
     await temp.edit(
-        "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʲ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
+        "<blockquote><b>⚡ ফোর্স-সাব মোড টগল করতে একটি চ্যানেল নির্বাচন করুন:</b></blockquote>",
         reply_markup=InlineKeyboardMarkup(buttons),
         disable_web_page_preview=True
     )
@@ -374,13 +363,13 @@ async def handle_join_request(client, chat_join_request):
 
 @Bot.on_message(filters.command('addchnl') & filters.private & admin)
 async def add_force_sub(client: Client, message: Message):
-    temp = await message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
+    temp = await message.reply("<b><i>একটু অপেক্ষা করুন...</i></b>", quote=True)
     args = message.text.split(maxsplit=1)
 
-    if len(args) != By2:
-        buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
+    if len(args) != 2:
+        buttons = [[InlineKeyboardButton("বন্ধ ✖️", callback_data="close")]]
         await temp.edit(
-            "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>",
+            "<blockquote><b>ব্যবহার:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>একবারে শুধুমাত্র একটি চ্যানেল যোগ করুন।</b>",
             reply_markup=InlineKeyboardMarkup(buttons)
         )
         return
@@ -388,95 +377,99 @@ async def add_force_sub(client: Client, message: Message):
     try:
         channel_id = int(args[1])
     except ValueError:
-        await temp.edit("<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>")
+        await temp.edit("<blockquote><b>❌ অবৈধ চ্যানেল আইডি!</b></blockquote>")
         return
 
     all_channels = await db.show_channels()
     channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
     if channel_id in channel_ids_only:
-        await temp.edit(f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
+        await temp.edit(f"<blockquote><b>চ্যানেল ইতিমধ্যে বিদ্যমান:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
         return
 
     try:
         chat = await client.get_chat(channel_id)
-
-        if chat.type != ChatType.CHANNEL:
-            await temp.edit("<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>")
-            return
-
-        member = await client.get_chat_member(chat.id, "me")
-        if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-            await temp.edit("<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>")
-            return
-
-        link = await client.export_chat_invite_link(chat.id) if not chat.username else f"https://t.me/{chat.username}"
-        
-        await db.add_channel(channel_id)
-        await temp.edit(
-            f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
-            f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-            f"<blockquote><b>Iᴅ:</b> <code>{channel_id}</code></blockquote>",
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
-        )
-
+        logger.info(f"Retrieved chat: {chat.title} ({chat.id})")
     except Exception as e:
-        logger.error(f"Failed to add channel {channel_id}: {e}")
-        await temp.edit(
-            f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʲ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
-            parse_mode=ParseMode.HTML
-        )
+        logger.error(f"Failed to get chat {channel_id}: {e}")
+        await temp.edit(f"<blockquote><b>চ্যানেল তথ্য পাওয়া যায়নি:</b></blockquote>\n <code>{e}</code>")
+        return
+
+    if chat.type != ChatType.CHANNEL:
+        await temp.edit("<b>❌ শুধুমাত্র পাবলিক বা প্রাইভেট চ্যানেল অনুমোদিত।</b>")
+        return
+
+    try:
+        member = await client.get_chat_member(chat.id, "me")
+        logger.info(f"Bot status in channel {chat.id}: {member.status}")
+        if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+            await temp.edit("<b>❌ বটকে ঐ চ্যানেলে অ্যাডমিন করতে হবে।</b>")
+            return
+    except Exception as e:
+        logger.error(f"Failed to check bot status in channel {channel_id}: {e}")
+        await temp.edit(f"<blockquote><b>বটের স্ট্যাটাস চেক করতে ব্যর্থ:</b></blockquote>\n <code>{e}</code>")
+        return
+
+    link = await client.export_chat_invite_link(chat.id) if not chat.username else f"https://t.me/{chat.username}"
+    
+    await db.add_channel(channel_id)
+    await temp.edit(
+        f"<blockquote><b>✅ ফোর্স-সাব চ্যানেল সফলভাবে যোগ করা হয়েছে!</b></blockquote>\n\n"
+        f"<blockquote><b>নাম:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+        f"<blockquote><b>আইডি:</b> <code>{channel_id}</code></blockquote>",
+        parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True
+    )
 
 @Bot.on_message(filters.command('delchnl') & filters.private & admin)
 async def del_force_sub(client: Client, message: Message):
-    temp = await message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
+    temp = await message.reply("<b><i>একটু অপেক্ষা করুন...</i></b>", quote=True)
     args = message.text.split(maxsplit=1)
     all_channels = await db.show_channels()
 
     if len(args) < 2:
-        buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
+        buttons = [[InlineKeyboardButton("বন্ধ ✖️", callback_data="close")]]
         await temp.edit(
-            "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
+            "<blockquote><b>ব্যবহার:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
             reply_markup=InlineKeyboardMarkup(buttons)
         )
         return
 
     if args[1].lower() == "all":
         if not all_channels:
-            await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+            await temp.edit("<blockquote><b>❌ কোনো ফোর্স-সাব চ্যানেল পাওয়া যায়নি।</b></blockquote>")
             return
         for ch_id in all_channels:
             await db.rem_channel(ch_id)
-        await temp.edit("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
+        await temp.edit("<blockquote><b>✅ সব ফোর্স-সাব চ্যানেল মুছে ফেলা হয়েছে।</b></blockquote>")
         return
 
     try:
         ch_id = int(args[1])
         if ch_id in all_channels:
             await db.rem_channel(ch_id)
-            await temp.edit(f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+            await temp.edit(f"<blockquote><b>✅ চ্যানেল মুছে ফেলা হয়েছে:</b></blockquote>\n <code>{ch_id}</code>")
         else:
-            await temp.edit(f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+            await temp.edit(f"<blockquote><b>❌ চ্যানেল পাওয়া যায়নি:</b></blockquote>\n <code>{ch_id}</code>")
     except ValueError:
-        buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
+        buttons = [[InlineKeyboardButton("বন্ধ ✖️", callback_data="close")]]
         await temp.edit(
-            "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
+            "<blockquote><b>ব্যবহার:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
             reply_markup=InlineKeyboardMarkup(buttons)
         )
     except Exception as e:
         logger.error(f"Error removing channel {args[1]}: {e}")
-        await temp.edit(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
+        await temp.edit(f"<blockquote><b>❌ ত্রুটি:</b></blockquote>\n <code>{e}</code>")
 
 @Bot.on_message(filters.command('listchnl') & filters.private & admin)
 async def list_force_sub_channels(client: Client, message: Message):
-    temp = await message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
+    temp = await message.reply("<b><i>একটু অপেক্ষা করুন...</i></b>", quote=True)
     channels = await db.show_channels()
 
     if not channels:
-        await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        await temp.edit("<blockquote><b>❌ কোনো ফোর্স-সাব চ্যানেল পাওয়া যায়নি।</b></blockquote>")
         return
 
-    result = "<blockquote><b>⚡ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟs:</b></blockquote>\n\n"
+    result = "<blockquote><b>⚡ ফোর্স-সাব চ্যানেলসমূহ:</b></blockquote>\n\n"
     for ch_id in channels:
         try:
             chat = await client.get_chat(ch_id)
@@ -484,9 +477,9 @@ async def list_force_sub_channels(client: Client, message: Message):
             result += f"<b>•</b> <a href='{link}'>{chat.title}</a> [<code>{ch_id}</code>]\n"
         except Exception as e:
             logger.error(f"Failed to fetch chat {ch_id}: {e}")
-            result += f"<b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʙʟᴇ</i>\n"
+            result += f"<b>•</b> <code>{ch_id}</code> — <i>অনুপলব্ধ</i>\n"
 
-    buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
+    buttons = [[InlineKeyboardButton("বন্ধ ✖️", callback_data="close")]]
     await temp.edit(
         result, 
         reply_markup=InlineKeyboardMarkup(buttons),
