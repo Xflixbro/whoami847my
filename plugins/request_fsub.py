@@ -16,56 +16,57 @@ import logging
 from pyrogram import Client, filters, __version__
 from pyrogram.enums import ParseMode, ChatAction, ChatMemberStatus, ChatType
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatMemberUpdated, ChatPermissions, InputMediaPhoto
-from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant, InviteHashEmpty, ChatAdminRequired, PeerIdInvalid, UserIsBlocked, InputUserDeactivated, UserNotParticipant
 from bot import Bot
-from config import *
 from helper_func import *
 from database.database import *
 
 # Set up logging for this module
 logger = logging.getLogger(__name__)
 
-# Function to show force-sub settings with channels list and buttons
+# Function to show force-sub settings with channels list, buttons, and message effects
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
-    settings_text = "›› Rᴇǫᴜᴇsᴛ Fꜱᴜʙ Sᴇᴛᴛɪɴɢs:\n\n"
+    settings_text = "<b>›› Rᴇǫᴜᴇsᴛ Fꜱᴜʙ Sᴇᴛᴛɪɴɢs:</b>\n\n"
     channels = await db.show_channels()
     
     if not channels:
-        settings_text += "<i>Nᴏ ᴄʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ʏᴇᴛ. Uꜱᴇ 'ADD CHNL' ᴛᴏ ᴀᴅᴅ ᴀ ᴄʜᴀɴɴᴇʟ.</i>"
+        settings_text += "<i>Nᴏ ᴄʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ʏᴇᴛ. Uꜱᴇ 'ᴀᴅᴅ Cʜᴀɴɴᴇʟs' ᴛᴏ ᴀᴅᴅ ᴀ ᴄʜᴀɴɴᴇʟ.</i>"
     else:
         settings_text += "<blockquote><b>⚡ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟs:</b></blockquote>\n\n"
         for ch_id in channels:
             try:
                 chat = await client.get_chat(ch_id)
                 link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
-                settings_text += f"<b>•</b> <a href='{link}'>{chat.title}</a> [<code>{ch_id}</code>]\n"
-            except Exception:
-                settings_text += f"<b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʙʟᴇ</i>\n"
+                settings_text += f"<blockquote><b>•</b> <a href='{link}'>{chat.title}</a> [<code>{ch_id}</code>]</blockquote>\n"
+            except Exception as e:
+                logger.error(f"Failed to fetch chat {ch_id}: {e}")
+                settings_text += f"<blockquote><b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʙʟᴇ</i></blockquote>\n"
 
     buttons = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("ADD CHNL", callback_data="fsub_add_channel"),
-                InlineKeyboardButton("REMOVE CHNL", callback_data="fsub_remove_channel")
+                InlineKeyboardButton("•ᴀᴅᴅ Cʜᴀɴɴᴇʟs", callback_data="fsub_add_channel"),
+                InlineKeyboardButton("ʀᴇᴍovᴇ Cʜᴀɴɴᴇʟs•", callback_data="fsub_remove_channel")
             ],
             [
-                InlineKeyboardButton("Tᴏɢɢʟᴇ Mᴏᴅᴇ", callback_data="fsub_toggle_mode"),
-                InlineKeyboardButton("REFRESH", callback_data="fsub_refresh")
+                InlineKeyboardButton("Tᴏɢɢʟᴇ Mᴏᴅᴇ•", callback_data="fsub_toggle_mode"),
+                InlineKeyboardButton("•ʀᴇꜰᴇʀsʜ•", callback_data="fsub_refresh")
             ],
             [
-                InlineKeyboardButton("CLOSE", callback_data="fsub_close")
+                InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
             ]
         ]
     )
 
-    image_url = "https://i.postimg.cc/VLyZyg1z/57ccdb58.jpg"
+    # Select random image and effect
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
 
     if message_id:
         try:
             await client.edit_message_media(
                 chat_id=chat_id,
                 message_id=message_id,
-                media=InputMediaPhoto(media=image_url, caption=settings_text),
+                media=InputMediaPhoto(media=selected_image, caption=settings_text),
                 reply_markup=buttons
             )
         except Exception as e:
@@ -82,11 +83,11 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         try:
             await client.send_photo(
                 chat_id=chat_id,
-                photo=image_url,
+                photo=selected_image,
                 caption=settings_text,
                 reply_markup=buttons,
                 parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
+                message_effect_id=selected_effect
             )
         except Exception as e:
             logger.error(f"Failed to send photo: {e}")
@@ -95,7 +96,8 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 text=settings_text,
                 reply_markup=buttons,
                 parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
+                disable_web_page_preview=True,
+                message_effect_id=selected_effect
             )
 
 @Bot.on_message(filters.command('forcesub') & filters.private & admin)
@@ -109,20 +111,19 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
     message_id = callback.message.id
 
     if data == "fsub_add_channel":
-        # Edit the current message to ask for channel ID with Back and Close buttons
         await db.set_temp_state(chat_id, "awaiting_add_channel_input")
         try:
             await client.edit_message_media(
                 chat_id=chat_id,
                 message_id=message_id,
                 media=InputMediaPhoto(
-                    media="https://i.postimg.cc/VLyZyg1z/57ccdb58.jpg",
-                    caption="Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID."
+                    media=random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC,
+                    caption="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b></blockquote>"
                 ),
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("BACK", callback_data="fsub_back"),
-                        InlineKeyboardButton("CLOSE", callback_data="fsub_close")
+                        InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
+                        InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
                     ]
                 ])
             )
@@ -131,33 +132,32 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text="Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.",
+                text="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b></blockquote>",
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("BACK", callback_data="fsub_back"),
-                        InlineKeyboardButton("CLOSE", callback_data="fsub_close")
+                        InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
+                        InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
                     ]
                 ]),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
-        await callback.answer("Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.")
+        await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b></blockquote>")
 
     elif data == "fsub_remove_channel":
-        # Edit the current message to ask for channel ID or 'all' with Back and Close buttons
         await db.set_temp_state(chat_id, "awaiting_remove_channel_input")
         try:
             await client.edit_message_media(
                 chat_id=chat_id,
                 message_id=message_id,
                 media=InputMediaPhoto(
-                    media="https://i.postimg.cc/VLyZyg1z/57ccdb58.jpg",
-                    caption="Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs."
+                    media=random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC,
+                    caption="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs.</b></blockquote>"
                 ),
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("BACK", callback_data="fsub_back"),
-                        InlineKeyboardButton("CLOSE", callback_data="fsub_close")
+                        InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
+                        InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
                     ]
                 ])
             )
@@ -166,20 +166,19 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
-                text="Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs.",
+                text="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs.</b></blockquote>",
                 reply_markup=InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton("BACK", callback_data="fsub_back"),
-                        InlineKeyboardButton("CLOSE", callback_data="fsub_close")
+                        InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
+                        InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
                     ]
                 ]),
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
-        await callback.answer("Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all'.")
+        await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ '[<code>all</code>]'.</b></blockquote>")
 
     elif data == "fsub_toggle_mode":
-        # Simulate /fsub_mode command
         temp = await callback.message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
         channels = await db.show_channels()
 
@@ -196,8 +195,9 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 status = "🟢" if mode == "on" else "🔴"
                 title = f"{status} {chat.title}"
                 buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
-            except:
-                buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
+            except Exception as e:
+                logger.error(f"Failed to fetch chat {ch_id}: {e}")
+                buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʬʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
 
         buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
 
@@ -238,7 +238,7 @@ async def handle_channel_input(client: Client, message: Message):
         if state == "awaiting_add_channel_input":
             channel_id = int(message.text)
             all_channels = await db.show_channels()
-            channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
+            channel_ids_only = [int(cid) for cid in all_channels]  # Ensure integer comparison
             if channel_id in channel_ids_only:
                 await message.reply(f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
                 return
@@ -261,36 +261,35 @@ async def handle_channel_input(client: Client, message: Message):
                 f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
                 f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
                 f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
+                parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
-            # Reset state and go back to settings
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
         elif state == "awaiting_remove_channel_input":
             all_channels = await db.show_channels()
+            channel_ids_only = [int(cid) for cid in all_channels]  # Ensure integer comparison
             if message.text.lower() == "all":
                 if not all_channels:
-                    await message.reply("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+                    await message.reply("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʬ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
                     return
                 for ch_id in all_channels:
-                    await db.rem_channel(ch_id)
-                await message.reply("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
+                    await db.rem_channel(int(ch_id))
+                await message.reply("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʬ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
             else:
                 try:
                     ch_id = int(message.text)
-                    if ch_id in all_channels:
+                    if ch_id in channel_ids_only:
                         await db.rem_channel(ch_id)
                         await message.reply(f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>")
                     else:
                         await message.reply(f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>")
                 except ValueError:
-                    await message.reply(
-                        "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
-                    )
+                    await message.reply("<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>")
                 except Exception as e:
+                    logger.error(f"Error removing channel {message.text}: {e}")
                     await message.reply(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
-            # Reset state and go back to settings
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
@@ -299,7 +298,11 @@ async def handle_channel_input(client: Client, message: Message):
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id)
     except Exception as e:
-        await message.reply(f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>")
+        logger.error(f"Failed to process channel input {message.text}: {e}")
+        await message.reply(
+            f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>",
+            parse_mode=ParseMode.HTML
+        )
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id)
 
@@ -309,7 +312,8 @@ async def change_force_sub_mode(client: Client, message: Message):
     channels = await db.show_channels()
 
     if not channels:
-        return await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʬ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        return
 
     buttons = []
     for ch_id in channels:
@@ -319,13 +323,14 @@ async def change_force_sub_mode(client: Client, message: Message):
             status = "🟢" if mode == "on" else "🔴"
             title = f"{status} {chat.title}"
             buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
-        except:
-            buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
+        except Exception as e:
+            logger.error(f"Failed to fetch chat {ch_id}: {e}")
+            buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʬʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
 
     buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
 
     await temp.edit(
-        "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
+        "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʬ ᴍᴏᴅᴇ:</b></blockquote>",
         reply_markup=InlineKeyboardMarkup(buttons),
         disable_web_page_preview=True
     )
@@ -362,43 +367,53 @@ async def add_force_sub(client: Client, message: Message):
 
     if len(args) != 2:
         buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
-        return await temp.edit(
+        await temp.edit(
             "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>",
             reply_markup=InlineKeyboardMarkup(buttons)
         )
+        return
 
     try:
         channel_id = int(args[1])
     except ValueError:
-        return await temp.edit("<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>")
+        await temp.edit("<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>")
+        return
 
     all_channels = await db.show_channels()
-    channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
+    channel_ids_only = [int(cid) for cid in all_channels]  # Ensure integer comparison
     if channel_id in channel_ids_only:
-        return await temp.edit(f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
+        await temp.edit(f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
+        return
 
     try:
         chat = await client.get_chat(channel_id)
 
         if chat.type != ChatType.CHANNEL:
-            return await temp.edit("<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>")
+            await temp.edit("<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>")
+            return
 
         member = await client.get_chat_member(chat.id, "me")
         if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-            return await temp.edit("<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>")
+            await temp.edit("<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>")
+            return
 
         link = await client.export_chat_invite_link(chat.id) if not chat.username else f"https://t.me/{chat.username}"
         
         await db.add_channel(channel_id)
-        return await temp.edit(
-            f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
+        await temp.edit(
+            f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
             f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-            f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
+            f"<blockquote><b>Iᴅ:</b> <code>{channel_id}</code></blockquote>",
+            parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
 
     except Exception as e:
-        return await temp.edit(f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>")
+        logger.error(f"Failed to add channel {channel_id}: {e}")
+        await temp.edit(
+            f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
+            parse_mode=ParseMode.HTML
+        )
 
 @Bot.on_message(filters.command('delchnl') & filters.private & admin)
 async def del_force_sub(client: Client, message: Message):
@@ -408,33 +423,38 @@ async def del_force_sub(client: Client, message: Message):
 
     if len(args) < 2:
         buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
-        return await temp.edit(
+        await temp.edit(
             "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
             reply_markup=InlineKeyboardMarkup(buttons)
         )
+        return
 
     if args[1].lower() == "all":
         if not all_channels:
-            return await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+            await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʬ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+            return
         for ch_id in all_channels:
-            await db.rem_channel(ch_id)
-        return await temp.edit("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
+            await db.rem_channel(int(ch_id))
+        await temp.edit("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʬ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
+        return
 
     try:
         ch_id = int(args[1])
-        if ch_id in all_channels:
+        channel_ids_only = [int(cid) for cid in all_channels]  # Ensure integer comparison
+        if ch_id in channel_ids_only:
             await db.rem_channel(ch_id)
-            return await temp.edit(f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+            await temp.edit(f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>")
         else:
-            return await temp.edit(f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+            await temp.edit(f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>")
     except ValueError:
         buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
-        return await temp.edit(
+        await temp.edit(
             "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
             reply_markup=InlineKeyboardMarkup(buttons)
         )
     except Exception as e:
-        return await temp.edit(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
+        logger.error(f"Error removing channel {args[1]}: {e}")
+        await temp.edit(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
 
 @Bot.on_message(filters.command('listchnl') & filters.private & admin)
 async def list_force_sub_channels(client: Client, message: Message):
@@ -442,7 +462,8 @@ async def list_force_sub_channels(client: Client, message: Message):
     channels = await db.show_channels()
 
     if not channels:
-        return await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʬ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        return
 
     result = "<blockquote><b>⚡ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟs:</b></blockquote>\n\n"
     for ch_id in channels:
@@ -450,14 +471,16 @@ async def list_force_sub_channels(client: Client, message: Message):
             chat = await client.get_chat(ch_id)
             link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
             result += f"<b>•</b> <a href='{link}'>{chat.title}</a> [<code>{ch_id}</code>]\n"
-        except Exception:
-            result += f"<b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʙʟᴇ</i>\n"
+        except Exception as e:
+            logger.error(f"Failed to fetch chat {ch_id}: {e}")
+            result += f"<b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʬʟᴇ</i>\n"
 
     buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
     await temp.edit(
         result, 
-        disable_web_page_preview=True, 
-        reply_markup=InlineKeyboardMarkup(buttons)
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True
     )
 
 #
