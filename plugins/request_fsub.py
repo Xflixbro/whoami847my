@@ -24,21 +24,24 @@ from database.database import *
 # Set up logging for this module
 logger = logging.getLogger(__name__)
 
-# Define message effect IDs (same as in config.py)
-MESSAGE_EFFECT_IDS = [
-    5104841245755180586,  # 🔥
-    5107584321108051014,  # 👍
-    5044134455711629726,  # ❤️
-    5046509860389126442,  # 🎉
-]
+# Function to validate image URL
+async def is_valid_image_url(url):
+    import aiohttp
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.head(url, timeout=5) as response:
+                return response.status == 200 and 'image' in response.headers.get('Content-Type', '')
+    except Exception as e:
+        logger.error(f"Invalid image URL {url}: {e}")
+        return False
 
-# Function to show force-sub settings with channels list, buttons, image, and message effects
+# Function to show force-sub settings with channels list, buttons, and image
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
     settings_text = "<b>›› Rᴇǫᴜᴇsᴛ Fꜱᴜʙ Sᴇᴛᴛɪɴɢs:</b>\n\n"
     channels = await db.show_channels()
     
     if not channels:
-        settings_text += "<blockquote><i>Nᴏ �3083;ʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ʏᴇᴛ. Uꜱᴇ 𖤓 ᴀᴅᴅ Cʜᴀɴɴᴇʟs 𖤓 ᴛᴏ ᴀᴅᴅ ᴀ ᴄʜᴀɴɴᴇʟ.</i></blockquote>"
+        settings_text += "<blockquote><i>Nᴏ Cʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ʏᴇᴛ. Uꜱᴇ 𖤓 ᴀᴅᴅ Cʜᴀɴɴᴇʟs 𖤓 ᴛᴏ ᴀᴅᴅ ᴀ ᴄʜᴀɴɴᴇʟ.</i></blockquote>"
     else:
         settings_text += "<blockquote><b>⚡ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟs:</b></blockquote>\n\n"
         for ch_id in channels:
@@ -66,9 +69,14 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         ]
     )
 
-    # Select random image and effect
-    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
+    # Select random image
+    selected_image = None
+    for img in random.sample(RANDOM_IMAGES, len(RANDOM_IMAGES)):
+        if await is_valid_image_url(img):
+            selected_image = img
+            break
+    if not selected_image:
+        selected_image = START_PIC  # Fallback to default image
 
     if message_id:
         try:
@@ -90,34 +98,20 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 photo=selected_image,
                 caption=settings_text,
                 reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                message_effect_id=selected_effect
+                parse_mode=ParseMode.HTML
             )
-            logger.info(f"Sent photo message with image {selected_image} and effect {selected_effect}")
+            logger.info(f"Sent photo message with image {selected_image}")
         except Exception as e:
             logger.error(f"Failed to send photo message with image {selected_image}: {e}")
             # Fallback to text-only message
-            try:
-                await client.send_message(
-                    chat_id=chat_id,
-                    text=settings_text,
-                    reply_markup=buttons,
-                    parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True,
-                    message_effect_id=selected_effect
-                )
-                logger.info(f"Sent text-only message with effect {selected_effect} as fallback")
-            except Exception as e:
-                logger.error(f"Failed to send text-only message with effect {selected_effect}: {e}")
-                # Final fallback without effect
-                await client.send_message(
-                    chat_id=chat_id,
-                    text=settings_text,
-                    reply_markup=buttons,
-                    parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True
-                )
-                logger.info("Sent text-only message without effect as final fallback")
+            await client.send_message(
+                chat_id=chat_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+            logger.info("Sent text-only message as fallback")
 
 @Bot.on_message(filters.command('forcesub') & filters.private & admin)
 async def force_sub_settings(client: Client, message: Message):
@@ -217,19 +211,23 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
         await show_force_sub_settings(client, chat_id, message_id)
         await callback.answer("Aᴄᴛɪᴏɴ ᴄᴀɴᴄᴇʟʟᴇᴅ!")
 
-@Bot.on_message(filters.private & filters.text & admin)
+@Bot.on_message(filters.private & filters.text)
 async def handle_channel_input(client: Client, message: Message):
     chat_id = message.chat.id
     user_id = message.from_user.id
     input_text = message.text.strip()
     state = await db.get_temp_state(chat_id)
-    logger.info(f"Handling input: '{input_text}' for state: {state} in chat {chat_id} by user {user_id}")
+    logger.info(f"Received message: '{input_text}' for state: {state} in chat {chat_id} by user {user_id}")
 
     # Check if user is admin
     is_admin = await db.admin_exist(user_id) or user_id == OWNER_ID
     if not is_admin:
         logger.warning(f"User {user_id} is not an admin or owner")
         await message.reply("<blockquote><b>❌ You are not authorized to perform this action.</b></blockquote>")
+        return
+
+    if state not in ["awaiting_add_channel_input", "awaiting_remove_channel_input"]:
+        logger.info(f"No action pending for state: {state}, ignoring input: {input_text}")
         return
 
     # Validate input
@@ -301,10 +299,6 @@ async def handle_channel_input(client: Client, message: Message):
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
-        else:
-            logger.warning(f"No valid state for input handling: {state}")
-            await message.reply("<blockquote><b>❌ No action pending. Please use /forcesub to start.</b></blockquote>")
-
     except ValueError as ve:
         logger.error(f"Invalid channel ID: {input_text}, Error: {ve}")
         await message.reply("<blockquote><b>❌ Invalid channel ID!</b></blockquote>")
@@ -344,7 +338,7 @@ async def change_force_sub_mode(client: Client, message: Message):
     buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
 
     await temp.edit(
-        "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
+        "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʰᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
         reply_markup=InlineKeyboardMarkup(buttons),
         disable_web_page_preview=True
     )
@@ -425,7 +419,7 @@ async def add_force_sub(client: Client, message: Message):
     except Exception as e:
         logger.error(f"Failed to add channel {channel_id}: {e}")
         await temp.edit(
-            f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʲ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
+            f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
             parse_mode=ParseMode.HTML
         )
 
