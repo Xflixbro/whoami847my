@@ -15,6 +15,7 @@ import sys
 import re
 import string
 import time
+import logging
 from datetime import datetime, timedelta
 from pyrogram import Client, filters, __version__
 from pyrogram.enums import ParseMode, ChatAction
@@ -26,6 +27,10 @@ from config import *
 from helper_func import *
 from database.database import *
 from database.db_premium import *
+
+# Set up logging for debugging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Define emoji reactions and sticker
 EMOJI_MODE = True
@@ -161,7 +166,7 @@ async def start_command(client: Client, message: Message):
                 pass
         if FILE_AUTO_DELETE > 0:
             notification_msg = await message.reply(
-                f"<blockquote><b>Tʜɪs  ғɪʟᴇ ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ɪɴ {get_exp_time(FILE_AUTO_DELETE).lower()}. ᴘʟᴇᴀsᴇ sᴀᴠᴇ ᴏʀ ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ ʏᴏᴜʀ sᴀᴠᴇᴅ ᴍᴇssᴀɢᴇs ʙᴇғᴏʀᴇ ɪᴛ ɢᴇᴛs ᴅᴇʟᴇᴛᴇᴅ.</b></blockquote>"
+                f"<blockquote><b>ᴛʜɪs ғɪʟᴇ ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ɪɴ {get_exp_time(FILE_AUTO_DELETE).lower()}. ᴘʟᴇᴀsᴇ sᴀᴠᴇ ᴏʀ ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ ʏᴏᴜʀ sᴀᴠᴇᴅ ᴍᴇssᴀɢᴇs ʙᴇғᴏʀᴇ ɪᴛ ɢᴇᴛs ᴅᴇʟᴇᴛᴇᴅ.</b></blockquote>"
             )
             await asyncio.sleep(FILE_AUTO_DELETE)
             for snt_msg in animelord_msgs:    
@@ -188,21 +193,43 @@ async def start_command(client: Client, message: Message):
     ])
     try:
         await asyncio.sleep(0.5)
-        selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-        await message.reply_photo(
-            photo=selected_image,
-            caption=START_MSG.format(
-                first=message.from_user.first_name,
-                last=message.from_user.last_name if message.from_user.last_name else "",
-                username=None if not message.from_user.username else '@' + message.from_user.username,
-                mention=message.from_user.mention,
-                id=message.from_user.id
-            ),
-            reply_markup=reply_markup,
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-        )
+        # Check if RANDOM_IMAGES is defined and valid
+        if not hasattr(config, 'RANDOM_IMAGES') or not RANDOM_IMAGES or not isinstance(RANDOM_IMAGES, list):
+            logger.warning("RANDOM_IMAGES is not defined, empty, or invalid in config.py. Using START_PIC.")
+            selected_image = START_PIC
+        else:
+            selected_image = random.choice(RANDOM_IMAGES)
+        try:
+            # Try sending with message effect
+            await message.reply_photo(
+                photo=selected_image,
+                caption=START_MSG.format(
+                    first=message.from_user.first_name,
+                    last=message.from_user.last_name if message.from_user.last_name else "",
+                    username=None if not message.from_user.username else '@' + message.from_user.username,
+                    mention=message.from_user.mention,
+                    id=message.from_user.id
+                ),
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.warning(f"Failed to apply message effect: {e}. Sending without effect.")
+            await message.reply_photo(
+                photo=selected_image,
+                caption=START_MSG.format(
+                    first=message.from_user.first_name,
+                    last=message.from_user.last_name if message.from_user.last_name else "",
+                    username=None if not message.from_user.username else '@' + message.from_user.username,
+                    mention=message.from_user.mention,
+                    id=message.from_user.id
+                ),
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML
+            )
     except Exception as e:
-        print(f"ᴇʀʀᴏʀ sᴇɴᴅɪɴɢ sᴛᴀʜʀᴛ ᴘʜᴏᴛᴏ: {e}")
+        logger.error(f"ᴇʀʀᴏʀ sᴇɴᴅɪɴɢ sᴛᴀʀᴛ ᴘʜᴏᴛᴏ: {e}")
         await asyncio.sleep(0.5)
         await message.reply_photo(
             photo=START_PIC,
@@ -213,8 +240,87 @@ async def start_command(client: Client, message: Message):
                 mention=message.from_user.mention,
                 id=message.from_user.id
             ),
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.HTML
         )
+
+@Bot.on_callback_query(filters.regex("^(about|help)$"))
+async def handle_callback_query(client: Client, callback_query: CallbackQuery):
+    try:
+        if callback_query.data == "about":
+            await callback_query.message.edit_text(
+                "<blockquote><b>ᴀʙᴏᴜᴛ ᴛʜɪs ʙᴏᴛ:\n\n"
+                "This is a file storage bot created by AnimeLord-Bots. "
+                "It allows users to access files after subscribing to required channels. "
+                "For more information, visit our GitHub: https://github.com/AnimeLord-Bots/FileStore</b></blockquote>",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("ʙᴀᴄᴋ", callback_data="back_to_start")]])
+            )
+        elif callback_query.data == "help":
+            await callback_query.message.edit_text(
+                "<blockquote><b>ʜᴇʟᴘ:\n\n"
+                "Use /start to begin using the bot.\n"
+                "Join the required channels to access files.\n"
+                "Contact @MehediYT69 for support if you encounter issues.</b></blockquote>",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("ʙᴀᴄᴋ", callback_data="back_to_start")]])
+            )
+        await callback_query.answer()
+    except Exception as e:
+        logger.error(f"Error handling callback query {callback_query.data}: {e}")
+        await callback_query.message.reply_text(
+            "<blockquote><b>ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴘʀᴏᴄᴇssɪɴɢ ʏᴏᴜʀ ʀᴇǫᴜᴇsᴛ. ᴘʟᴇᴀsᴇ ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ.</b></blockquote>"
+        )
+        await callback_query.answer()
+
+@Bot.on_callback_query(filters.regex("back_to_start"))
+async def back_to_start(client: Client, callback_query: CallbackQuery):
+    try:
+        reply_markup = InlineKeyboardMarkup([
+            [InlineKeyboardButton("ᴍᴏʀᴇ ᴄʜᴀɴɴᴇʟs", url="https://t.me/Anime_Lord_List")],
+            [InlineKeyboardButton("ᴀʙᴏᴜᴛ", callback_data="about"), InlineKeyboardButton("ʜᴇʟᴘ", callback_data="help")]
+        ])
+        user = callback_query.from_user
+        # Check if RANDOM_IMAGES is defined and valid
+        if not hasattr(config, 'RANDOM_IMAGES') or not RANDOM_IMAGES or not isinstance(RANDOM_IMAGES, list):
+            logger.warning("RANDOM_IMAGES is not defined, empty, or invalid in config.py. Using START_PIC.")
+            selected_image = START_PIC
+        else:
+            selected_image = random.choice(RANDOM_IMAGES)
+        try:
+            await callback_query.message.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption=START_MSG.format(
+                        first=user.first_name,
+                        last=user.last_name if user.last_name else "",
+                        username=None if not user.username else '@' + user.username,
+                        mention=user.mention,
+                        id=user.id
+                    )
+                ),
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            logger.warning(f"Failed to apply message effect or edit media: {e}. Sending without effect.")
+            await callback_query.message.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption=START_MSG.format(
+                        first=user.first_name,
+                        last=user.last_name if user.last_name else "",
+                        username=None if not user.username else '@' + user.username,
+                        mention=user.mention,
+                        id=user.id
+                    )
+                ),
+                reply_markup=reply_markup
+            )
+        await callback_query.answer()
+    except Exception as e:
+        logger.error(f"Error returning to start message: {e}")
+        await callback_query.message.reply_text(
+            "<blockquote><b>ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ʀᴇᴛᴜʀɴɪɴɢ ᴛᴏ sᴛᴀʀᴛ. ᴘʟᴇᴀsᴇ ᴛʀʏ /start ᴀɢᴀɪɴ.</b></blockquote>"
+        )
+        await callback_query.answer()
 
 async def not_joined(client: Client, message: Message):
     temp = await message.reply("<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ sᴜʙsᴄʀɪᴘᴛɪᴏɴ...</b></blockquote>")
@@ -265,7 +371,7 @@ async def not_joined(client: Client, message: Message):
 async def check_plan(client: Client, message: Message):
     user_id = message.from_user.id
     status_message = await check_user_plan(user_id)
-    await message.reply_text(f"<blockquote><b>{status_message}</b></blockquote>")
+    await message.reply_text(f"<blockquote><b>{status_message}</b></blockquote>", parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.command('addPremium') & filters.private & admin)
 async def add_premium_user_command(client, msg):
@@ -282,7 +388,8 @@ async def add_premium_user_command(client, msg):
             "/addpremium 123456789 30 m - 30 ᴍɪɴᴜᴛᴇs\n"
             "/addpremium 123456789 2 h - 2 ʜᴏᴜʀs\n"
             "/addpremium 123456789 1 d - 1 ᴅᴀʏ\n"
-            "/addpremium 123456789 1 y - 1 ʏᴇᴀʀ</b></blockquote>"
+            "/addpremium 123456789 1 y - 1 ʏᴇᴀʀ</b></blockquote>",
+            parse_mode=ParseMode.HTML
         )
         return
     try:
@@ -292,7 +399,8 @@ async def add_premium_user_command(client, msg):
         expiration_time = await add_premium(user_id, time_value, time_unit)
         await msg.reply_text(
             f"<blockquote><b>ᴜsᴇʀ {user_id} ᴀᴅᴅᴇᴅ ᴀs ᴀ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ғᴏʀ {time_value} {time_unit}.\n"
-            f"ᴇxᴘɪʀᴀᴛɪᴏɴ ᴛɪᴍᴇ: {expiration_time}.</b></blockquote>"
+            f"ᴇxᴘɪʀᴀᴛɪᴏɴ ᴛɪᴍᴇ: {expiration_time}.</b></blockquote>",
+            parse_mode=ParseMode.HTML
         )
         await client.send_message(
             chat_id=user_id,
@@ -301,23 +409,39 @@ async def add_premium_user_command(client, msg):
                 f"<b>Yᴏᴜ ʜᴀᴠᴇ ʀᴇᴄᴇɪᴠᴇᴅ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ғᴏʀ {time_value} {time_unit}.</b>\n"
                 f"<b>ᴇxᴘɪʀᴇs ᴏɴ: {expiration_time}</b>"
             ),
+            parse_mode=ParseMode.HTML
         )
     except ValueError:
-        await msg.reply_text("<blockquote><b>ɪɴᴠᴀʟɪᴅ ɪɴᴘᴜᴛ. ᴘʟᴇᴀsᴇ ᴇɴsᴜʀᴇ ᴜsᴇʀ ɪᴅ ᴀɴᴅ ᴛɪᴍᴇ ᴠᴀʟᴜᴇ ᴀʀᴇ ɴᴜᴍʙᴇʀs</b></blockquote>")
+        await msg.reply_text(
+            "<blockquote><b>ɪɴᴠᴀʟɪᴅ ɪɴᴘᴜᴛ. ᴘʟᴇᴀsᴇ ᴇɴsᴜʀᴇ ᴜsᴇʀ ɪᴅ ᴀɴᴅ ᴛɪᴍᴇ ᴠᴀʟᴜᴇ ᴀʀᴇ ɴᴜᴍʙᴇʀs.</b></blockquote>",
+            parse_mode=ParseMode.HTML
+        )
     except Exception as e:
-        await msg.reply_text(f"<blockquote><b>ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ: {str(e)}</b></blockquote>")
+        await msg.reply_text(
+            f"<blockquote><b>ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ: {str(e)}</b></blockquote>",
+            parse_mode=ParseMode.HTML
+        )
 
 @Bot.on_message(filters.command('remove_premium') & filters.private & admin)
 async def pre_remove_user(client: Client, msg: Message):
     if len(msg.command) != 2:
-        await msg.reply_text("<blockquote><b>ᴜsᴀɢᴇ:</b></blockquote> /remove_premium user_id")
+        await msg.reply_text(
+            "<blockquote><b>ᴜsᴀɢᴇ: /remove_premium user_id</b></blockquote>",
+            parse_mode=ParseMode.HTML
+        )
         return
     try:
         user_id = int(msg.command[1])
         await remove_premium(user_id)
-        await msg.reply_text(f"<blockquote><b>ᴜsᴇʀ {user_id} ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
+        await msg.reply_text(
+            f"<blockquote><b>ᴜsᴇʀ {user_id} ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>",
+            parse_mode=ParseMode.HTML
+        )
     except ValueError:
-        await msg.reply_text("<blockquote><b>ᴜsᴇʀ ɪᴅ ᴍᴜsᴛ ʙᴇ ᴀɴ ɪɴᴛᴇɢᴇʀ ᴏʀ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ ɪɴ ᴅᴀᴛᴀʙᴀsᴇ.</b></blockquote>")
+        await msg.reply_text(
+            "<blockquote><b>ᴜsᴇʀ ɪᴅ ᴍᴜsᴛ ʙᴇ ᴀɴ ɪɴᴛᴇɢᴇʀ ᴏʀ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ ɪɴ ᴅᴀᴛᴀʙᴀsᴇ.</b></blockquote>",
+            parse_mode=ParseMode.HTML
+        )
 
 @Bot.on_message(filters.command('premium_users') & filters.private & admin)
 async def list_premium_users_command(client, message):
@@ -357,19 +481,25 @@ async def list_premium_users_command(client, message):
                 f"ᴇʀʀᴏʀ: ᴜɴᴀʙʟᴇ ᴛᴏ ғᴇᴛᴄʜ ᴜsᴇʀ ᴅᴇᴛᴀɪʟs ({str(e)})</b></blockquote>"
             )
     if len(premium_user_list) == 1:
-        await message.reply_text("<blockquote><b>ɴᴏ ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs ғᴏᴜɴᴅ ɪɴ ᴍʏ ᴅᴀᴛᴀʙᴀsᴇ.</b></blockquote>")
+        await message.reply_text(
+            "<blockquote><b>ɴᴏ ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs ғᴏᴜɴᴅ ɪɴ ᴍʏ ᴅᴀᴛᴀʙᴀsᴇ.</b></blockquote>",
+            parse_mode=ParseMode.HTML
+        )
     else:
-        await message.reply_text("\n\n".join(premium_user_list), parse_mode=None)
+        await message.reply_text("\n\n".join(premium_user_list), parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.command("count") & filters.private & admin)
 async def total_verify_count_cmd(client, message: Message):
     total = await db.get_total_verify_count()
-    await message.reply_text(f"<blockquote><b>ᴛᴏᴛᴀʟ ᴠᴇʀɪғɪᴇᴅ ᴛᴏᴋᴇɴs ᴛᴏᴅᴀʏ: {total}</b></blockquote>")
+    await message.reply_text(
+        f"<blockquote><b>ᴛᴏᴛᴀʟ ᴠᴇʀɪғɪᴇᴅ ᴛᴏᴋᴇɴs ᴛᴏᴅᴀʏ: {total}</b></blockquote>",
+        parse_mode=ParseMode.HTML
+    )
 
 @Bot.on_message(filters.command('commands') & filters.private & admin)
 async def bcmd(bot: Bot, message: Message):        
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(text=CMD_TXT, reply_markup=reply_markup, quote=True)
+    await message.reply_text(text=CMD_TXT, reply_markup=reply_markup, quote=True, parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.command('admin_cmd') & filters.private & admin)
 async def admin_cmd(bot: Bot, message: Message):
@@ -381,7 +511,7 @@ async def admin_cmd(bot: Bot, message: Message):
         "- /admins - <b>ʟɪsᴛ ᴀʟʟ ᴀᴅᴍɪɴs [ᴀᴅᴍɪɴ]</b>"
     )
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
+    await message.reply_text(reply_text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.command('premium_cmd') & filters.private & admin)
 async def premium_cmd(bot: Bot, message: Message):
@@ -393,7 +523,7 @@ async def premium_cmd(bot: Bot, message: Message):
         "- /premium_users - <b>ᴛ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs [ᴀᴅᴍɪɴ]</b>"
     )
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
+    await message.reply_text(reply_text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.command('user_cmd') & filters.private & admin)
 async def user_cmd(bot: Bot, message: Message):
@@ -406,19 +536,19 @@ async def user_cmd(bot: Bot, message: Message):
         "- /banlist - <b>ᴛ ʙᴀɴɴᴇᴅ ᴜsᴇʀs [ᴀᴅᴮᴍɪɴ]</b>"
     )
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
+    await message.reply_text(reply_text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.command('broadcast_cmd') & filters.private & admin)
 async def broadcast_cmd(bot: Bot, message: Message):
     reply_text = (
         "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ɢᴇᴛ ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴍᴀɴᴅs.</b>\n\n"
-        "</b>ᴏᴛ ᴄᴏᴍᴍᴀɴᴅs:</b></blockquote>\n"
+        "<b>ᴏᴛ ᴄᴏᴍᴮᴍᴀɴᴅs:</b></blockquote>\n"
         "- /broadcast - <b>ᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇs ᴛᴏ ᴜsᴇʀs [ᴀᴅᴍɪɴ]</b>\n"
         "- /dbroadcast - <b>ᴏᴀᴅᴄᴀsᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ [ᴀᴅᴍɪɴ]</b>\n"
         "- /pbroadcast - <b>ᴘɪɴ ʙʀᴏᴀᴅᴄᴀsᴛ ᴛᴏ ᴀʟʟ ᴜsᴇʀs [ᴀᴅᴍɪɴ]</b>"
     )
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
+    await message.reply_text(reply_text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.command('force_chn_cmd') & filters.private & admin)
 async def force_chn_cmd(bot: Bot, message: Message):
@@ -431,18 +561,18 @@ async def force_chn_cmd(bot: Bot, message: Message):
         "- /listchnl - <b>ᴠɪᴇᴡ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs [ᴀᴅᴍɪɴ]</b>"
     )
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
+    await message.reply_text(reply_text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.command('auto_dlt_cmd') & filters.private & admin)
 async def auto_dlt_cmd(bot: Bot, message: Message):
     reply_text = (
         "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ɢᴇᴛ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴄᴏᴍᴮᴍᴀɴᴅs.</b>\n\n"
         "<b>ᴏᴛ ᴄᴏᴍᴮᴍᴀɴᴅs:</b></blockquote>\n"
-        "- /dlt_time - sᴇᴛ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴮᴍᴇ [ᴀᴅᴍɪɴ]</b>\n"
+        "- /dlt_time - <b>sᴇᴛ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴮᴍᴇ [ᴀᴅᴍɪɴ]</b>\n"
         "- /check_dlt_time - <b>ᴄʜᴇᴄᴋ ᴅᴇʟᴇᴛᴇ ᴛɪᴮᴍᴇ [ᴀᴅᴍɪɴ]</b>"
     )
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
+    await message.reply_text(reply_text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.command('links_cmd') & filters.private & admin)
 async def links_cmd(bot: Bot, message: Message):
@@ -455,7 +585,7 @@ async def links_cmd(bot: Bot, message: Message):
         "- /genlink - <b>ᴄʀᴇᴀᴛᴇ ʟɪɴᴋ ғᴏʀ ᴀ sɪɴɢʟᴇ ᴘᴏsᴛ</b>"
     )
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
+    await message.reply_text(reply_text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
 
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
