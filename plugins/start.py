@@ -70,7 +70,7 @@ async def start_command(client: Client, message: Message):
     banned_users = await db.get_ban_users()
     if user_id in banned_users:
         return await message.reply_text(
-            "ʏᴏᴜ ᴀʀᴇ ʙᴀɴɴᴇᴅ ғʀᴏᴍ ᴜsɪɴɢ ᴛʜɪs ʙᴏᴛ.\n\nᴄᴏɴᴛᴀᴄᴛ sᴜᴘᴘᴏʀᴛ ɪғ ʏᴏᴜ ᴛʜɪɴᴋ ᴛʜɪs ɪs ᴀ ᴍɪsᴛᴀᴋᴇ.",
+            "<blockquote><b>ʏᴏᴜ ᴀʀᴇ ʙᴀɴɴᴇᴅ ғʀᴏᴍ ᴜsɪɴɢ ᴛʜɪs ʙᴏᴛ.\n\nᴄᴏɴᴛᴀᴄᴛ sᴜᴘᴘᴏʀᴛ ɪғ ʏᴏᴜ ᴛʜɪɴᴋ ᴛʜɪs ɪs ᴀ ᴍɪsᴛᴀᴋᴇ.</b></blockquote>",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("ᴄᴏɴᴛᴀᴄᴛ sᴜᴘᴘᴏʀᴛ", url=BAN_SUPPORT)]])
         )
     if not await is_subscribed(client, user_id):
@@ -83,13 +83,15 @@ async def start_command(client: Client, message: Message):
             pass
 
     # Animation messages
-    m = await message.reply_text("ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴍʏ ʙᴏᴛ.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...")
+    m = await message.reply_text("<blockquote><b>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴍʏ ʙᴏᴛ.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...</blockquote></b>")
     await asyncio.sleep(0.4)
-    await m.edit_text("...")
+    await m.edit_text("<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ...</blockquote></b>")
     await asyncio.sleep(0.5)
-    await m.edit_text("ᴄʜᴇᴄᴋɪɴɢ...")
+    await m.edit_text("<blockquote>🎊</blockquote>")
     await asyncio.sleep(0.5)
-    await m.edit_text("sᴛᴀʀᴛɪɴɢ...")
+    await m.edit_text("<blockquote>⚡</blockquote>")
+    await asyncio.sleep(0.5)
+    await m.edit_text("<blockquote><b>sᴛᴀʀᴛɪɴɢ...</blockquote></b>")
     await asyncio.sleep(0.4)
     await m.delete()
 
@@ -126,11 +128,11 @@ async def start_command(client: Client, message: Message):
             except Exception as e:
                 print(f"ᴇʀʀᴏʀ ᴅᴇᴄᴏᴅɪɴɢ ɪᴅ: {e}")
                 return
-        temp_msg = await message.reply("ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ...")
+        temp_msg = await message.reply("<blockquote><b>ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ...</b></blockquote>")
         try:
             messages = await get_messages(client, ids)
         except Exception as e:
-            await message.reply_text("sᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ ᴡʀᴏɴɢ!")
+            await message.reply_text("<blockquote><b>sᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ ᴡʀᴏɴɢ!</b></blockquote>")
             print(f"ᴇʀʀᴏʀ ɢᴇᴛᴛɪɴɢ ᴍᴇssᴀɢᴇs: {e}")
             return
         finally:
@@ -159,7 +161,7 @@ async def start_command(client: Client, message: Message):
                 pass
         if FILE_AUTO_DELETE > 0:
             notification_msg = await message.reply(
-                f"ᴛʜɪs ғɪʟᴇ ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ɪɴ {get_exp_time(FILE_AUTO_DELETE).lower()}. ᴘʟᴇᴀsᴇ sᴀᴠᴇ ᴏʀ ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ ʏᴏᴜʀ sᴀᴠᴇᴅ ᴍᴇssᴀɢᴇs ʙᴇғᴏʀᴇ ɪᴛ ɢᴇᴛs ᴅᴇʟᴇᴛᴇᴅ."
+                f"<blockquote><b>Tʜɪs  ғɪʟᴇ ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ɪɴ {get_exp_time(FILE_AUTO_DELETE).lower()}. ᴘʟᴇᴀsᴇ sᴀᴠᴇ ᴏʀ ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ ʏᴏᴜʀ sᴀᴠᴇᴅ ᴍᴇssᴀɢᴇs ʙᴇғᴏʀᴇ ɪᴛ ɢᴇᴛs ᴅᴇʟᴇᴛᴇᴅ.</b></blockquote>"
             )
             await asyncio.sleep(FILE_AUTO_DELETE)
             for snt_msg in animelord_msgs:    
@@ -172,7 +174,7 @@ async def start_command(client: Client, message: Message):
                 reload_url = f"https://t.me/{client.username}?start={message.command[1]}" if message.command and len(message.command) > 1 else None
                 keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("ɢᴇᴛ ғɪʟᴇ ᴀɢᴀɪɴ!", url=reload_url)]]) if reload_url else None
                 await notification_msg.edit(
-                    "ʏᴏᴜʀ ᴠɪᴅᴇᴏ/ғɪʟᴇ ɪs sᴜᴄᴄᴇssғᴜʟʏ ᴅᴇʟᴇᴛᴇᴅ!\n\nᴄʟɪᴄᴋ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ᴅᴇʟᴇᴛᴇᴅ ᴠɪᴅᴇᴏ/ғɪʟᴇ.",
+                    "<blockquote><b>ʏᴏᴜʀ ᴠɪᴅᴇᴏ/ғɪʟᴇ ɪs sᴜᴄᴄᴇssғᴜʟʏ ᴅᴇʟᴇᴛᴇᴅ!\n\nᴄʟɪᴄᴋ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ᴅᴇʟᴇᴛᴇᴅ ᴠɪᴅᴇᴏ/ғɪʟᴇ.</b></blockquote>",
                     reply_markup=keyboard
                 )
             except Exception as e:
@@ -215,7 +217,7 @@ async def start_command(client: Client, message: Message):
         )
 
 async def not_joined(client: Client, message: Message):
-    temp = await message.reply("ᴄʜᴇᴄᴋɪɴɢ sᴜʙsᴄʀɪᴘᴛɪᴏɴ...")
+    temp = await message.reply("<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ sᴜʙsᴄʀɪᴘᴛɪᴏɴ...</b></blockquote>")
     user_id = message.from_user.id
     buttons = []
     count = 0
@@ -234,10 +236,10 @@ async def not_joined(client: Client, message: Message):
                     )).invite_link
                     buttons.append([InlineKeyboardButton(text=name, url=link)])
                     count += 1
-                    await temp.edit(f"ᴄʜᴇᴄᴋɪɴɢ {count}...")
+                    await temp.edit(f"<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ {count}...</b></blockquote>")
                 except Exception as e:
                     print(f"ᴇʀʀᴏʀ ᴡɪᴛʜ ᴄʜᴀᴛ {chat_id}: {e}")
-                    return await temp.edit(f"ᴇʀʀᴏʀ, ᴄᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ @Mehediyt69\nʀᴇᴀsᴏɴ: {e}")
+                    return await temp.edit(f"<blockquote><b>ᴇʀʀᴏʀ, ᴄᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ @Mehediyt69\nʀᴇᴀsᴏɴ: {e}</b></blockquote>")
         try:
             buttons.append([InlineKeyboardButton(text='ᴛʀʏ ᴀɢᴀɪɴ', url=f"https://t.me/{client.username}?start={message.command[1]}")])
         except IndexError:
@@ -263,7 +265,7 @@ async def not_joined(client: Client, message: Message):
 async def check_plan(client: Client, message: Message):
     user_id = message.from_user.id
     status_message = await check_user_plan(user_id)
-    await message.reply_text(status_message)
+    await message.reply_text(f"<blockquote><b>{status_message}</b></blockquote>")
 
 @Bot.on_message(filters.command('addPremium') & filters.private & admin)
 async def add_premium_user_command(client, msg):
@@ -289,8 +291,8 @@ async def add_premium_user_command(client, msg):
         time_unit = msg.command[3].lower()
         expiration_time = await add_premium(user_id, time_value, time_unit)
         await msg.reply_text(
-            f"ᴜsᴇʀ {user_id} ᴀᴅᴅᴇᴅ ᴀs ᴀ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ғᴏʀ {time_value} {time_unit}.\n"
-            f"ᴇxᴘɪʀᴀᴛɪᴏɴ ᴛɪᴍᴇ: {expiration_time}."
+            f"<blockquote><b>ᴜsᴇʀ {user_id} ᴀᴅᴅᴇᴅ ᴀs ᴀ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ғᴏʀ {time_value} {time_unit}.\n"
+            f"ᴇxᴘɪʀᴀᴛɪᴏɴ ᴛɪᴍᴇ: {expiration_time}.</b></blockquote>"
         )
         await client.send_message(
             chat_id=user_id,
@@ -301,9 +303,9 @@ async def add_premium_user_command(client, msg):
             ),
         )
     except ValueError:
-        await msg.reply_text("<blockquote><b>ɪɴᴠᴀʟɪᴅ ɪɴᴘᴜᴛ. ᴘʟᴇᴀsᴇ ᴇɴsᴜʀᴇ ᴜsᴇʀ ɪᴅ ᴀɴᴅ ᴛɪᴍᴇ ᴠᴀʟᴜᴇ ᴀʀᴇ ɴᴜᴍʙᴇRs</b></blockquote>.")
+        await msg.reply_text("<blockquote><b>ɪɴᴠᴀʟɪᴅ ɪɴᴘᴜᴛ. ᴘʟᴇᴀsᴇ ᴇɴsᴜʀᴇ ᴜsᴇʀ ɪᴅ ᴀɴᴅ ᴛɪᴍᴇ ᴠᴀʟᴜᴇ ᴀʀᴇ ɴᴜᴍʙᴇʀs</b></blockquote>")
     except Exception as e:
-        await msg.reply_text(f"ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ: {str(e)}")
+        await msg.reply_text(f"<blockquote><b>ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ: {str(e)}</b></blockquote>")
 
 @Bot.on_message(filters.command('remove_premium') & filters.private & admin)
 async def pre_remove_user(client: Client, msg: Message):
@@ -315,14 +317,14 @@ async def pre_remove_user(client: Client, msg: Message):
         await remove_premium(user_id)
         await msg.reply_text(f"<blockquote><b>ᴜsᴇʀ {user_id} ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
     except ValueError:
-        await msg.reply_text("ᴜsᴇʀ ɪᴅ ᴍᴜsᴛ ʙᴇ ᴀɴ ɪɴᴛᴇɢᴇʀ ᴏʀ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ ɪɴ ᴅᴀᴛᴀʙᴀsᴇ.")
+        await msg.reply_text("<blockquote><b>ᴜsᴇʀ ɪᴅ ᴍᴜsᴛ ʙᴇ ᴀɴ ɪɴᴛᴇɢᴇʀ ᴏʀ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ ɪɴ ᴅᴀᴛᴀʙᴀsᴇ.</b></blockquote>")
 
 @Bot.on_message(filters.command('premium_users') & filters.private & admin)
 async def list_premium_users_command(client, message):
     from pytz import timezone
     ist = timezone("Asia/Dhaka")
     premium_users_cursor = collection.find({})
-    premium_user_list = ['ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs ɪɴ ᴅᴀᴛᴀʙᴀsᴇ:']
+    premium_user_list = ['<blockquote><b>ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs ɪɴ ᴅᴀᴛᴀʙᴀsᴇ:</b></blockquote>']
     current_time = datetime.now(ist)
     async for user in premium_users_cursor:
         user_id = user["user_id"]
@@ -344,18 +346,18 @@ async def list_premium_users_command(client, message):
             )
             expiry_info = f"{days}d {hours}h {minutes}m {seconds}s left"
             premium_user_list.append(
-                f"ᴜsᴇʀ ɪᴅ: {user_id}\n"
+                f"<blockquote><b>ᴜsᴇʀ ɪᴅ: {user_id}\n"
                 f"ᴜsᴇʀ: @{username}\n"
                 f"ɴᴀᴍᴇ: {mention}\n"
-                f"ᴇxᴘɪʀʏ: {expiry_info}"
+                f"ᴇxᴘɪʀʏ: {expiry_info}</b></blockquote>"
             )
         except Exception as e:
             premium_user_list.append(
-                f"ᴜsᴇʀ ɪᴅ: {user_id}\n"
-                f"ᴇʀʀᴏʀ: ᴜɴᴀʙʟᴇ ᴛᴏ ғᴇᴛᴄʜ ᴜsᴇʀ ᴅᴇᴛᴀɪʟs ({str(e)})"
+                f"<blockquote><b>ᴜsᴇʀ ɪᴅ: {user_id}\n"
+                f"ᴇʀʀᴏʀ: ᴜɴᴀʙʟᴇ ᴛᴏ ғᴇᴛᴄʜ ᴜsᴇʀ ᴅᴇᴛᴀɪʟs ({str(e)})</b></blockquote>"
             )
     if len(premium_user_list) == 1:
-        await message.reply_text("ɴᴏ ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs ғᴏᴜɴᴅ ɪɴ ᴍʏ ᴅᴀᴛᴀʙᴀsᴇ.")
+        await message.reply_text("<blockquote><b>ɴᴏ ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs ғᴏᴜɴᴅ ɪɴ ᴍʏ ᴅᴀᴛᴀʙᴀsᴇ.</b></blockquote>")
     else:
         await message.reply_text("\n\n".join(premium_user_list), parse_mode=None)
 
