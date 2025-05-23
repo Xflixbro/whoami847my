@@ -39,7 +39,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
     channels = await db.show_channels()
     
     if not channels:
-        settings_text += "<i>Nᴏ ᴄʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ʏᴇᴛ. Uꜱᴇ 𖤓 ᴀᴅᴅ Cʜᴀɴɴᴇʟs 𖤓 ᴛᴏ ᴀᴅᴅ ᴀ ᴄʜᴀɴɴᴇʟ.</i>"
+        settings_text += "<blockquote><i>Nᴏ ᴄʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ʏᴇᴛ. Uꜱᴇ 𖤓 ᴀᴅᴅ Cʜᴀɴɴᴇʟs 𖤓 ᴛᴏ ᴀᴅᴅ ᴀ ᴄʜᴀɴɴᴇʟ.</i></blockquote>"
     else:
         settings_text += "<blockquote><b>⚡ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟs:</b></blockquote>\n\n"
         for ch_id in channels:
