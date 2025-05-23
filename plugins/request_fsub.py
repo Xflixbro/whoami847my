@@ -573,7 +573,7 @@ async def add_force_sub(client: Client, message: Message):
                     media=selected_image,
                     caption="<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>"
                 ),
-                message_effect_id=random.choice(MESSAGE EFFECT_IDS)
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
         except Exception as e:
             logger.error(f"Failed to edit photo: {e}")
