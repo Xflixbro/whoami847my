@@ -19,7 +19,7 @@ from pyrogram.enums import ParseMode, ChatAction, ChatMemberStatus, ChatType
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatMemberUpdated, ChatPermissions, InputMediaPhoto
 from pyrogram.errors.exceptions.bad_request_400 import MediaEmpty
 from bot import Bot
-from config import RANDOM_IMAGES, START_PIC
+from config import RANDOM_IMAGES, START_PIC, FORCE_PIC
 from helper_func import *
 from database.database import *
 
@@ -48,6 +48,51 @@ async def verify_image_url(url: str) -> bool:
     except Exception as e:
         logger.error(f"Image URL verification failed for {url}: {e}")
         return False
+
+# Function to select a valid image
+async def select_valid_image() -> str:
+    image_source = "unknown"
+    selected_image = None
+
+    # Try RANDOM_IMAGES first
+    if RANDOM_IMAGES:
+        try:
+            valid_images = [img for img in RANDOM_IMAGES if await verify_image_url(img)]
+            if valid_images:
+                selected_image = random.choice(valid_images)
+                image_source = "RANDOM_IMAGES"
+            else:
+                logger.warning("No accessible images in RANDOM_IMAGES")
+        except Exception as e:
+            logger.error(f"Failed to select random image from RANDOM_IMAGES: {e}")
+
+    # Fallback to START_PIC
+    if not selected_image and START_PIC:
+        if await verify_image_url(START_PIC):
+            selected_image = START_PIC
+            image_source = "START_PIC"
+        else:
+            logger.warning(f"Image {START_PIC} from START_PIC is inaccessible")
+
+    # Fallback to FORCE_PIC
+    if not selected_image and FORCE_PIC:
+        if await verify_image_url(FORCE_PIC):
+            selected_image = FORCE_PIC
+            image_source = "FORCE_PIC"
+        else:
+            logger.warning(f"Image {FORCE_PIC} from FORCE_PIC is inaccessible")
+
+    # Final fallback to FALLBACK_IMAGE
+    if not selected_image:
+        if await verify_image_url(FALLBACK_IMAGE):
+            selected_image = FALLBACK_IMAGE
+            image_source = "FALLBACK_IMAGE"
+        else:
+            logger.error(f"Fallback image {FALLBACK_IMAGE} is inaccessible")
+            selected_image = None
+
+    logger.info(f"Selected image: {selected_image} from {image_source}")
+    return selected_image
 
 # Function to show force-sub settings with channels list, buttons, random images, and message effects
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
@@ -83,35 +128,14 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         ]
     )
 
-    # Select image with fallback
-    selected_image = None
-    image_source = "unknown"
-    if RANDOM_IMAGES:
-        try:
-            selected_image = random.choice(RANDOM_IMAGES)
-            image_source = "RANDOM_IMAGES"
-            if not await verify_image_url(selected_image):
-                logger.warning(f"Image {selected_image} from RANDOM_IMAGES is inaccessible")
-                selected_image = None
-        except Exception as e:
-            logger.error(f"Failed to select random image from RANDOM_IMAGES: {e}")
-    if not selected_image and START_PIC:
-        selected_image = START_PIC
-        image_source = "START_PIC"
-        if not await verify_image_url(selected_image):
-            logger.warning(f"Image {selected_image} from START_PIC is inaccessible")
-            selected_image = None
-    if not selected_image:
-        selected_image = FALLBACK_IMAGE
-        image_source = "FALLBACK_IMAGE"
-        if not await verify_image_url(selected_image):
-            logger.error(f"Fallback image {selected_image} is inaccessible, falling back to text")
-            selected_image = None
+    # Select a valid image
+    selected_image = await select_valid_image()
 
-    # Select random effect
+    # Select random effect with validation
     selected_effect = None
     try:
-        selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
+        if MESSAGE_EFFECT_IDS:
+            selected_effect = random.choice(MESSAGE_EFFECT_IDS)
     except Exception as e:
         logger.error(f"Failed to select message effect: {e}")
 
@@ -125,7 +149,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                         media=InputMediaPhoto(media=selected_image, caption=settings_text),
                         reply_markup=buttons
                     )
-                    logger.info(f"Edited message with image {selected_image} from {image_source}")
+                    logger.info(f"Edited message with image {selected_image}")
                     return
                 except MediaEmpty as e:
                     logger.error(f"MediaEmpty error for image {selected_image} (attempt {attempt+1}): {e}")
@@ -158,7 +182,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                         disable_web_page_preview=True,
                         message_effect_id=selected_effect
                     )
-                    logger.info(f"Sent photo with image {selected_image} from {image_source}, effect {selected_effect}")
+                    logger.info(f"Sent photo with image {selected_image}, effect {selected_effect}")
                     return
                 except MediaEmpty as e:
                     logger.error(f"MediaEmpty error for image {selected_image} (attempt {attempt+1}): {e}")
@@ -174,9 +198,10 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
             text=settings_text,
             reply_markup=buttons,
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            message_effect_id=selected_effect
         )
-        logger.info("Sent text-only message due to image failure")
+        logger.info(f"Sent text-only message with effect {selected_effect}")
 
 @Bot.on_message(filters.command('forcesub') & filters.private & admin)
 async def force_sub_settings(client: Client, message: Message):
@@ -190,12 +215,13 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
 
     if data == "fsub_add_channel":
         await db.set_temp_state(chat_id, "awaiting_add_channel_input")
+        selected_image = await select_valid_image()
         try:
             await client.edit_message_media(
                 chat_id=chat_id,
                 message_id=message_id,
                 media=InputMediaPhoto(
-                    media=FALLBACK_IMAGE,
+                    media=selected_image if selected_image else FALLBACK_IMAGE,
                     caption="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b></blockquote>"
                 ),
                 reply_markup=InlineKeyboardMarkup([
@@ -205,9 +231,9 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                     ]
                 ])
             )
-            logger.info(f"Edited message for add_channel with fallback image {FALLBACK_IMAGE}")
+            logger.info(f"Edited message for add_channel with image {selected_image or FALLBACK_IMAGE}")
         except Exception as e:
-            logger.error(f"Failed to edit message with image {FALLBACK_IMAGE}: {e}")
+            logger.error(f"Failed to edit message with image {selected_image or FALLBACK_IMAGE}: {e}")
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
@@ -225,13 +251,14 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
 
     elif data == "fsub_remove_channel":
         await db.set_temp_state(chat_id, "awaiting_remove_channel_input")
+        selected_image = await select_valid_image()
         try:
             await client.edit_message_media(
                 chat_id=chat_id,
                 message_id=message_id,
                 media=InputMediaPhoto(
-                    media=FALLBACK_IMAGE,
-                    caption="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs.</b></blockquote>"
+                    media=selected_image if selected_image else FALLBACK_IMAGE,
+                    caption="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ 'all' ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇ�ls.</b></blockquote>"
                 ),
                 reply_markup=InlineKeyboardMarkup([
                     [
@@ -240,9 +267,9 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                     ]
                 ])
             )
-            logger.info(f"Edited message for remove_channel with fallback image {FALLBACK_IMAGE}")
+            logger.info(f"Edited message for remove_channel with image {selected_image or FALLBACK_IMAGE}")
         except Exception as e:
-            logger.error(f"Failed to edit message with image {FALLBACK_IMAGE}: {e}")
+            logger.error(f"Failed to edit message with image {selected_image or FALLBACK_IMAGE}: {e}")
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
@@ -281,11 +308,30 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
 
         buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
 
-        await temp.edit(
-            "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
-            reply_markup=InlineKeyboardMarkup(buttons),
-            disable_web_page_preview=True
-        )
+        selected_image = await select_valid_image()
+        if selected_image:
+            try:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption="<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>"
+                    ),
+                    reply_markup=InlineKeyboardMarkup(buttons)
+                )
+                logger.info(f"Edited toggle_mode message with image {selected_image}")
+            except Exception as e:
+                logger.error(f"Failed to edit toggle_mode message with image {selected_image}: {e}")
+                await temp.edit(
+                    "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
+                    reply_markup=InlineKeyboardMarkup(buttons),
+                    disable_web_page_preview=True
+                )
+        else:
+            await temp.edit(
+                "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
+                reply_markup=InlineKeyboardMarkup(buttons),
+                disable_web_page_preview=True
+            )
         await callback.answer()
 
     elif data == "fsub_refresh":
@@ -337,49 +383,123 @@ async def handle_channel_input(client: Client, message: Message):
             link = await client.export_chat_invite_link(chat.id) if not chat.username else f"https://t.me/{chat.username}"
             
             await db.add_channel(channel_id)
-            await message.reply(
-                f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
-                f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-                f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
-                disable_web_page_preview=True
-            )
+            selected_image = await select_valid_image()
+            if selected_image:
+                await message.reply_photo(
+                    photo=selected_image,
+                    caption=(
+                        f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
+                        f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                        f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>"
+                    ),
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+            else:
+                await message.reply(
+                    f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
+                    f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                    f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
         elif state == "awaiting_remove_channel_input":
             all_channels = await db.show_channels()
+            selected_image = await select_valid_image()
             if message.text.lower() == "all":
                 if not all_channels:
-                    await message.reply("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+                    if selected_image:
+                        await message.reply_photo(
+                            photo=selected_image,
+                            caption="<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇ�ls ғᴏᴜɴᴅ.</b></blockquote>",
+                            parse_mode=ParseMode.HTML
+                        )
+                    else:
+                        await message.reply("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
                     return
                 for ch_id in all_channels:
                     await db.rem_channel(ch_id)
-                await message.reply("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
+                if selected_image:
+                    await message.reply_photo(
+                        photo=selected_image,
+                        caption="<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>",
+                        parse_mode=ParseMode.HTML
+                    )
+                else:
+                    await message.reply("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
             else:
                 try:
                     ch_id = int(message.text)
                     if ch_id in all_channels:
                         await db.rem_channel(ch_id)
-                        await message.reply(f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+                        if selected_image:
+                            await message.reply_photo(
+                                photo=selected_image,
+                                caption=f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>",
+                                parse_mode=ParseMode.HTML
+                            )
+                        else:
+                            await message.reply(f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>")
                     else:
-                        await message.reply(f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+                        if selected_image:
+                            await message.reply_photo(
+                                photo=selected_image,
+                                caption=f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>",
+                                parse_mode=ParseMode.HTML
+                            )
+                        else:
+                            await message.reply(f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>")
                 except ValueError:
-                    await message.reply(
-                        "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
-                    )
+                    if selected_image:
+                        await message.reply_photo(
+                            photo=selected_image,
+                            caption="<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
+                            parse_mode=ParseMode.HTML
+                        )
+                    else:
+                        await message.reply("<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>")
                 except Exception as e:
                     logger.error(f"Error removing channel {message.text}: {e}")
-                    await message.reply(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
+                    if selected_image:
+                        await message.reply_photo(
+                            photo=selected_image,
+                            caption=f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>",
+                            parse_mode=ParseMode.HTML
+                        )
+                    else:
+                        await message.reply(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
     except ValueError:
-        await message.reply("<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>")
+        selected_image = await select_valid_image()
+        if selected_image:
+            await message.reply_photo(
+                photo=selected_image,
+                caption="<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>",
+                parse_mode=ParseMode.HTML
+            )
+        else:
+            await message.reply("<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>")
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id)
     except Exception as e:
         logger.error(f"Failed to process channel input {message.text}: {e}")
-        await message.reply(f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>")
+        selected_image = await select_valid_image()
+        if selected_image:
+            await message.reply_photo(
+                photo=selected_image,
+                caption=f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>",
+                parse_mode=ParseMode.HTML
+            )
+        else:
+            await message.reply(
+                f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>",
+                parse_mode=ParseMode.HTML
+            )
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id)
 
@@ -389,7 +509,17 @@ async def change_force_sub_mode(client: Client, message: Message):
     channels = await db.show_channels()
 
     if not channels:
-        return await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        selected_image = await select_valid_image()
+        if selected_image:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>"
+                )
+            )
+        else:
+            await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        return
 
     buttons = []
     for ch_id in channels:
@@ -401,15 +531,34 @@ async def change_force_sub_mode(client: Client, message: Message):
             buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
         except Exception as e:
             logger.error(f"Failed to fetch chat {ch_id}: {e}")
-            buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
+            buttons.append([InlineKeyboardButton(f"� handwriting️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
 
     buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
 
-    await temp.edit(
-        "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
-        reply_markup=InlineKeyboardMarkup(buttons),
-        disable_web_page_preview=True
-    )
+    selected_image = await select_valid_image()
+    if selected_image:
+        try:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>"
+                ),
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+            logger.info(f"Edited fsub_mode message with image {selected_image}")
+        except Exception as e:
+            logger.error(f"Failed to edit fsub_mode message with image {selected_image}: {e}")
+            await temp.edit(
+                "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
+                reply_markup=InlineKeyboardMarkup(buttons),
+                disable_web_page_preview=True
+            )
+    else:
+        await temp.edit(
+            "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙ ᴍᴏᴅᴇ:</b></blockquote>",
+            reply_markup=InlineKeyboardMarkup(buttons),
+            disable_web_page_preview=True
+        )
 
 @Bot.on_chat_member_updated()
 async def handle_Chatmembers(client, chat_member_updated: ChatMemberUpdated):    
@@ -443,44 +592,122 @@ async def add_force_sub(client: Client, message: Message):
 
     if len(args) != 2:
         buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
-        return await temp.edit(
-            "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        selected_image = await select_valid_image()
+        if selected_image:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>"
+                ),
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+        else:
+            await temp.edit(
+                "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b>",
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+        return
 
     try:
         channel_id = int(args[1])
     except ValueError:
-        return await temp.edit("<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>")
+        selected_image = await select_valid_image()
+        if selected_image:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>"
+                )
+            )
+        else:
+            await temp.edit("<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜᴀɴɴᴇʟ ɪᴅ!</b></blockquote>")
+        return
 
     all_channels = await db.show_channels()
     channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
     if channel_id in channel_ids_only:
-        return await temp.edit(f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
+        selected_image = await select_valid_image()
+        if selected_image:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption=f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>"
+                )
+            )
+        else:
+            await temp.edit(f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
+        return
 
     try:
         chat = await client.get_chat(channel_id)
 
         if chat.type != ChatType.CHANNEL:
-            return await temp.edit("<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>")
+            selected_image = await select_valid_image()
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption="<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>"
+                    )
+                )
+            else:
+                await temp.edit("<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>")
+            return
 
         member = await client.get_chat_member(chat.id, "me")
         if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-            return await temp.edit("<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>")
+            selected_image = await select_valid_image()
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption="<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>"
+                    )
+                )
+            else:
+                await temp.edit("<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ.</b>")
+            return
 
         link = await client.export_chat_invite_link(chat.id) if not chat.username else f"https://t.me/{chat.username}"
         
         await db.add_channel(channel_id)
-        return await temp.edit(
-            f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
-            f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-            f"<blockquote><b>Iᴅ:</b> <code>{channel_id}</code></blockquote>",
-            disable_web_page_preview=True
-        )
+        selected_image = await select_valid_image()
+        if selected_image:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption=(
+                        f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
+                        f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                        f"<blockquote><b>Iᴅ:</b> <code>{channel_id}</code></blockquote>"
+                    )
+                ),
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+        else:
+            await temp.edit(
+                f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
+                f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                f"<blockquote><b>Iᴅ:</b> <code>{channel_id}</code></blockquote>",
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
 
     except Exception as e:
         logger.error(f"Failed to add channel {channel_id}: {e}")
-        return await temp.edit(f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>")
+        selected_image = await select_valid_image()
+        if selected_image:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption=f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>"
+                )
+            )
+        else:
+            await temp.edit(
+                f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴀᴅᴅ ᴄʜᴀɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>"
+            )
 
 @Bot.on_message(filters.command('delchnl') & filters.private & admin)
 async def del_force_sub(client: Client, message: Message):
@@ -490,34 +717,102 @@ async def del_force_sub(client: Client, message: Message):
 
     if len(args) < 2:
         buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
-        return await temp.edit(
-            "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        selected_image = await select_valid_image()
+        if selected_image:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>"
+                ),
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+        else:
+            await temp.edit(
+                "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+        return
 
     if args[1].lower() == "all":
         if not all_channels:
-            return await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+            selected_image = await select_valid_image()
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption="<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>"
+                    )
+                )
+            else:
+                await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+            return
         for ch_id in all_channels:
             await db.rem_channel(ch_id)
-        return await temp.edit("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
+        selected_image = await select_valid_image()
+        if selected_image:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>"
+                )
+            )
+        else:
+            await temp.edit("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
+        return
 
     try:
         ch_id = int(args[1])
         if ch_id in all_channels:
             await db.rem_channel(ch_id)
-            return await temp.edit(f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+            selected_image = await select_valid_image()
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption=f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>"
+                    )
+                )
+            else:
+                await temp.edit(f"<blockquote><b>✅ Cʜᴀɴɴᴇʟ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>")
         else:
-            return await temp.edit(f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+            selected_image = await select_valid_image()
+            if selected_image:
+                await temp.edit_media(
+                    media=InputMediaPhoto(
+                        media=selected_image,
+                        caption=f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>"
+                    )
+                )
+            else:
+                await temp.edit(f"<blockquote><b>❌ Cʜᴀɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>")
     except ValueError:
         buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
-        return await temp.edit(
-            "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        selected_image = await select_valid_image()
+        if selected_image:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>"
+                ),
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+        else:
+            await temp.edit(
+                "<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
     except Exception as e:
         logger.error(f"Error removing channel {args[1]}: {e}")
-        return await temp.edit(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
+        selected_image = await select_valid_image()
+        if selected_image:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption=f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>"
+                )
+            )
+        else:
+            await temp.edit(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
 
 @Bot.on_message(filters.command('listchnl') & filters.private & admin)
 async def list_force_sub_channels(client: Client, message: Message):
@@ -525,7 +820,17 @@ async def list_force_sub_channels(client: Client, message: Message):
     channels = await db.show_channels()
 
     if not channels:
-        return await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        selected_image = await select_valid_image()
+        if selected_image:
+            await temp.edit_media(
+                media=InputMediaPhoto(
+                    media=selected_image,
+                    caption="<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>"
+                )
+            )
+        else:
+            await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        return
 
     result = "<blockquote><b>⚡ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟs:</b></blockquote>\n\n"
     for ch_id in channels:
@@ -538,11 +843,24 @@ async def list_force_sub_channels(client: Client, message: Message):
             result += f"<b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʙʟᴇ</i>\n"
 
     buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
-    await temp.edit(
-        result, 
-        disable_web_page_preview=True, 
-        reply_markup=InlineKeyboardMarkup(buttons)
-    )
+    selected_image = await select_valid_image()
+    if selected_image:
+        await temp.edit_media(
+            media=InputMediaPhoto(
+                media=selected_image,
+                caption=result
+            ),
+            reply_markup=InlineKeyboardMarkup(buttons),
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+    else:
+        await temp.edit(
+            result, 
+            reply_markup=InlineKeyboardMarkup(buttons),
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
 
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
@@ -552,5 +870,4 @@ async def list_force_sub_channels(client: Client, message: Message):
 # Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
 # All rights reserved
-#
 #
