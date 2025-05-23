@@ -137,9 +137,20 @@ async def admin_callback(client: Client, callback: CallbackQuery):
         await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴀᴅᴍɪɴ ID(ꜱ) ᴏʀ ᴛʏᴘᴇ '[<code>all</code>]'.</b></blockquote>")
 
     elif data == "admin_list":
-        await client.invoke_message_handler(
-            filters.command('admins') & filters.private & admin,
-            callback.message
+        admin_ids = await db.get_all_admins()
+        if not admin_ids:
+            admin_list = "<b><blockquote>❌ Nᴏ ᴀᴅᴍɪɴꜱ ꜰᴏᴜɴᴅ.</blockquote></b>"
+        else:
+            admin_list = "\n".join(f"<b><blockquote>Iᴅ: <code>{id}</code></blockquote></b>" for id in admin_ids)
+
+        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Cʟᴏꜱᴇ", callback_data="admin_close")]])
+        await client.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=f"<b>⚡ Cᴜʀʀᴇɴᴛ ᴀᴅᴍɪɴ ʟɪꜱᴛ:</b>\n\n{admin_list}",
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
         )
         await callback.answer("Sʜᴏᴡɪɴɢ ᴀᴅᴍɪɴ ʟɪsᴛ!")
 
@@ -194,7 +205,7 @@ async def handle_admin_input(client: Client, message: Message):
             if check == len(admin_ids):
                 for id in admin_ids:
                     await db.add_admin(int(id))
-                await pro.edit(f"<b>✅ Aᴅᴍɪɴ(ꜱ) ᴀᴅᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʲʟʟʏ:</b>\n\n{admin_list}", reply_markup=reply_markup)
+                await pro.edit(f"<b>✅ Aᴅᴍɪɴ(ꜱ) ᴀᴅᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ:</b>\n\n{admin_list}", reply_markup=reply_markup)
             else:
                 await pro.edit(
                     f"<b>❌ Sᴏᴍᴇ ᴇʀʀᴏʀꜱ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴀᴅᴅɪɴɢ ᴀᴅᴍɪɴꜱ:</b>\n\n{admin_list.strip()}\n\n"
