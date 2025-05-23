@@ -13,6 +13,7 @@ import random
 import sys
 import time
 import logging
+import aiohttp
 from pyrogram import Client, filters, __version__
 from pyrogram.enums import ParseMode, ChatAction, ChatMemberStatus, ChatType
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatMemberUpdated, ChatPermissions, InputMediaPhoto
@@ -35,8 +36,18 @@ MESSAGE_EFFECT_IDS = [
     5046589136895476101,  # 💩
 ]
 
-# Fallback image URL in case RANDOM_IMAGES and START_PIC fail
-FALLBACK_IMAGE = "https://i.postimg.cc/VLyZyg1z/57ccdb58.jpg"
+# Default image URL (as specified)
+FALLBACK_IMAGE = "https://i.postimg.cc/VLPChddR/b7dcd4a1.jpg"
+
+# Function to verify image URL accessibility
+async def verify_image_url(url: str) -> bool:
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.head(url, timeout=5) as resp:
+                return resp.status == 200
+    except Exception as e:
+        logger.error(f"Image URL verification failed for {url}: {e}")
+        return False
 
 # Function to show force-sub settings with channels list, buttons, random images, and message effects
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
@@ -72,79 +83,100 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         ]
     )
 
-    # Select random image with fallback to START_PIC and then FALLBACK_IMAGE
+    # Select image with fallback
     selected_image = None
+    image_source = "unknown"
     if RANDOM_IMAGES:
         try:
             selected_image = random.choice(RANDOM_IMAGES)
+            image_source = "RANDOM_IMAGES"
+            if not await verify_image_url(selected_image):
+                logger.warning(f"Image {selected_image} from RANDOM_IMAGES is inaccessible")
+                selected_image = None
         except Exception as e:
             logger.error(f"Failed to select random image from RANDOM_IMAGES: {e}")
     if not selected_image and START_PIC:
         selected_image = START_PIC
+        image_source = "START_PIC"
+        if not await verify_image_url(selected_image):
+            logger.warning(f"Image {selected_image} from START_PIC is inaccessible")
+            selected_image = None
     if not selected_image:
         selected_image = FALLBACK_IMAGE
-        logger.warning("No valid image in RANDOM_IMAGES or START_PIC, using fallback image")
+        image_source = "FALLBACK_IMAGE"
+        if not await verify_image_url(selected_image):
+            logger.error(f"Fallback image {selected_image} is inaccessible, falling back to text")
+            selected_image = None
 
     # Select random effect
-    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
+    selected_effect = None
+    try:
+        selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
+    except Exception as e:
+        logger.error(f"Failed to select message effect: {e}")
 
     if message_id:
-        try:
-            await client.edit_message_media(
-                chat_id=chat_id,
-                message_id=message_id,
-                media=InputMediaPhoto(media=selected_image, caption=settings_text),
-                reply_markup=buttons
-            )
-        except MediaEmpty as e:
-            logger.error(f"MediaEmpty error for image {selected_image}: {e}")
-            await client.edit_message_text(
-                chat_id=chat_id,
-                message_id=message_id,
-                text=settings_text,
-                reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
-            )
-        except Exception as e:
-            logger.error(f"Failed to edit message with image {selected_image}: {e}")
-            await client.edit_message_text(
-                chat_id=chat_id,
-                message_id=message_id,
-                text=settings_text,
-                reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
-            )
+        if selected_image:
+            for attempt in range(2):  # Retry once if image fails
+                try:
+                    await client.edit_message_media(
+                        chat_id=chat_id,
+                        message_id=message_id,
+                        media=InputMediaPhoto(media=selected_image, caption=settings_text),
+                        reply_markup=buttons
+                    )
+                    logger.info(f"Edited message with image {selected_image} from {image_source}")
+                    return
+                except MediaEmpty as e:
+                    logger.error(f"MediaEmpty error for image {selected_image} (attempt {attempt+1}): {e}")
+                    break
+                except Exception as e:
+                    logger.error(f"Failed to edit message with image {selected_image} (attempt {attempt+1}): {e}")
+                    if attempt == 1:
+                        break
+                    await asyncio.sleep(1)  # Wait before retry
+        # Fallback to text if image fails
+        await client.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=settings_text,
+            reply_markup=buttons,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+        logger.info("Edited message as text-only due to image failure")
     else:
-        try:
-            await client.send_photo(
-                chat_id=chat_id,
-                photo=selected_image,
-                caption=settings_text,
-                reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True,
-                message_effect_id=selected_effect
-            )
-        except MediaEmpty as e:
-            logger.error(f"MediaEmpty error for image {selected_image}: {e}")
-            await client.send_message(
-                chat_id=chat_id,
-                text=settings_text,
-                reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
-            )
-        except Exception as e:
-            logger.error(f"Failed to send photo {selected_image} with effect {selected_effect}: {e}")
-            await client.send_message(
-                chat_id=chat_id,
-                text=settings_text,
-                reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
-            )
+        if selected_image:
+            for attempt in range(2):  # Retry once if image fails
+                try:
+                    await client.send_photo(
+                        chat_id=chat_id,
+                        photo=selected_image,
+                        caption=settings_text,
+                        reply_markup=buttons,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True,
+                        message_effect_id=selected_effect
+                    )
+                    logger.info(f"Sent photo with image {selected_image} from {image_source}, effect {selected_effect}")
+                    return
+                except MediaEmpty as e:
+                    logger.error(f"MediaEmpty error for image {selected_image} (attempt {attempt+1}): {e}")
+                    break
+                except Exception as e:
+                    logger.error(f"Failed to send photo {selected_image} with effect {selected_effect} (attempt {attempt+1}): {e}")
+                    if attempt == 1:
+                        break
+                    await asyncio.sleep(1)  # Wait before retry
+        # Fallback to text if image fails
+        await client.send_message(
+            chat_id=chat_id,
+            text=settings_text,
+            reply_markup=buttons,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+        logger.info("Sent text-only message due to image failure")
 
 @Bot.on_message(filters.command('forcesub') & filters.private & admin)
 async def force_sub_settings(client: Client, message: Message):
@@ -173,6 +205,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                     ]
                 ])
             )
+            logger.info(f"Edited message for add_channel with fallback image {FALLBACK_IMAGE}")
         except Exception as e:
             logger.error(f"Failed to edit message with image {FALLBACK_IMAGE}: {e}")
             await client.edit_message_text(
@@ -207,6 +240,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                     ]
                 ])
             )
+            logger.info(f"Edited message for remove_channel with fallback image {FALLBACK_IMAGE}")
         except Exception as e:
             logger.error(f"Failed to edit message with image {FALLBACK_IMAGE}: {e}")
             await client.edit_message_text(
@@ -440,7 +474,7 @@ async def add_force_sub(client: Client, message: Message):
         return await temp.edit(
             f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
             f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-            f"<blockquote><b>Iᴅ:</b></blockquote>\n <code>{channel_id}</code>",
+            f"<blockquote><b>Iᴅ:</b> <code>{channel_id}</code></blockquote>",
             disable_web_page_preview=True
         )
 
@@ -493,7 +527,7 @@ async def list_force_sub_channels(client: Client, message: Message):
     if not channels:
         return await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
 
-    result = "<blockquote><b>⚡ Fᴏʀᴄᴇ-sᴜʬ Cʜᴀɴɴᴇʟs:</b></blockquote>\n\n"
+    result = "<blockquote><b>⚡ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟs:</b></blockquote>\n\n"
     for ch_id in channels:
         try:
             chat = await client.get_chat(ch_id)
@@ -518,4 +552,5 @@ async def list_force_sub_channels(client: Client, message: Message):
 # Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
 # All rights reserved
+#
 #
