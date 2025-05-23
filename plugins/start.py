@@ -83,13 +83,15 @@ async def start_command(client: Client, message: Message):
             pass
 
     # Animation messages
-    m = await message.reply_text("ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴍʏ ʙᴏᴛ.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...")
+    m = await message.reply_text("<blockquote><b>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴍʏ ʙᴏᴛ.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...</b></blockquote>")
     await asyncio.sleep(0.4)
-    await m.edit_text("...")
+    await m.edit_text("<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ...</b></blockquote>")
     await asyncio.sleep(0.5)
-    await m.edit_text("ᴄʜᴇᴄᴋɪɴɢ...")
+    await m.edit_text("<blockquote>🎊</blockquote>")
     await asyncio.sleep(0.5)
-    await m.edit_text("sᴛᴀʀᴛɪɴɢ...")
+    await m.edit_text("<blockquote>⚡</blockquote>")
+    await asyncio.sleep(0.5)
+    await m.edit_text("<blockquote><b>sᴛᴀʀᴛɪɴɢ...</b></blockquote>")
     await asyncio.sleep(0.4)
     await m.delete()
 
@@ -303,7 +305,7 @@ async def add_premium_user_command(client, msg):
     except ValueError:
         await msg.reply_text("<blockquote><b>ɪɴᴠᴀʟɪᴅ ɪɴᴘᴜᴛ. ᴘʟᴇᴀsᴇ ᴇɴsᴜʀᴇ ᴜsᴇʀ ɪᴅ ᴀɴᴅ ᴛɪᴍᴇ ᴠᴀʟᴜᴇ ᴀʀᴇ ɴᴜᴍʙᴇRs</b></blockquote>.")
     except Exception as e:
-        await msg.reply_text(f"ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ: {str(e)}")
+        await msg.reply_text(f"ᴀɴ ᴇʀʀᴏʀ ᴐᴄᴄᴜʀʀᴇᴅ: {str(e)}")
 
 @Bot.on_message(filters.command('remove_premium') & filters.private & admin)
 async def pre_remove_user(client: Client, msg: Message):
