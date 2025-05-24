@@ -220,19 +220,19 @@ async def user_callback(client: Client, callback: CallbackQuery):
         await callback.answer("Bᴀᴄᴋ ᴛᴏ ꜱᴇᴛᴛɪɴɢꜱ!")
 
 # Handle user input for banning/unbanning users
-@Bot.on_message(filters.private & filters.regex(r"^\d+$|^all$") & admin)
+@Bot.on_message(filters.private & filters.text & admin)
 async def handle_user_ban_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
 
     try:
         if state == "awaiting_ban_user_input":
-            banuser_ids = await db.get_ban_users()
-            user_ids = message.text.split()
+            banusers = message.text.split()
             pro = await message.reply("<b><i>Pʟᴇᴀꜱᴇ ᴡᴀɪᴛ...</i></b>", quote=True)
+            banuser_ids = await db.get_ban_users()
             report, success_count = "", 0
 
-            for uid in user_ids:
+            for uid in banusers:
                 try:
                     uid_int = int(uid)
                 except:
@@ -265,20 +265,22 @@ async def handle_user_ban_input(client: Client, message: Message):
 
         elif state == "awaiting_unban_user_input":
             banuser_ids = await db.get_ban_users()
+            banusers = message.text.split()
+            pro = await message.reply("<b><i>Pʟᴇᴀꜱᴇ ᴡᴀɪᴛ...</i></b>", quote=True)
+
             if message.text.lower() == "all":
                 if not banuser_ids:
-                    await message.reply("<blockquote><b>❌ Nᴏ ᴜꜱᴇʀꜱ ɪɴ ᴛʜᴇ ʙᴀɴ ʟɪꜱᴛ.</b></blockquote>")
+                    await pro.edit("<blockquote><b>✅ Nᴏ ᴜꜱᴇʀꜱ ɪɴ ᴛʜᴇ ʙᴀɴ ʟɪꜱᴛ.</b></blockquote>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Cʟᴏꜱᴇ", callback_data="user_close")]]))
+                    await db.set_temp_state(chat_id, "")
+                    await show_user_settings(client, chat_id)
                     return
                 for uid in banuser_ids:
                     await db.del_ban_user(uid)
                 listed = "\n".join([f"<b><blockquote>Uɴʙᴀɴɴᴇᴅ: <code>{uid}</code></b></blockquote>" for uid in banuser_ids])
-                await message.reply(f"<b>🚫 Cʟᴇᴀʀᴇᴅ Bᴀɴ Lɪꜱᴛ:</b>\n\n{listed}")
+                await pro.edit(f"<b>🚫 Cʟᴇᴀʀᴇᴅ Bᴀɴ Lɪꜱᴛ:</b>\n\n{listed}", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Cʟᴏꜱᴇ", callback_data="user_close")]]))
             else:
-                user_ids = message.text.split()
-                pro = await message.reply("<b><i>Pʟᴇᴀꜱᴇ ᴡᴀɪᴛ...</i></b>", quote=True)
                 report = ""
-
-                for uid in user_ids:
+                for uid in banusers:
                     try:
                         uid_int = int(uid)
                     except:
@@ -299,7 +301,7 @@ async def handle_user_ban_input(client: Client, message: Message):
     except Exception as e:
         logger.error(f"Failed to process user input {message.text}: {e}")
         await message.reply(
-            f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴘʀᴏᴄᴇꜱꜱ ᴜꜱᴇʀ ɪɴᴘᴜᴛ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>",
+            f"<blockquote><b>❌ Fᴀɪʟᴇᴅ ᴛᴏ ᴘʀᴏᴄᴇꜱꜱ ᴜꜱᴇʀ ɪɴᴪᴜᴛ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>",
             parse_mode=ParseMode.HTML
         )
         await db.set_temp_state(chat_id, "")
@@ -362,7 +364,7 @@ async def delete_banuser(client: Client, message: Message):
         return await pro.edit(
             "<b>❗ Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴜꜱᴇʀ IDs ᴛᴏ ᴜɴʙᴀɴ.</b>\n\n"
             "<b>📌 Uꜱᴀɢᴇ:</b>\n"
-            "<code>/unban [user_id]</code> — Uɴʙᴀɴ ꜱᴘᴇᴄɪғɪᴄ ᴜꜱᴇʀ(ꜱ)\n"
+            "<code>/unban [user_id]</code> — Uɴʙᴀɴ ꜱᴘᴇᴄɪꜰɪᴄ ᴜꜱᴇʀ(ꜱ)\n"
             "<code>/unban all</code> — Rᴇᴍᴏᴠᴇ ᴀʟʟ ʙᴀɴɴᴇᴅ ᴜꜱᴇʀꜱ",
             reply_markup=reply_markup
         )
@@ -407,7 +409,7 @@ async def get_banuser_list(client: Client, message: Message):
             user_link = f'<a href="tg://user?id={uid}">{user.first_name}</a>'
             result += f"<b><blockquote>{user_link} — <code>{uid}</code></b></blockquote>\n"
         except:
-            result += f"<b><blockquote><code>{uid}</code> — <i>Cᴏᴜʟᴅ ɴᴏᴛ ғᴇᴛᴄʜ ɴᴀᴍᴇ</i></b></blockquote>\n"
+            result += f"<b><blockquote><code>{uid}</code> — <i>Cᴏᴜʟᴅ ɴᴏᴛ ғᴇᴛᴄʜ ɴᴀᴮᴇ</i></b></blockquote>\n"
 
     await pro.edit(result, disable_web_page_preview=True, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cʟᴏꜱᴇ", callback_data="close")]]))
 
