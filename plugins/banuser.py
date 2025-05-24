@@ -115,9 +115,7 @@ async def user_callback(client: Client, callback: CallbackQuery):
         await client.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
-            text="<blockquote><b>Give me the user ID(s) to ban.</b>\n\n"
-                 "<b>📌 Usage:</b>\n"
-                 "<code>/ban [user_id]</code> — Ban one or more users by ID.</blockquote>",
+            text="<blockquote><b>Give me the user ID(s) to ban.</b></blockquote>",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("• Back •", callback_data="user_back"),
@@ -134,10 +132,7 @@ async def user_callback(client: Client, callback: CallbackQuery):
         await client.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
-            text="<blockquote><b>Give me the user ID(s) or type 'all' to unban all users.</b>\n\n"
-                 "<b>📌 Usage:</b>\n"
-                 "<code>/unban [user_id]</code> — Unban specific user(s)\n"
-                 "<code>/unban all</code> — Remove all banned users</blockquote>",
+            text="<blockquote><b>Give me the user ID(s) or type 'all' to unban all users.</b></blockquote>",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("• Back •", callback_data="user_back"),
@@ -224,13 +219,13 @@ async def user_callback(client: Client, callback: CallbackQuery):
         await show_user_settings(client, chat_id, message_id)
         await callback.answer("Back to settings!")
 
-# Custom filter for ban/unban command input
+# Custom filter for ban/unban user input
 async def ban_user_filter(flt, client: Client, message: Message):
     state = await db.get_temp_state(message.chat.id)
     return (
         filters.private(message)
         and admin(message)
-        and filters.regex(r"^\d+$|^all$|^/ban\s|^/unban\s")(message)
+        and filters.regex(r"^\d+$|^all$")(message)
         and state in ["awaiting_ban_command_input", "awaiting_unban_command_input"]
     )
 
@@ -243,26 +238,11 @@ async def handle_user_input(client: Client, message: Message):
     try:
         if state == "awaiting_ban_command_input":
             banuser_ids = await db.get_ban_users()
-            # Simulate /ban command
-            if message.text.startswith("/ban"):
-                banusers = message.text.split()[1:]  # Skip the /ban part
-            else:
-                banusers = message.text.split()
-
+            user_ids = message.text.split()
             pro = await message.reply("<b><i>Please wait...</i></b>", quote=True)
             report, success_count = "", 0
 
-            if not banusers:
-                await pro.edit(
-                    "<b>❗ You must provide user IDs to ban.</b>\n\n"
-                    "<b>📌 Usage:</b>\n"
-                    "<code>/ban [user_id]</code> — Ban one or more users by ID.",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Close", callback_data="user_close")]])
-                )
-                await db.set_temp_state(chat_id, "")
-                return
-
-            for uid in banusers:
+            for uid in user_ids:
                 try:
                     uid_int = int(uid)
                 except:
@@ -295,26 +275,11 @@ async def handle_user_input(client: Client, message: Message):
 
         elif state == "awaiting_unban_command_input":
             banuser_ids = await db.get_ban_users()
-            if message.text.startswith("/unban"):
-                banusers = message.text.split()[1:]  # Skip the /unban part
-            else:
-                banusers = message.text.split()
-
+            user_ids = message.text.split()
             pro = await message.reply("<b><i>Please wait...</i></b>", quote=True)
             report = ""
 
-            if not banusers:
-                await pro.edit(
-                    "<b>❗ Please provide user IDs to unban.</b>\n\n"
-                    "<b>📌 Usage:</b>\n"
-                    "<code>/unban [user_id]</code> — Unban specific user(s)\n"
-                    "<code>/unban all</code> — Remove all banned users",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Close", callback_data="user_close")]])
-                )
-                await db.set_temp_state(chat_id, "")
-                return
-
-            if banusers[0].lower() == "all":
+            if user_ids[0].lower() == "all":
                 if not banuser_ids:
                     await pro.edit("<b>✅ No users in the ban list.</b>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Close", callback_data="user_close")]]))
                     await db.set_temp_state(chat_id, "")
@@ -327,7 +292,7 @@ async def handle_user_input(client: Client, message: Message):
                 await show_user_settings(client, chat_id)
                 return
 
-            for uid in banusers:
+            for uid in user_ids:
                 try:
                     uid_int = int(uid)
                 except:
