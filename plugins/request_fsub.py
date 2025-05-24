@@ -36,13 +36,13 @@ MESSAGE_EFFECT_IDS = [
 
 # Function to show force-sub settings with channels list, buttons, image, and message effects
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
-    settings_text = "<b>›› Rᴇǫᴜᴇsᴛ Fꜱᴜʙ Sᴇᴛᴛɪɴɢs:</b>\n\n"
+    settings_text = "<b>›› Request Fsub Settings:</b>\n\n"
     channels = await db.show_channels()
     
     if not channels:
-        settings_text += "<blockquote><i>Nᴏ ᴄʜᴀɴɴᴇʟs ᴄᴏɴғɪɢᴜʀᴇᴅ ʏᴇᴛ. Uꜱᴇ 𖤓 ᴀᴅᴅ Cʜᴀɴɴᴇʟs 𖤓 ᴛᴏ ᴀᴅᴅ ᴀ ᴄʜᴀɴɴᴇʟ.</i></blockquote>"
+        settings_text += "<blockquote><i>No channels configured yet. Use 𖤓 Add Channels 𖤓 to add a channel.</i></blockquote>"
     else:
-        settings_text += "<blockquote><b>⚡ Fᴏʀᴄᴇ-sᴜʙ Cʜᴀɴɴᴇʟs:</b></blockquote>\n\n"
+        settings_text += "<blockquote><b>⚡ Force-sub Channels:</b></blockquote>\n\n"
         for ch_id in channels:
             try:
                 chat = await client.get_chat(ch_id)
@@ -50,20 +50,20 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 settings_text += f"<blockquote><b>•</b> <a href='{link}'>{chat.title}</a> [<code>{ch_id}</code>]</blockquote>\n"
             except Exception as e:
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
-                settings_text += f"<blockquote><b>•</b> <code>{ch_id}</code> — <i>Uɴᴀᴠᴀɪʟᴀʙʟᴇ</i></blockquote>\n"
+                settings_text += f"<blockquote><b>•</b> <code>{ch_id}</code> — <i>Unavailable</i></blockquote>\n"
 
     buttons = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("• ᴀᴅᴅ Cʜᴀɴɴᴇʟs ", callback_data="fsub_add_channel"),
-                InlineKeyboardButton(" ʀᴇᴍovᴇ Cʜᴀɴɴᴇʟs •", callback_data="fsub_remove_channel")
+                InlineKeyboardButton("• Add Channels ", callback_data="fsub_add_channel"),
+                InlineKeyboardButton(" Remove Channels •", callback_data="fsub_remove_channel")
             ],
             [
-                InlineKeyboardButton("• ᴛᴏɢɢʟᴇ Mᴏᴅᴇ •", callback_data="fsub_toggle_mode")
+                InlineKeyboardButton("• Toggle Mode •", callback_data="fsub_toggle_mode")
             ],
             [
-                InlineKeyboardButton("• ʀᴇꜰᴇʀsʜ ", callback_data="fsub_refresh"),
-                InlineKeyboardButton(" ᴄʟosᴇ•", callback_data="fsub_close")
+                InlineKeyboardButton("• Refresh ", callback_data="fsub_refresh"),
+                InlineKeyboardButton(" Close•", callback_data="fsub_close")
             ]
         ]
     )
@@ -123,6 +123,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
 
 @Bot.on_message(filters.command('forcesub') & filters.private & admin)
 async def force_sub_settings(client: Client, message: Message):
+    logger.info(f"Received /forcesub command from chat {message.chat.id}")
     await show_force_sub_settings(client, message.chat.id)
 
 @Bot.on_callback_query(filters.regex(r"^fsub_"))
@@ -131,23 +132,25 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
     chat_id = callback.message.chat.id
     message_id = callback.message.id
 
+    logger.info(f"Received callback query with data: {data} in chat {chat_id}")
+
     if data == "fsub_add_channel":
         await db.set_temp_state(chat_id, "awaiting_add_channel_input")
         logger.info(f"Set state to 'awaiting_add_channel_input' for chat {chat_id}")
         await client.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
-            text="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b></blockquote>",
+            text="<blockquote><b>Give me the channel ID.</b>\n<b>Add only one channel at a time.</b></blockquote>",
             reply_markup=InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
-                    InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
+                    InlineKeyboardButton("•Back•", callback_data="fsub_back"),
+                    InlineKeyboardButton("•Close•", callback_data="fsub_close")
                 ]
             ]),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
-        await callback.answer("<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID.</b>\n<b>Aᴅᴅ ᴏɴʟ�y ᴏɴᴇ ᴄʜᴀɴɴᴇʟ ᴀᴛ ᴀ ᴛɪᴍᴇ.</b></blockquote>")
+        await callback.answer("Give me the channel ID.\nAdd only one channel at a time.")
 
     elif data == "fsub_remove_channel":
         await db.set_temp_state(chat_id, "awaiting_remove_channel_input")
@@ -155,24 +158,24 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
         await client.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
-            text="<blockquote><b>Gɪᴠᴇ ᴍᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ '<code>all</code>' ᴛᴏ ʀᴇᴮᴏᴠᴇ ᴀʟʟ ᴄʜᴀɴɴᴇʟs.</b></blockquote>",
+            text="<blockquote><b>Give me the channel ID or type '<code>all</code>' to remove all channels.</b></blockquote>",
             reply_markup=InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("•ʙᴀᴄᴋ•", callback_data="fsub_back"),
-                    InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
+                    InlineKeyboardButton("•Back•", callback_data="fsub_back"),
+                    InlineKeyboardButton("•Close•", callback_data="fsub_close")
                 ]
             ]),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
-        await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ID ᴏʀ ᴛʏᴘᴇ '<code>all</code>'.</b></blockquote>")
+        await callback.answer("Please provide the channel ID or type 'all'.")
 
     elif data == "fsub_toggle_mode":
-        temp = await callback.message.reply("<b><i>Wᴀɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
+        temp = await callback.message.reply("<b><i>Wait a sec...</i></b>", quote=True)
         channels = await db.show_channels()
 
         if not channels:
-            await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʬ ᴄʜᴀɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+            await temp.edit("<blockquote><b>❌ No force-sub channels found.</b></blockquote>")
             await callback.answer()
             return
 
@@ -186,12 +189,12 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
             except Exception as e:
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
-                buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴᴀᴠᴀɪʟᴀʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
+                buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
 
-        buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
+        buttons.append([InlineKeyboardButton("Close ✖️", callback_data="close")])
 
         await temp.edit(
-            "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʬ ᴍᴏᴅᴇ:</b></blockquote>",
+            "<blockquote><b>⚡ Select a channel to toggle force-sub mode:</b></blockquote>",
             reply_markup=InlineKeyboardMarkup(buttons),
             disable_web_page_preview=True
         )
@@ -199,35 +202,42 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
 
     elif data == "fsub_refresh":
         await show_force_sub_settings(client, chat_id, callback.message.id)
-        await callback.answer("Sᴇᴛᴛɪɴɢs ʀᴇғʀᴇsʜᴇᴅ!")
+        await callback.answer("Settings refreshed!")
 
     elif data == "fsub_close":
         await db.set_temp_state(chat_id, "")
         await callback.message.delete()
-        await callback.answer("Sᴇᴛᴛɪɴɢs ᴄʟᴏsᴇᴅ!")
+        await callback.answer("Settings closed!")
 
     elif data == "fsub_back":
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id, message_id)
-        await callback.answer("Bᴀᴄᴋ ᴛᴏ sᴇᴛᴛɪɴɢs!")
+        await callback.answer("Back to settings!")
 
     elif data == "fsub_cancel":
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id, message_id)
-        await callback.answer("Aᴄᴛɪᴏɴ ᴄᴀɴᴄᴇʟʟᴇᴅ!")
+        await callback.answer("Action cancelled!")
 
 # Modified filter to avoid conflict with admin.py
 async def fsub_state_filter(_, __, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
+    # Log the current state and message text for debugging
+    logger.info(f"Checking fsub_state_filter for chat {chat_id}: state={state}, message_text={message.text}")
     # Ensure the filter only triggers for force-sub related states and specific input
-    return bool(
-        state in ["awaiting_add_channel_input", "awaiting_remove_channel_input"] 
-        and message.text 
-        and (message.text.lower() == "all" or (message.text.startswith("-") and message.text[1:].isdigit()))
-    )
+    if state not in ["awaiting_add_channel_input", "awaiting_remove_channel_input"]:
+        logger.info(f"State {state} not relevant for fsub_state_filter in chat {chat_id}")
+        return False
+    if not message.text:
+        logger.info(f"No message text provided in chat {chat_id}")
+        return False
+    # Check if the message matches the expected format for channel ID or 'all'
+    is_valid_input = message.text.lower() == "all" or (message.text.startswith("-") and message.text[1:].isdigit())
+    logger.info(f"Input validation for chat {chat_id}: is_valid_input={is_valid_input}")
+    return is_valid_input
 
-@Bot.on_message(filters.private & admin & filters.create(fsub_state_filter))
+@Bot.on_message(filters.private & admin & filters.create(fsub_state_filter), group=1)
 async def handle_channel_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
@@ -239,7 +249,7 @@ async def handle_channel_input(client: Client, message: Message):
             all_channels = await db.show_channels()
             channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
             if channel_id in channel_ids_only:
-                await message.reply(f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
+                await message.reply(f"<blockquote><b>Channel already exists:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
                 await db.set_temp_state(chat_id, "")
                 await show_force_sub_settings(client, chat_id)
                 return
@@ -247,14 +257,14 @@ async def handle_channel_input(client: Client, message: Message):
             chat = await client.get_chat(channel_id)
 
             if chat.type != ChatType.CHANNEL:
-                await message.reply("<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀɴɴᴇʟs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.</b>")
+                await message.reply("<b>❌ Only public or private channels are allowed.</b>")
                 await db.set_temp_state(chat_id, "")
                 await show_force_sub_settings(client, chat_id)
                 return
 
             member = await client.get_chat_member(chat.id, "me")
             if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-                await message.reply("<b>❌ Bᴏᴛ ᴍᴜsᴛ ʙᴇ ᴀɴ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜ�.aɴɴᴇʟ.</b>")
+                await message.reply("<b>❌ Bot must be an admin in that channel.</b>")
                 await db.set_temp_state(chat_id, "")
                 await show_force_sub_settings(client, chat_id)
                 return
@@ -263,9 +273,9 @@ async def handle_channel_input(client: Client, message: Message):
             
             await db.add_channel(channel_id)
             await message.reply(
-                f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜ�.aɴɴᴇʟ ᴀᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
-                f"<blockquote><b>Nᴀᴍᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-                f"<blockquote><b>Iᴅ: <code>{channel_id}</code></b></blockquote>",
+                f"<blockquote><b>✅ Force-sub Channel added successfully!</b></blockquote>\n\n"
+                f"<blockquote><b>Name:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+                f"<blockquote><b>ID: <code>{channel_id}</code></b></blockquote>",
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
@@ -276,32 +286,32 @@ async def handle_channel_input(client: Client, message: Message):
             all_channels = await db.show_channels()
             if message.text.lower() == "all":
                 if not all_channels:
-                    await message.reply("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʬ ᴄʜ�.aɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+                    await message.reply("<blockquote><b>❌ No force-sub channels found.</b></blockquote>")
                     await db.set_temp_state(chat_id, "")
                     await show_force_sub_settings(client, chat_id)
                     return
                 for ch_id in all_channels:
                     await db.rem_channel(ch_id)
-                await message.reply("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʬ ᴄʜ�.aɴɴᴇʟs ʀᴇᴮᴏᴠᴇᴅ.</b></blockquote>")
+                await message.reply("<blockquote><b>✅ All force-sub channels removed.</b></blockquote>")
             else:
                 ch_id = int(message.text)
                 if ch_id in all_channels:
                     await db.rem_channel(ch_id)
-                    await message.reply(f"<blockquote><b>✅ Cʜ�.aɴɴᴇʟ ʀᴇᴮᴏᴠᴇᴅ:</b></blockquote>\n <blockquote><code>{ch_id}</code></blockquote>")
+                    await message.reply(f"<blockquote><b>✅ Channel removed:</b></blockquote>\n <blockquote><code>{ch_id}</code></blockquote>")
                 else:
-                    await message.reply(f"<blockquote><b>❌ Cʜ�.aɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <blockquote><code>{ch_id}</code></blockquote>")
+                    await message.reply(f"<blockquote><b>❌ Channel not found:</b></blockquote>\n <blockquote><code>{ch_id}</code></blockquote>")
             await db.set_temp_state(chat_id, "")
             await show_force_sub_settings(client, chat_id)
 
     except ValueError:
         logger.error(f"Invalid input received: {message.text}")
-        await message.reply("<blockquote><b>❌ Iɴᴠᴀʟɪᴅ ᴄʜ�.aɴɴᴇʟ ɪᴅ!</b></blockquote>")
+        await message.reply("<blockquote><b>❌ Invalid channel ID!</b></blockquote>")
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id)
     except Exception as e:
         logger.error(f"Failed to process channel input {message.text}: {e}")
         await message.reply(
-            f"<blockquote><b>❌ F�.aɪʟᴇᴅ ᴛᴏ ᴘʀᴏᴄᴇss ᴄʜ�.aɴɴᴇʟ:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>",
+            f"<blockquote><b>❌ Failed to process channel:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>",
             parse_mode=ParseMode.HTML
         )
         await db.set_temp_state(chat_id, "")
@@ -309,11 +319,11 @@ async def handle_channel_input(client: Client, message: Message):
 
 @Bot.on_message(filters.command('fsub_mode') & filters.private & admin)
 async def change_force_sub_mode(client: Client, message: Message):
-    temp = await message.reply("<b><i>W�.aɪᴛ ᴀ sᴇᴄ...</i></b>", quote=True)
+    temp = await message.reply("<b><i>Wait a sec...</i></b>", quote=True)
     channels = await db.show_channels()
 
     if not channels:
-        await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʬ ᴄʜ�.aɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        await temp.edit("<blockquote><b>❌ No force-sub channels found.</b></blockquote>")
         return
 
     buttons = []
@@ -326,12 +336,12 @@ async def change_force_sub_mode(client: Client, message: Message):
             buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
         except Exception as e:
             logger.error(f"Failed to fetch chat {ch_id}: {e}")
-            buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Uɴ�.aᴠ�.aɪʟ�.aʙʟᴇ)", callback_data=f"rfs_ch_{ch_id}")])
+            buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
 
-    buttons.append([InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")])
+    buttons.append([InlineKeyboardButton("Close ✖️", callback_data="close")])
 
     await temp.edit(
-        "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ �.a ᴄʜ�.aɴɴᴇʟ ᴛᴏ ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʬ ᴮᴏᴅᴇ:</b></blockquote>",
+        "<blockquote><b>⚡ Select a channel to toggle force-sub mode:</b></blockquote>",
         reply_markup=InlineKeyboardMarkup(buttons),
         disable_web_page_preview=True
     )
@@ -363,13 +373,13 @@ async def handle_join_request(client, chat_join_request):
 
 @Bot.on_message(filters.command('addchnl') & filters.private & admin)
 async def add_force_sub(client: Client, message: Message):
-    temp = await message.reply("<b><i>W�.aɪᴛ �.a sᴇᴄ...</i></b>", quote=True)
+    temp = await message.reply("<b><i>Wait a sec...</i></b>", quote=True)
     args = message.text.split(maxsplit=1)
 
     if len(args) != 2:
-        buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
+        buttons = [[InlineKeyboardButton("Close ✖️", callback_data="close")]]
         await temp.edit(
-            "<blockquote><b>Uꜱ�.aɢᴇ:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Aᴅᴅ ᴏɴʟʏ ᴏɴᴇ ᴄʜ�.aɴɴᴇʟ �.aᴛ �.a ᴛɪᴮᴇ.</b>",
+            "<blockquote><b>Usage:</b></blockquote>\n <code>/addchnl -100XXXXXXXXXX</code>\n<b>Add only one channel at a time.</b>",
             reply_markup=InlineKeyboardMarkup(buttons)
         )
         return
@@ -377,34 +387,34 @@ async def add_force_sub(client: Client, message: Message):
     try:
         channel_id = int(args[1])
     except ValueError:
-        await temp.edit("<blockquote><b>❌ Iɴᴠ�.aʟɪᴅ ᴄʜ�.aɴɴᴇʟ ɪᴅ!</b></blockquote>")
+        await temp.edit("<blockquote><b>❌ Invalid channel ID!</b></blockquote>")
         return
 
     all_channels = await db.show_channels()
     channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
     if channel_id in channel_ids_only:
-        await temp.edit(f"<blockquote><b>Cʜ�.aɴɴᴇʟ �.aʟʀᴇ.aᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
+        await temp.edit(f"<blockquote><b>Channel already exists:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
         return
 
     try:
         chat = await client.get_chat(channel_id)
 
         if chat.type != ChatType.CHANNEL:
-            await temp.edit("<b>❌ Oɴʟʏ ᴘᴜʙʟɪᴄ ᴏʀ ᴘʀɪᴠ�.aᴛᴇ ᴄʜ�.aɴɴᴇʟs �.aʀᴇ .aʟʟᴏᴡᴇᴅ.</b>")
+            await temp.edit("<b>❌ Only public or private channels are allowed.</b>")
             return
 
         member = await client.get_chat_member(chat.id, "me")
         if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-            await temp.edit("<b>❌ Bᴏᴛ ᴮᴜsᴛ ʙᴇ .aɴ .aᴅᴮɪɴ ɪɴ ᴛʜ.aᴛ ᴄʜ�.aɴɴᴇʟ.</b>")
+            await temp.edit("<b>❌ Bot must be an admin in that channel.</b>")
             return
 
         link = await client.export_chat_invite_link(chat.id) if not chat.username else f"https://t.me/{chat.username}"
         
         await db.add_channel(channel_id)
         await temp.edit(
-            f"<blockquote><b>✅ Fᴏʀᴄᴇ-sᴜʬ Cʜ�.aɴɴᴇʟ .aᴅᴅᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!</b></blockquote>\n\n"
-            f"<blockquote><b>N.aᴮᴇ:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
-            f"<blockquote><b>Iᴅ: <code>{channel_id}</code></b></blockquote>",
+            f"<blockquote><b>✅ Force-sub Channel added successfully!</b></blockquote>\n\n"
+            f"<blockquote><b>Name:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+            f"<blockquote><b>ID: <code>{channel_id}</code></b></blockquote>",
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
@@ -412,60 +422,60 @@ async def add_force_sub(client: Client, message: Message):
     except Exception as e:
         logger.error(f"Failed to add channel {channel_id}: {e}")
         await temp.edit(
-            f"<blockquote><b>❌ F.aɪʟᴇᴅ ᴛᴏ .aᴅᴅ ᴄʜ�.aɴɴᴇʟ:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
+            f"<blockquote><b>❌ Failed to add channel:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
             parse_mode=ParseMode.HTML
         )
 
 @Bot.on_message(filters.command('delchnl') & filters.private & admin)
 async def del_force_sub(client: Client, message: Message):
-    temp = await message.reply("<b><i>W�.aɪᴛ .a sᴇᴄ...</i></b>", quote=True)
+    temp = await message.reply("<b><i>Wait a sec...</i></b>", quote=True)
     args = message.text.split(maxsplit=1)
     all_channels = await db.show_channels()
 
     if len(args) < 2:
-        buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
+        buttons = [[InlineKeyboardButton("Close ✖️", callback_data="close")]]
         await temp.edit(
-            "<blockquote><b>Uꜱ.aɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
+            "<blockquote><b>Usage:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
             reply_markup=InlineKeyboardMarkup(buttons)
         )
         return
 
     if args[1].lower() == "all":
         if not all_channels:
-            await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʬ ᴄʜ�.aɴɴᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+            await temp.edit("<blockquote><b>❌ No force-sub channels found.</b></blockquote>")
             return
         for ch_id in all_channels:
             await db.rem_channel(ch_id)
-        await temp.edit("<blockquote><b>✅ Aʟʟ ғᴏʀᴄᴇ-sᴜʬ ᴄʜ�.aɴɴᴇʟs ʀᴇᴮᴏᴠᴇᴅ.</b></blockquote>")
+        await temp.edit("<blockquote><b>✅ All force-sub channels removed.</b></blockquote>")
         return
 
     try:
         ch_id = int(args[1])
         if ch_id in all_channels:
             await db.rem_channel(ch_id)
-            await temp.edit(f"<blockquote><b>✅ Cʜ�.aɴɴᴇʟ ʀᴇᴮᴏᴠᴇᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+            await temp.edit(f"<blockquote><b>✅ Channel removed:</b></blockquote>\n <code>{ch_id}</code>")
         else:
-            await temp.edit(f"<blockquote><b>❌ Cʜ�.aɴɴᴇʟ ɴᴏᴛ ғᴏᴜɴᴅ:</b></blockquote>\n <code>{ch_id}</code>")
+            await temp.edit(f"<blockquote><b>❌ Channel not found:</b></blockquote>\n <code>{ch_id}</code>")
     except ValueError:
-        buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
+        buttons = [[InlineKeyboardButton("Close ✖️", callback_data="close")]]
         await temp.edit(
-            "<blockquote><b>Uꜱ.aɢᴇ:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
+            "<blockquote><b>Usage:</b></blockquote>\n <code>/delchnl <channel_id | all</code>",
             reply_markup=InlineKeyboardMarkup(buttons)
         )
     except Exception as e:
         logger.error(f"Error removing channel {args[1]}: {e}")
-        await temp.edit(f"<blockquote><b>❌ Eʀʀᴏʀ:</b></blockquote>\n <code>{e}</code>")
+        await temp.edit(f"<blockquote><b>❌ Error:</b></blockquote>\n <code>{e}</code>")
 
 @Bot.on_message(filters.command('listchnl') & filters.private & admin)
 async def list_force_sub_channels(client: Client, message: Message):
-    temp = await message.reply("<b><i>W�.aɪᴛ .a sᴇᴄ...</i></b>", quote=True)
+    temp = await message.reply("<b><i>Wait a sec...</i></b>", quote=True)
     channels = await db.show_channels()
 
     if not channels:
-        await temp.edit("<blockquote><b>❌ Nᴏ ғᴏʀᴄᴇ-sᴜʬ ᴄʜ�.aɴɴᴮᴇʟs ғᴏᴜɴᴅ.</b></blockquote>")
+        await temp.edit("<blockquote><b>❌ No force-sub channels found.</b></blockquote>")
         return
 
-    result = "<blockquote><b>⚡ Fᴏʀᴄᴇ-sᴜʬ Cʜ�.aɴɴᴇʟs:</b></blockquote>\n\n"
+    result = "<blockquote><b>⚡ Force-sub Channels:</b></blockquote>\n\n"
     for ch_id in channels:
         try:
             chat = await client.get_chat(ch_id)
@@ -473,9 +483,9 @@ async def list_force_sub_channels(client: Client, message: Message):
             result += f"<b>•</b> <a href='{link}'>{chat.title}</a> [<code>{ch_id}</code>]\n"
         except Exception as e:
             logger.error(f"Failed to fetch chat {ch_id}: {e}")
-            result += f"<b>•</b> <code>{ch_id}</code> — <i>Uɴ�.aᴠ�.aɪʟ.aʙʟᴇ</i>\n"
+            result += f"<b>•</b> <code>{ch_id}</code> — <i>Unavailable</i>\n"
 
-    buttons = [[InlineKeyboardButton("Cʟᴏsᴇ ✖️", callback_data="close")]]
+    buttons = [[InlineKeyboardButton("Close ✖️", callback_data="close")]]
     await temp.edit(
         result, 
         reply_markup=InlineKeyboardMarkup(buttons),
