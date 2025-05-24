@@ -216,7 +216,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
         await show_force_sub_settings(client, chat_id, message_id)
         await callback.answer("Aᴄᴛɪᴏɴ ᴄᴀɴᴄᴇʟʟᴇᴅ!")
 
-@Bot.on_message(filters.private & filters.regex(r"^-?\d+$|^all$") & admin)
+@Bot.on_message(filters.private & filters.regex(r"^-?\d+$|^all$") & admin)  # Explicitly match negative integers or "all"
 async def handle_channel_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
@@ -362,7 +362,7 @@ async def add_force_sub(client: Client, message: Message):
         return
 
     all_channels = await db.show_channels()
-    channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
+    channel_ids_only> = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
     if channel_id in channel_ids_only:
         await temp.edit(f"<blockquote><b>Cʜᴀɴɴᴇʟ ᴀʟʀᴇᴀᴅʏ ᴇxɪsᴛs:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
         return
