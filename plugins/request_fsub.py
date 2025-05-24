@@ -55,15 +55,15 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
     buttons = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("•ᴀᴅᴅ Cʜᴀɴɴᴇʟs", callback_data="fsub_add_channel"),
-                InlineKeyboardButton("ʀᴇᴍovᴇ Cʜᴀɴɴᴇʟs•", callback_data="fsub_remove_channel")
+                InlineKeyboardButton("• ᴀᴅᴅ Cʜᴀɴɴᴇʟs ", callback_data="fsub_add_channel"),
+                InlineKeyboardButton(" ʀᴇᴍovᴇ Cʜᴀɴɴᴇʟs •", callback_data="fsub_remove_channel")
             ],
             [
-                InlineKeyboardButton("Tᴏɢɢʟᴇ Mᴏᴅᴇ•", callback_data="fsub_toggle_mode"),
-                InlineKeyboardButton("•ʀᴇꜰᴇʀsʜ•", callback_data="fsub_refresh")
-            ],
+                InlineKeyboardButton("• ᴛᴏɢɢʟᴇ Mᴏᴅᴇ •", callback_data="fsub_toggle_mode")
+            ]
             [
-                InlineKeyboardButton("•ᴄʟosᴇ•", callback_data="fsub_close")
+                InlineKeyboardButton("• ʀᴇꜰᴇʀsʜ ", callback_data="fsub_refresh"),
+                InlineKeyboardButton(" ᴄʟosᴇ•", callback_data="fsub_close")
             ]
         ]
     )
