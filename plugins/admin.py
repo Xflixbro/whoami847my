@@ -21,6 +21,7 @@ from bot import Bot
 from config import *
 from helper_func import *
 from database.database import *
+from banuser import show_user_settings  # Importing show_user_settings from banuser.py
 
 # Function to show admin settings with admin list, buttons, and message effects
 async def show_admin_settings(client: Client, chat_id: int, message_id: int = None):
@@ -28,7 +29,7 @@ async def show_admin_settings(client: Client, chat_id: int, message_id: int = No
     admin_ids = await db.get_all_admins()
 
     if not admin_ids:
-        settings_text += "<i>Nᴏ ᴀᴅᴍɪɴꜱ ᴄᴏɴꜰɪɢᴜʀᴇᴅ ʏᴇᴛ. Uꜱᴇ 'ᴀᴅᴅ ᴀᴅᴍɪɴ' ᴛᴏ ᴀᴅᴅ ᴀ/ᴍᴜʟᴛɪᴘʟᴇ ᴀᴅᴍɪɴ.</i>"
+        settings_text += "<i>Nᴏ ᴀᴅᴍɪɴꜱ ᴄᴏɴғɪɢᴜʀᴇᴅ ʏᴇᴛ. Uꜱᴇ 'ᴀᴅᴅ ᴀᴅᴍɪɴ' ᴛᴏ ᴀᴅᴅ ᴀ/ᴍᴜʟᴛɪᴘʟᴇ ᴀᴅᴍɪɴ.</i>"
     else:
         settings_text += "<blockquote><b>⚡ Cᴜʀʀᴇɴᴛ Aᴅᴍɪɴꜱ:</b></blockquote>\n\n"
         for idx, admin_id in enumerate(admin_ids[:5], 1):  # Show up to 5 admins
@@ -211,7 +212,7 @@ async def handle_admin_input(client: Client, message: Message):
             if check == len(admin_ids):
                 for id in admin_ids:
                     await db.add_admin(int(id))
-                await pro.edit(f"<b>✅ Aᴅᴍɪɴ(ꜱ) ᴀᴅᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ:</b>\n\n{admin_list}", reply_markup=reply_markup)
+                await pro.edit(f"<b>✅ Aᴅᴍɪɴ(ꜱ) ᴀᴅᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ:</b>\n\n{admin_list}", reply_markup=reply_markup)
             else:
                 await pro.edit(
                     f"<b>❌ Sᴏᴍᴇ ᴇʀʀᴏʀꜱ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴀᴅᴅɪɴɢ ᴀᴅᴍɪɴꜱ:</b>\n\n{admin_list.strip()}\n\n"
@@ -272,7 +273,7 @@ async def handle_admin_input(client: Client, message: Message):
                     report += f"<blockquote><b>✅ Bᴀɴɴᴇᴅ: <code>{uid_int}</code></b></blockquote>\n"
                     success_count += 1
                 else:
-                    report += f"<blockquote><b>⚠️ Iɴᴠᴀʟɪᴅ Tᴇʟᴇɢʀᴀᴍ ID ʟᴇɴɢᴛʜ: <code>{uid_int}</code></b></blockquote>\n"
+                    report += f"<blockquote><b>⚠️ Iɴᴠᴀʟɪᴅ Tᴇʟᴇɢʀᴀᴍ ID ʟᴇɴɡᴛʜ: <code>{uid_int}</code></b></blockquote>\n"
 
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Cʟᴏꜱᴇ", callback_data="user_close")]])
 
@@ -363,7 +364,7 @@ async def add_admins(client: Client, message: Message):
     if check == len(admins):
         for id in admins:
             await db.add_admin(int(id))
-        await pro.edit(f"<b>✅ Aᴅᴍɪɴ(ꜱ) ᴀᴅᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ:</b>\n\n{admin_list}", reply_markup=reply_markup)
+        await pro.edit(f"<b>✅ Aᴅᴍɪɴ(ꜱ) ᴀᴅᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ:</b>\n\n{admin_list}", reply_markup=reply_markup)
     else:
         await pro.edit(
             f"<b>❌ Sᴏᴍᴇ ᴇʀʀᴏʀꜱ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴀᴅᴅɪɴɢ ᴀᴅᴍɪɴꜱ:</b>\n\n{admin_list.strip()}\n\n"
@@ -383,7 +384,7 @@ async def delete_admins(client: Client, message: Message):
         return await pro.edit(
             "<b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴠᴀʟɪᴅ ᴀᴅᴍɪɴ ɪᴅ(ꜱ) ᴛᴏ ʀᴇᴍᴏᴠᴇ.</b>\n\n"
             "<b>Uꜱᴀɢᴇ:</b>\n"
-            "<code>/deladmin [user_id]</code> — Rᴇᴍᴏᴠᴇ ꜱᴘᴇᴄɪꜰɪᴄ ɪᴅꜱ\n"
+            "<code>/deladmin [user_id]</code> — Rᴇᴍᴏᴠᴇ ꜱᴘᴇᴄɪғɪᴄ ɪᴅꜱ\n"
             "<code>/deladmin all</code> — Rᴇᴍᴏᴠᴇ ᴀʟʟ ᴀᴅᴍɪɴꜱ",
             reply_markup=reply_markup
         )
