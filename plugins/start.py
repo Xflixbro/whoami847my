@@ -217,7 +217,7 @@ async def start_command(client: Client, message: Message):
         )
 
 async def not_joined(client: Client, message: Message):
-    temp = await message.reply("ᴄʜᴇᴄᴋɪɴɢ sᴜʙsᴄʀɪᴘᴛɪᴏɴ...")
+    temp = await message.reply("<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ sᴜʙsᴄʀɪᴘᴛɪᴏɴ...</b></blockquote>")
     user_id = message.from_user.id
     buttons = []
     count = 0
@@ -236,7 +236,7 @@ async def not_joined(client: Client, message: Message):
                     )).invite_link
                     buttons.append([InlineKeyboardButton(text=name, url=link)])
                     count += 1
-                    await temp.edit(f"ᴄʜᴇᴄᴋɪɴɢ {count}...")
+                    await temp.edit(f"<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ {count}...</b></blockquote>")
                 except Exception as e:
                     print(f"ᴇʀʀᴏʀ ᴡɪᴛʜ ᴄʜᴀᴛ {chat_id}: {e}")
                     return await temp.edit(f"ᴇʀʀᴏʀ, ᴄᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ @Mehediyt69\nʀᴇᴀsᴏɴ: {e}")
