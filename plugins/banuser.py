@@ -125,7 +125,7 @@ async def user_callback(client: Client, callback: CallbackQuery):
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
-        await callback.answer("<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴜꜱᴇʀ ID(ꜱ).</b></blockquote>")
+        await callback.answer("Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴜꜱᴇʀ ID(ꜱ).")
 
     elif data == "user_unban":
         await db.set_temp_state(chat_id, "awaiting_unban_user_input")
@@ -142,7 +142,7 @@ async def user_callback(client: Client, callback: CallbackQuery):
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
-        await callback.answer("<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴜꜱᴇʰ ID(ꜱ) ᴏʀ ᴛʏᴘᴇ '[<code>all</code>]'.</b></blockquote>")
+        await callback.answer("<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴜꜱᴇʀ ID(ꜱ) ᴏʀ ᴛʏᴘᴇ '<code>all</code>'.</b></blockquote>")
 
     elif data == "user_list":
         users = await db.full_userbase()
@@ -177,7 +177,7 @@ async def user_callback(client: Client, callback: CallbackQuery):
     elif data == "user_banlist":
         banuser_ids = await db.get_ban_users()
         if not banuser_ids:
-            result = "<b><blockquote>✅ Nᴏ ᴜꜱᴇʀꜱ ɪɴ ᴛʜᴇ ʙᴀɴ Lɪꜱᴛ.</b></blockquote>"
+            result = "<b><blockquote>✅ Nᴏ ᴜꜱᴇʀꜱ ɪɴ ᴛʜᴇ ʙᴀɴ Lɪꜱᴛ.</blockquote></b>"
         else:
             result = "<b>🚫 Bᴀɴɴᴇᴅ Uꜱᴇʀꜱ:</b>\n\n"
             for uid in banuser_ids:
@@ -220,8 +220,8 @@ async def user_callback(client: Client, callback: CallbackQuery):
         await callback.answer("Bᴀᴄᴋ ᴛᴏ ꜱᴇᴛᴛɪɴɢꜱ!")
 
 # Handle user input for banning/unbanning users
-@Bot.on_message(filters.private & filters.regex(r"^-?\d+$|^all$") & admin)
-async def handle_user_input(client: Client, message: Message):
+@Bot.on_message(filters.private & filters.regex(r"^\d+$|^all$") & admin)
+async def handle_user_ban_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
 
@@ -343,10 +343,10 @@ async def add_banuser(client: Client, message: Message):
             report += f"<b><blockquote>Bᴀɴɴᴇᴅ: <code>{uid_int}</code></b></blockquote>\n"
             success_count += 1
         else:
-            report += f"<blockquote><b>Iɴᴠᴀʟɪᴅ Tᴇʟᴇɢʰᴀᴍ ID ʟᴇɴɢᴛʜ: <code>{uid_int}</code></b></blockquote>\n"
+            report += f"<blockquote><b>Iɴᴠᴀʟɪᴅ Tᴇʟᴇɢʀᴀᴍ ID ʟᴇɴɢᴛʜ: <code>{uid_int}</code></b></blockquote>\n"
 
     if success_count:
-        await pro.edit(f"<b>✅ Bᴀɴɴᴇᴅ Uꜱᴇʀꜱ Uᴘᴅᴀᴛᴇᴅ:</b>\n\n{report}", reply_markup=reply_markup)
+        await pro.edit(f"<b>✅ Bᴀɴɴᴇᴅ Uꜱᴇʀꜱ Uᴅᴘᴀᴛᴇᴅ:</b>\n\n{report}", reply_markup=reply_markup)
     else:
         await pro.edit(f"<b>❌ Nᴏ ᴜꜱᴇʀꜱ ᴡᴇʀᴇ ʙᴀɴɴᴇᴅ:</b>\n\n{report}", reply_markup=reply_markup)
 
