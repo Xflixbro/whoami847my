@@ -60,7 +60,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
             ],
             [
                 InlineKeyboardButton("• ᴛᴏɢɢʟᴇ Mᴏᴅᴇ •", callback_data="fsub_toggle_mode")
-            ]
+            ],
             [
                 InlineKeyboardButton("• ʀᴇꜰᴇʀsʜ ", callback_data="fsub_refresh"),
                 InlineKeyboardButton(" ᴄʟosᴇ•", callback_data="fsub_close")
