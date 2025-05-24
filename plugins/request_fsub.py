@@ -24,7 +24,7 @@ from database.database import *
 # Set up logging for this module
 logger = logging.getLogger(__name__)
 
-# Define message effect IDs (same as in start.py)
+# Define message effect IDs
 MESSAGE_EFFECT_IDS = [
     5104841245755180586,  # 🔥
     5107584321108051014,  # 👍
@@ -47,10 +47,10 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
             try:
                 chat = await client.get_chat(ch_id)
                 link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
-                settings_text += f"<blockquote><b>•</b> <a href='{link}'>{chat.title}</a> [<code>{ch_id}</code>]</blockquote>\n"
+                settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code></b></blockquote>\n"
             except Exception as e:
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
-                settings_text += f"<blockquote><b>•</b> <code>{ch_id}</code> — <i>Unavailable</i></blockquote>\n"
+                settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
 
     buttons = InlineKeyboardMarkup(
         [
@@ -492,6 +492,46 @@ async def list_force_sub_channels(client: Client, message: Message):
         parse_mode=ParseMode.HTML,
         disable_web_page_preview=True
     )
+
+@Bot.on_callback_query(filters.regex(r"^rfs_ch_"))
+async def toggle_force_sub_mode(client: Client, callback: CallbackQuery):
+    data = callback.data
+    chat_id = callback.message.chat.id
+    message_id = callback.message.id
+    channel_id = int(data.split("_")[2])
+
+    current_mode = await db.get_channel_mode(channel_id)
+    new_mode = "off" if current_mode == "on" else "on"
+    await db.set_channel_mode(channel_id, new_mode)
+
+    try:
+        chat = await client.get_chat(channel_id)
+        status = "🟢" if new_mode == "on" else "🔴"
+        title = f"{status} {chat.title}"
+        buttons = [
+            [InlineKeyboardButton(title, callback_data=f"rfs_ch_{channel_id}")],
+            [InlineKeyboardButton("Close ✖️", callback_data="close")]
+        ]
+        await client.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=f"<blockquote><b>⚡ {chat.title}'s force-sub mode toggled to {new_mode}.</b></blockquote>",
+            reply_markup=InlineKeyboardMarkup(buttons),
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+    except Exception as e:
+        logger.error(f"Failed to toggle mode for channel {channel_id}: {e}")
+        await client.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=f"<blockquote><b>⚡ Failed to toggle mode for channel ID {channel_id}: {e}</b></blockquote>",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Close ✖️", callback_data="close")]]),
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+
+    await callback.answer(f"Force-sub mode toggled to {new_mode} for channel {channel_id}.")
 
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
