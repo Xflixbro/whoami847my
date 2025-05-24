@@ -219,8 +219,18 @@ async def user_callback(client: Client, callback: CallbackQuery):
         await show_user_settings(client, chat_id, message_id)
         await callback.answer("Back to settings!")
 
+# Custom filter for ban/unban user input
+async def ban_user_filter(flt, client: Client, message: Message):
+    state = await db.get_temp_state(message.chat.id)
+    return (
+        filters.private(message)
+        and admin(message)
+        and filters.regex(r"^\d+$|^all$")(message)
+        and state in ["awaiting_ban_user_input", "awaiting_unban_user_input"]
+    )
+
 # Handle user input for banning/unbanning users
-@Bot.on_message(filters.private & filters.regex(r"^\d+$|^all$") & admin)
+@Bot.on_message(ban_user_filter)
 async def handle_user_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
