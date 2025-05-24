@@ -30,11 +30,16 @@ async def show_user_settings(client: Client, chat_id: int, message_id: int = Non
     user_ids = await db.full_userbase()
 
     if not user_ids:
-        settings_text += "<i>Nᴏ ᴜꜱᴇʀꜱ ᴄᴏɴꜰɪɢᴜʀᴇᴅ ʏᴇᴛ.</i>"
+        settings_text += "<i>Nᴏ ᴜꜱᴇʀꜱ ᴄᴏɴғɪɢᴜʀᴇᴅ ʏᴇᴛ.</i>"
     else:
         settings_text += "<blockquote><b>⚡ Cᴜʀʀᴇɴᴛ Uꜱᴇʀꜱ:</b></blockquote>\n\n"
         for idx, user_id in enumerate(user_ids[:5], 1):  # Show up to 5 users
-            settings_text += f"<blockquote><b>{idx}. Iᴅ: <code>{user_id}</code></b></blockquote>\n"
+            try:
+                user = await client.get_users(user_id)
+                name = user.first_name if user.first_name else "Unknown"
+                settings_text += f"<blockquote><b>{idx}. {name} - <code>{user_id}</code></b></blockquote>\n"
+            except Exception as e:
+                settings_text += f"<blockquote><b>{idx}. Unknown - <code>{user_id}</code></b></blockquote>\n"
         if len(user_ids) > 5:
             settings_text += f"<blockquote><i>...and {len(user_ids) - 5} more.</i></blockquote>\n"
 
@@ -144,7 +149,8 @@ async def user_callback(client: Client, callback: CallbackQuery):
         if not user_ids:
             user_list = "<b><blockquote>❌ Nᴏ ᴜꜱᴇʀꜱ ꜰᴏᴜɴᴅ.</blockquote></b>"
         else:
-            user_list = "\n".join(f"<b><blockquote>Iᴅ: <code>{id}</code></blockquote></b>" for id in user_ids)
+            user_list = "\n".join(f"<b><blockquote>{idx + 1}. {user.first_name if (user := await client.get_users(uid)) else 'Unknown'} - <code>{uid}</code></blockquote></b>" 
+                                for idx, uid in enumerate(user_ids))
 
         reply_markup = InlineKeyboardMarkup([
             [
@@ -263,7 +269,7 @@ async def delete_banuser(client: Client, message: Message):
         return await pro.edit(
             "<b>❗ Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴜꜱᴇʀ IDs ᴛᴏ ᴜɴʙᴀɴ.</b>\n\n"
             "<b>📌 Uꜱᴀɢᴇ:</b>\n"
-            "<code>/unban [user_id]</code> — Uɴʙᴀɴ ꜱᴘᴇᴄɪꜰɪᴄ ᴜꜱᴇʀ(ꜱ)\n"
+            "<code>/unban [user_id]</code> — Uɴʙᴀɴ ꜱᴘᴇᴄɪғɪᴄ ᴜꜱᴇʀ(ꜱ)\n"
             "<code>/unban all</code> — Rᴇᴍᴏᴠᴇ ᴀʟʟ ʙᴀɴɴᴇᴅ ᴜꜱᴇʀꜱ",
             reply_markup=reply_markup
         )
