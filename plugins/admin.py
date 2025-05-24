@@ -44,7 +44,6 @@ async def show_admin_settings(client: Client, chat_id: int, message_id: int = No
             ],
             [
                 InlineKeyboardButton("• Aᴅᴍɪɴ Lɪsᴛ •", callback_data="admin_list")
-
             ],
             [
                 InlineKeyboardButton("• Rᴇꜰᴇʀsʜ ", callback_data="admin_refresh"),
@@ -135,7 +134,7 @@ async def admin_callback(client: Client, callback: CallbackQuery):
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
-        await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴀᴅᴍɪɴ ID(ꜱ) ᴏʀ ᴛʏᴘᴇ '[<code>all</code>]'.</b></blockquote>")
+        await callback.answer("<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴀᴅᴍɪɴ ID(ꜱ) ᴏʀ ᴛʏᴘᴇ 'all'.</b></blockquote>")
 
     elif data == "admin_list":
         admin_ids = await db.get_all_admins()
@@ -170,7 +169,7 @@ async def admin_callback(client: Client, callback: CallbackQuery):
         await callback.answer("Bᴀᴄᴋ ᴛᴏ sᴇᴛᴛɪɴɢs!")
 
 # Handle admin input for adding/removing admins
-@Bot.on_message(filters.private & filters.regex(r"^\d+$|^all$") & admin)  # Modified regex to match only positive integers or "all"
+@Bot.on_message(filters.private & filters.regex(r"^\d{10}$|^all$") & admin)
 async def handle_admin_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
