@@ -36,7 +36,7 @@ async def show_user_settings(client: Client, chat_id: int, message_id: int = Non
             try:
                 user = await client.get_users(user_id)
                 name = user.first_name if user.first_name else "Unknown"
-                settings_text += f"<blockquote><b>{idx}. {name} - <code>{user_id}</code></b></blockquote>\n"
+                settings_text += f"<blockquote><b>{idx}. <a href='tg://user?id={user_id}'>{name}</a> - <code>{user_id}</code></b></blockquote>\n"
             except Exception as e:
                 settings_text += f"<blockquote><b>{idx}. Unknown - <code>{user_id}</code></b></blockquote>\n"
         if len(user_ids) > 5:
@@ -107,7 +107,12 @@ async def show_admin_settings(client: Client, chat_id: int, message_id: int = No
     else:
         settings_text += "<blockquote><b>⚡ Cᴜʀʀᴇɴᴛ Aᴅᴍɪɴꜱ:</b></blockquote>\n\n"
         for idx, admin_id in enumerate(admin_ids[:5], 1):  # Show up to 5 admins
-            settings_text += f"<blockquote><b>{idx}. Iᴅ: <code>{admin_id}</code></b></blockquote>\n"
+            try:
+                admin = await client.get_users(admin_id)
+                name = admin.first_name if admin.first_name else "Unknown"
+                settings_text += f"<blockquote><b>{idx}. <a href='tg://user?id={admin_id}'>{name}</a> - <code>{admin_id}</code></b></blockquote>\n"
+            except Exception as e:
+                settings_text += f"<blockquote><b>{idx}. Unknown - <code>{admin_id}</code></b></blockquote>\n"
         if len(admin_ids) > 5:
             settings_text += f"<blockquote><i>...and {len(admin_ids) - 5} more.</i></blockquote>\n"
 
@@ -216,7 +221,14 @@ async def admin_callback(client: Client, callback: CallbackQuery):
         if not admin_ids:
             admin_list = "<b><blockquote>❌ Nᴏ ᴀᴅᴍɪɴꜱ ꜰᴏᴜɴᴅ.</blockquote></b>"
         else:
-            admin_list = "\n".join(f"<b><blockquote>Iᴅ: <code>{id}</code></blockquote></b>" for id in admin_ids)
+            admin_list = ""
+            for admin_id in admin_ids:
+                try:
+                    admin = await client.get_users(admin_id)
+                    name = admin.first_name if admin.first_name else "Unknown"
+                    admin_list += f"<b><blockquote><a href='tg://user?id={admin_id}'>{name}</a> - <code>{admin_id}</code></blockquote></b>\n"
+                except Exception as e:
+                    admin_list += f"<b><blockquote>Unknown - <code>{admin_id}</code></blockquote></b>\n"
 
         reply_markup = InlineKeyboardMarkup([
             [
@@ -291,11 +303,17 @@ async def user_callback(client: Client, callback: CallbackQuery):
 
     elif data == "user_list":
         user_ids = await db.full_userbase()
-        if not user_ids:
+        if not user_ids or not isinstance(user_ids, (list, tuple)):  # Ensure user_ids is iterable
             user_list = "<b><blockquote>❌ Nᴏ ᴜꜱᴇʀꜱ ꜰᴏᴜɴᴅ.</blockquote></b>"
         else:
-            user_list = "\n".join(f"<b><blockquote>{idx + 1}. {user.first_name if (user := await client.get_users(uid)) else 'Unknown'} - <code>{uid}</code></blockquote></b>" 
-                                for idx, uid in enumerate(user_ids))
+            user_list = ""
+            for idx, uid in enumerate(user_ids):
+                try:
+                    user = await client.get_users(uid)
+                    name = user.first_name if user.first_name else "Unknown"
+                    user_list += f"<b><blockquote>{idx + 1}. <a href='tg://user?id={uid}'>{name}</a> - <code>{uid}</code></blockquote></b>\n"
+                except Exception as e:
+                    user_list += f"<b><blockquote>{idx + 1}. Unknown - <code>{uid}</code></blockquote></b>\n"
 
         reply_markup = InlineKeyboardMarkup([
             [
