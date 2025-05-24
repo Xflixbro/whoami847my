@@ -43,11 +43,12 @@ async def show_admin_settings(client: Client, chat_id: int, message_id: int = No
                 InlineKeyboardButton("Rᴇᴍᴏᴠᴇ Aᴅᴍɪɴ •", callback_data="admin_remove")
             ],
             [
-                InlineKeyboardButton("Aᴅᴍɪɴ Lɪsᴛ", callback_data="admin_list"),
-                InlineKeyboardButton("• Rᴇꜰᴇʀsʜ •", callback_data="admin_refresh")
+                InlineKeyboardButton("• Aᴅᴍɪɴ Lɪsᴛ •", callback_data="admin_list")
+
             ],
             [
-                InlineKeyboardButton("• Cʟᴏsᴇ •", callback_data="admin_close")
+                InlineKeyboardButton("• Rᴇꜰᴇʀsʜ ", callback_data="admin_refresh"),
+                InlineKeyboardButton(" Cʟᴏsᴇ •", callback_data="admin_close")
             ]
         ]
     )
@@ -336,11 +337,11 @@ async def delete_admins(client: Client, message: Message):
 
             if id in admin_ids:
                 await db.del_admin(id)
-                passed += f"<blockquote><code>{id}</code> ✅ Rᴇᴮᴏᴠᴇᴅ</blockquote>\n"
+                passed += f"<blockquote><code>{id}</code> ✅ Rᴇᴍᴏᴠᴇᴅ</blockquote>\n"
             else:
                 passed += f"<blockquote><b>Iᴅ <code>{id}</code> ɴᴏᴛ ꜰᴏᴜɴᴅ ɪɴ ᴀᴅᴮɪɴ ʟɪꜱᴛ.</b></blockquote>\n"
 
-        await pro.edit(f"<b>⛔️ Aᴅᴮɪɴ ʀᴇᴮᴏᴠᴀʟ ʀᴇꜱᴜʟᴛ:</b>\n\n{passed}", reply_markup=reply_markup)
+        await pro.edit(f"<b>⛔️ Aᴅᴮɪɴ ʀᴇᴍᴏᴠᴀʟ ʀᴇꜱᴜʟᴛ:</b>\n\n{passed}", reply_markup=reply_markup)
     else:
         await pro.edit("<b><blockquote>Nᴏ ᴀᴅᴮɪɴ ɪᴅꜱ ᴀᴠᴀɪʟᴀʙʟᴇ ᴛᴏ ᴅᴇʟᴇᴛᴇ.</blockquote></b>", reply_markup=reply_markup)
 
@@ -350,12 +351,12 @@ async def get_admins(client: Client, message: Message):
     admin_ids = await db.get_all_admins()
 
     if not admin_ids:
-        admin_list = "<b><blockquote>❌ Nᴏ ᴀᴅᴮɪɴꜱ ꜰᴏᴜɴᴅ.</blockquote></b>"
+        admin_list = "<b><blockquote>❌ Nᴏ Aᴅᴍɪɴ ꜰᴏᴜɴᴅ.</blockquote></b>"
     else:
         admin_list = "\n".join(f"<b><blockquote>Iᴅ: <code>{id}</code></blockquote></b>" for id in admin_ids)
 
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Cʟᴏꜱᴇ", callback_data="close")]])
-    await pro.edit(f"<b>⚡ Cᴜʀʀᴇɴᴛ ᴀᴅᴮɪɴ ʟɪꜱᴛ:</b>\n\n{admin_list}", reply_markup=reply_markup)
+    await pro.edit(f"<b>⚡ Cᴜʀʀᴇɴᴛ Aᴅᴍɪɴ ʟɪꜱᴛ:</b>\n\n{admin_list}", reply_markup=reply_markup)
 
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
