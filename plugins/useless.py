@@ -231,42 +231,69 @@ async def set_timer(client: Bot, message: Message):
     if state == "awaiting_timer_input":
         try:
             duration = int(message.text)
+            if duration <= 0:
+                raise ValueError("Duration must be a positive integer")
             await db.set_del_timer(duration)
-            try:
-                await message.reply_photo(
-                    photo=selected_image,
-                    caption=f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀꜱ ʙᴇᴇɴ ꜱᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>",
-                    parse_mode=ParseMode.HTML,
-                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-                )
-            except Exception as e:
-                logger.error(f"Failed to send photo: {e}")
+            # Verify the timer was set
+            new_timer = await db.get_del_timer()
+            if new_timer == duration:
+                try:
+                    await message.reply_photo(
+                        photo=selected_image,
+                        caption=f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀꜱ ʙᴇᴇɴ ꜱᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>",
+                        parse_mode=ParseMode.HTML,
+                        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send photo: {e}")
+                    await message.reply(
+                        f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀꜱ ʙᴇᴇɴ ꜱᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>",
+                        parse_mode=ParseMode.HTML,
+                        message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    )
+                logger.info(f"Successfully set delete timer to {duration} seconds for chat {chat_id}")
+            else:
+                logger.error(f"Failed to set delete timer to {duration} seconds for chat {chat_id}")
                 await message.reply(
-                    f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀꜱ ʙᴇᴇɴ ꜱᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>",
+                    "<blockquote><b>Fᴀɪʟᴇᴅ ᴛᴏ ꜱᴇᴛ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ. Pʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ.</b></blockquote>",
                     parse_mode=ParseMode.HTML,
                     message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
                 )
-            logger.info(f"Set delete timer to {duration} seconds for chat {chat_id}")
             # Clear the state after processing
             await db.set_temp_state(chat_id, "")
-        except ValueError:
+            logger.info(f"Cleared state for chat {chat_id}")
+        except ValueError as e:
+            logger.error(f"Invalid duration input: {message.text} from chat {chat_id} - {str(e)}")
             try:
                 await message.reply_photo(
                     photo=selected_image,
-                    caption="<b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b>",
+                    caption="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b></blockquote>",
                     parse_mode=ParseMode.HTML,
                     message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
                 )
             except Exception as e:
                 logger.error(f"Failed to send photo: {e}")
                 await message.reply(
-                    "<b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b>",
+                    "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b></blockquote>",
                     parse_mode=ParseMode.HTML,
                     message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
                 )
-            logger.error(f"Invalid duration input: {message.text} from chat {chat_id}")
     else:
         logger.info(f"Ignoring numeric input: {message.text} as state is not 'awaiting_timer_input' for chat {chat_id}")
+        try:
+            await message.reply_photo(
+                photo=selected_image,
+                caption="<blockquote><b>Nᴏ ᴛɪᴍᴇʀ ꜱᴇᴛᴛɪɴɢ ᴘʀᴏᴄᴇꜱꜱ ɪꜱ ᴀᴄᴛɪᴠᴇ. Pʟᴇᴀꜱᴇ ᴜꜱᴇ /auto_delete ᴛᴏ ꜱᴇᴛ ᴛʜᴇ ᴛɪᴍᴇʀ.</b></blockquote>",
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
+            await message.reply(
+                "<blockquote><b>Nᴏ ᴛɪᴍᴇʀ ꜱᴇᴛᴛɪɴɢ ᴘʀᴏᴄᴇꜱꜱ ɪꜱ ᴀᴄᴛɪᴠᴇ. Pʟᴇᴀꜱᴇ ᴜꜱᴇ /auto_delete ᴛᴏ ꜱᴇᴛ ᴛʜᴇ ᴛɪᴍᴇʀ.</b></blockquote>",
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
 
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
