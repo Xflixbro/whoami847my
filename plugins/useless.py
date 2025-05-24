@@ -56,10 +56,7 @@ WAIT_MSG = "<b>Wᴏʀᴋɪɴɢ...</b>"
 @Bot.on_message(filters.command('users') & filters.private & admin)
 async def get_users(client: Bot, message: Message):
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-    logger.info(f"Processing /users command from user {message.from_user.id}")
-    
     try:
-        # Send initial "Working..." message
         msg = await client.send_photo(
             chat_id=message.chat.id,
             photo=selected_image,
@@ -67,49 +64,39 @@ async def get_users(client: Bot, message: Message):
             message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
     except Exception as e:
-        logger.error(f"Failed to send initial photo for /users: {e}")
+        logger.error(f"Failed to send photo: {e}")
         msg = await client.send_message(
             chat_id=message.chat.id,
             text=WAIT_MSG,
             message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
-
+    users = await db.full_userbase()
     try:
-        # Fetch userbase with a timeout to prevent hanging
-        logger.info("Attempting to fetch userbase from database")
-        users = await asyncio.wait_for(db.full_userbase(), timeout=10.0)
-        user_count = len(users)
-        caption = f"{user_count} Uꜱᴇʀꜱ ᴀʀᴇ ᴜꜱɪɴɢ ᴛʜɪꜱ ʙᴏᴛ"
-        logger.info(f"Successfully fetched {user_count} users")
-        
-        try:
-            await msg.edit_media(
-                media=InputMediaPhoto(
-                    media=selected_image,
-                    caption=caption
-                ),
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-        except Exception as e:
-            logger.error(f"Failed to edit message with image: {e}")
-            await msg.edit(
-                text=caption,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-    except asyncio.TimeoutError:
-        logger.error("Database query timed out while fetching userbase")
-        await msg.edit(
-            text="Error: Database query timed out. Please check the database connection and try again.",
+        await msg.edit_media(
+            media=InputMediaPhoto(
+                media=selected_image,
+                caption=f"{len(users)} Uꜱᴇʀꜱ ᴀʀᴇ ᴜꜱɪɴɢ ᴛʜɪꜱ ʙᴏᴛ"
+            ),
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("• Bᴀᴄᴋ •", callback_data="user_back"),
+                    InlineKeyboardButton("• Cʟᴏꜱᴇ •", callback_data="user_close")
+                ]
+            ]),
             message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
     except Exception as e:
-        logger.error(f"Failed to fetch userbase: {e}")
+        logger.error(f"Failed to edit message with image: {e}")
         await msg.edit(
-            text=f"Error: Could not fetch user data. Details: {str(e)}",
+            text=f"{len(users)} Uꜱᴇʀꜱ ᴀʀᴇ ᴜꜱɪɴɢ ᴛʜɪꜱ ʙᴏᴛ",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("• Bᴀᴄᴋ •", callback_data="user_back"),
+                    InlineKeyboardButton("• Cʟᴏꜱᴇ •", callback_data="user_close")
+                ]
+            ]),
             message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
-
-#=====================================================================================##
 
 # AUTO-DELETE SETTINGS
 
@@ -122,10 +109,10 @@ async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int =
     timer_text = get_readable_time(delete_timer)
 
     settings_text = (
-        "» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Sᴇᴛᴛɪɴɢs</b>\n\n"
+        "» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Sᴇᴛᴛɪɴɢꜱ</b>\n\n"
         f"<blockquote>» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ:</b> {mode_status}</blockquote>\n"
         f"<blockquote>» <b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ:</b> {timer_text}</blockquote>\n\n"
-        "<b>Cʟɪᴄᴋ Bᴇʟᴏᴡ Bᴜᴛᴛᴏɴs Tᴏ Cʜᴀɴɢᴇ Sᴇᴛᴛɪɴɢs</b>"
+        "<b>Cʟɪᴄᴋ Bᴇʟᴏᴡ Bᴜᴛᴛᴏɴꜱ Tᴏ Cʜᴀɴɢᴇ Sᴇᴛᴛɪɴɢꜱ</b>"
     )
 
     keyboard = InlineKeyboardMarkup(
@@ -135,7 +122,7 @@ async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int =
                 InlineKeyboardButton(" Sᴇᴛ Tɪᴍᴇʀ •", callback_data="auto_set_timer")
             ],
             [
-                InlineKeyboardButton("• Rᴇғʀᴇsʜ", callback_data="auto_refresh"),
+                InlineKeyboardButton("• Rᴇғʀᴇꜱʜ", callback_data="auto_refresh"),
                 InlineKeyboardButton("Bᴀᴄᴋ •", callback_data="auto_back")
             ]
         ]
@@ -198,7 +185,7 @@ async def auto_delete_callback(client: Bot, callback: CallbackQuery):
         new_mode = not current_mode
         await db.set_auto_delete_mode(new_mode)
         await show_auto_delete_settings(client, chat_id, callback.message.id)
-        await callback.answer(f"<blockquote><b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ {'Eɴᴀʙʟᴇᴅ' if new_mode else 'Dɪsᴀʙʟᴇᴅ'}!</b></blockquote>")
+        await callback.answer(f"<blockquote><b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ {'Eɴᴀʙʟᴇᴅ' if new_mode else 'Dɪꜱᴀʙʟᴇᴅ'}!</b></blockquote>")
     
     elif data == "auto_set_timer":
         # Set a state to indicate that we are expecting a timer input
@@ -208,8 +195,8 @@ async def auto_delete_callback(client: Bot, callback: CallbackQuery):
             await callback.message.reply_photo(
                 photo=selected_image,
                 caption=(
-                    "<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ sᴇᴄᴏɴᴅs ғᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
-                    "<blockquote><b>Exᴀᴄᴀᴍᴘʟᴇ: 300 (ғᴏʀ 5 ᴍɪɴᴜᴛᴇs)</b></blockquote>"
+                    "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
+                    "<blockquote><b>Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)</b></blockquote>"
                 ),
                 parse_mode=ParseMode.HTML,
                 message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
@@ -217,8 +204,8 @@ async def auto_delete_callback(client: Bot, callback: CallbackQuery):
         except Exception as e:
             logger.error(f"Failed to send photo: {e}")
             await callback.message.reply(
-                "<blockquote><b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ sᴇᴄᴏɴᴅs ғᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
-                "<blockquote><b>Exᴀᴄᴀᴍᴘʟᴇ: 300 (ғᴏʀ 5 ᴍɪɴᴜᴛᴇs)</b></blockquote>",
+                "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
+                "<blockquote><b>Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)</b></blockquote>",
                 parse_mode=ParseMode.HTML,
                 message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
@@ -226,11 +213,11 @@ async def auto_delete_callback(client: Bot, callback: CallbackQuery):
     
     elif data == "auto_refresh":
         await show_auto_delete_settings(client, chat_id, callback.message.id)
-        await callback.answer("<blockquote><b>Sᴇᴛᴛɪɴɢs ʀᴇғʀᴇsʜᴇᴅ!</b></blockquote>")
+        await callback.answer("<blockquote><b>Sᴇᴛᴛɪɴɢꜱ ʀᴇꜰʀᴇꜱʜᴇᴅ!</b></blockquote>")
     
     elif data == "auto_back":
         await callback.message.delete()
-        await callback.answer("<blockquote><b>Bᴀᴄᴋ ᴛᴏ ᴘʀᴇᴠɪᴏᴜs ᴍᴇɴᴜ!</b></blockquote>")
+        await callback.answer("<blockquote><b>Bᴀᴄᴋ ᴛᴏ ᴘʀᴇᴠɪᴏᴜꜱ ᴍᴇɴᴜ!</b></blockquote>")
 
 @Bot.on_message(filters.private & filters.regex(r"^\d+$") & admin)
 async def set_timer(client: Bot, message: Message):
@@ -248,14 +235,14 @@ async def set_timer(client: Bot, message: Message):
             try:
                 await message.reply_photo(
                     photo=selected_image,
-                    caption=f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀs ʙᴇᴇɴ sᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>",
+                    caption=f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀꜱ ʙᴇᴇɴ ꜱᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>",
                     parse_mode=ParseMode.HTML,
                     message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
                 )
             except Exception as e:
                 logger.error(f"Failed to send photo: {e}")
                 await message.reply(
-                    f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀs ʙᴇᴇɴ sᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>",
+                    f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀꜱ ʙᴇᴇɴ ꜱᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>",
                     parse_mode=ParseMode.HTML,
                     message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
                 )
@@ -266,22 +253,20 @@ async def set_timer(client: Bot, message: Message):
             try:
                 await message.reply_photo(
                     photo=selected_image,
-                    caption="<b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ sᴇᴄᴏɴᴅs.</b>",
+                    caption="<b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b>",
                     parse_mode=ParseMode.HTML,
                     message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
                 )
             except Exception as e:
                 logger.error(f"Failed to send photo: {e}")
                 await message.reply(
-                    "<b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ sᴇᴄᴏɴᴅs.</b>",
+                    "<b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b>",
                     parse_mode=ParseMode.HTML,
                     message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
                 )
             logger.error(f"Invalid duration input: {message.text} from chat {chat_id}")
     else:
         logger.info(f"Ignoring numeric input: {message.text} as state is not 'awaiting_timer_input' for chat {chat_id}")
-
-#=====================================================================================##
 
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
