@@ -1,4 +1,3 @@
-#
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
 #
 # This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
@@ -21,11 +20,14 @@ import logging
 from config import OWNER_ID
 from database.database import db
 from asyncio import TimeoutError
-#
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Define the forwarded message filter
+def forwarded_msg_filter(_, __, message: Message):
+    return bool(message.forward_from_chat)
 
 # Small caps conversion dictionary
 SMALL_CAPS = {
@@ -58,7 +60,6 @@ def to_small_caps_with_html(text: str) -> str:
 # Store user data for flink command
 flink_user_data: Dict[int, Dict] = {}
 
-
 # Custom filter for batch input
 async def batch_input_filter(_, __, message: Message):
     chat_id = message.chat.id
@@ -84,14 +85,14 @@ async def handle_batch_input(client: Client, message: Message):
 
     # Validate input
     msg_id = None
-    if message.forward_from_chat and message.forward_from_chat.id == DATABASE_CHANNEL_ID:
+    if message.forward_from_chat and message.forward_from_chat.id == CHANNEL_ID:
         msg_id = message.forward_from_message_id
     elif message.text and message.text.startswith("https://t.me/"):
         try:
             link_parts = message.text.split("/")
             msg_id = int(link_parts[-1])
             channel_id = link_parts[-2] if link_parts[-2].startswith("-") else await client.get_chat(link_parts[-2]).id
-            if channel_id != DATABASE_CHANNEL_ID:
+            if channel_id != CHANNEL_ID:
                 await message.reply("<b>❌ This link is not from the database channel!</b>")
                 return
         except Exception as e:
