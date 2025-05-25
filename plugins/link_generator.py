@@ -14,7 +14,7 @@ from pyrogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from pyrogram.enums import ParseMode
 from bot import Bot
 from helper_func import encode, get_message_id, admin
-from config import DATABASE_CHANNEL_ID
+from config import CHANNEL_ID  
 import re
 from typing import Dict
 import logging
