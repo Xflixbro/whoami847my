@@ -14,12 +14,14 @@ from pyrogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from pyrogram.enums import ParseMode
 from bot import Bot
 from helper_func import encode, get_message_id, admin
+from config import DATABASE_CHANNEL_ID
 import re
 from typing import Dict
 import logging
 from config import OWNER_ID
 from database.database import db
 from asyncio import TimeoutError
+#
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -56,75 +58,86 @@ def to_small_caps_with_html(text: str) -> str:
 # Store user data for flink command
 flink_user_data: Dict[int, Dict] = {}
 
-@Bot.on_message(filters.private & admin & filters.command('batch'))
-async def batch(client: Client, message: Message):
-    # Modified to ensure both messages are collected before generating link
-    while True:
-        try:
-            first_message = await client.ask(
-                text=to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward the first message from db channel (with quotes).\nOr send the db channel post link\n</b></blockquote><b>━━━━━━━━━━━━━━━━━━</b>"),
-                chat_id=message.from_user.id,
-                filters=(filters.forwarded | (filters.text & ~filters.forwarded)),
-                timeout=60,
-                parse_mode=ParseMode.HTML
-            )
-        except TimeoutError:
-            logger.error(to_small_caps_with_html(f"timeout error waiting for first message in batch command"))
-            return
-        f_msg_id = await get_message_id(client, first_message)
-        if f_msg_id:
-            break
-        else:
-            await first_message.reply(
-                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Error: This forwarded post is not from my db channel or this link is not valid.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
-                quote=True,
-                parse_mode=ParseMode.HTML
-            )
-            continue
 
-    while True:
-        try:
-            second_message = await client.ask(
-                text=to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward the last message from db channel (with quotes).\nOr send the db channel post link\n</b></blockquote><b>━━━━━━━━━━━━━━━━━━</b>"),
-                chat_id=message.from_user.id,
-                filters=(filters.forwarded | (filters.text & ~filters.forwarded)),
-                timeout=60,
-                parse_mode=ParseMode.HTML
-            )
-        except TimeoutError:
-            logger.error(to_small_caps_with_html(f"timeout error waiting for second message in batch command"))
-            return
-        s_msg_id = await get_message_id(client, second_message)
-        if s_msg_id:
-            # Validate that the second message ID is greater than or equal to the first
-            if s_msg_id >= f_msg_id:
-                break
-            else:
-                await second_message.reply(
-                    to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Error: The last message ID must be greater than or equal to the first message ID.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
-                    quote=True,
-                    parse_mode=ParseMode.HTML
-                )
-                continue
-        else:
-            await second_message.reply(
-                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Error: This forwarded post is not from my db channel or this link is not valid.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
-                quote=True,
-                parse_mode=ParseMode.HTML
-            )
-            continue
+# Custom filter for batch input
+async def batch_input_filter(_, __, message: Message):
+    chat_id = message.chat.id
+    state = await db.get_temp_state(chat_id)
+    return state in ["awaiting_first_batch_input", "awaiting_second_batch_input"]
 
-    # Generate link only after both messages are validated
-    string = f"get-{f_msg_id * abs(client.db_channel.id)}-{s_msg_id * abs(client.db_channel.id)}"
-    base64_string = await encode(string)
-    link = f"https://t.me/{client.username}?start={base64_string}"  # Normal font for link
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
-    await second_message.reply_text(
-        f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>",  # Normal font for link
-        quote=True,
-        reply_markup=reply_markup,
-        parse_mode=ParseMode.HTML
+@Bot.on_message(filters.command('batch') & filters.private & admin)
+async def batch_command(client: Client, message: Message):
+    chat_id = message.chat.id
+    await db.set_temp_state(chat_id, "awaiting_first_batch_input")
+    await message.reply(
+        "<b>🔗 Please forward the first message from the database channel or send its t.me link.</b>",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel_batch")]])
     )
+
+@Bot.on_message(filters.private & admin & (filters.create(forwarded_msg_filter) | filters.regex(r"https?://t\.me/.*")), group=1)
+async def handle_batch_input(client: Client, message: Message):
+    chat_id = message.chat.id
+    state = await db.get_temp_state(chat_id)
+
+    if state not in ["awaiting_first_batch_input", "awaiting_second_batch_input"]:
+        return
+
+    # Validate input
+    msg_id = None
+    if message.forward_from_chat and message.forward_from_chat.id == DATABASE_CHANNEL_ID:
+        msg_id = message.forward_from_message_id
+    elif message.text and message.text.startswith("https://t.me/"):
+        try:
+            link_parts = message.text.split("/")
+            msg_id = int(link_parts[-1])
+            channel_id = link_parts[-2] if link_parts[-2].startswith("-") else await client.get_chat(link_parts[-2]).id
+            if channel_id != DATABASE_CHANNEL_ID:
+                await message.reply("<b>❌ This link is not from the database channel!</b>")
+                return
+        except Exception as e:
+            await message.reply("<b>❌ Invalid t.me link!</b>")
+            return
+    else:
+        await message.reply("<b>❌ Please forward a message from the database channel or send a valid t.me link!</b>")
+        return
+
+    if state == "awaiting_first_batch_input":
+        await db.set_temp_data(chat_id, "first_batch_msg_id", msg_id)
+        await db.set_temp_state(chat_id, "awaiting_second_batch_input")
+        await message.reply(
+            "<b>🔗 Please forward the second message from the database channel or send its t.me link.</b>",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel_batch")]])
+        )
+    elif state == "awaiting_second_batch_input":
+        first_msg_id = await db.get_temp_data(chat_id, "first_batch_msg_id")
+        if msg_id < first_msg_id:
+            await message.reply("<b>❌ Second message ID must be greater than or equal to the first message ID!</b>")
+            return
+
+        # Generate batch link
+        try:
+            batch_link = await generate_batch_link(client, first_msg_id, msg_id)
+            await message.reply(
+                f"<b>✅ Batch link generated successfully!</b>\n\n{batch_link}",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Open Link", url=batch_link)]])
+            )
+        except Exception as e:
+            await message.reply(f"<b>❌ Failed to generate batch link!</b>\n\n<i>{e}</i>")
+        finally:
+            await db.set_temp_state(chat_id, "")
+            await db.clear_temp_data(chat_id, "first_batch_msg_id")
+
+async def generate_batch_link(client: Client, start_id: int, end_id: int) -> str:
+    encoded_str = await encode(f"batch_{start_id}_{end_id}")
+    return f"https://t.me/{(await client.get_me()).username}?start={encoded_str}"
+
+@Bot.on_callback_query(filters.regex(r"cancel_batch"))
+async def cancel_batch(client: Client, callback: CallbackQuery):
+    chat_id = callback.message.chat.id
+    await db.set_temp_state(chat_id, "")
+    await db.clear_temp_data(chat_id, "first_batch_msg_id")
+    await callback.message.delete()
+    await callback.answer("Batch operation cancelled!")
 
 @Bot.on_message(filters.private & admin & filters.command('genlink'))
 async def link_generator(client: Client, message: Message):
