@@ -8,7 +8,6 @@
 # All rights reserved.
 #
 
-
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove
@@ -60,14 +59,7 @@ def to_small_caps_with_html(text: str) -> str:
 
 # Store user data for flink command
 flink_user_data: Dict[int, Dict] = {}
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_message(filters.private & admin & filters.command('batch'))
 async def batch(client: Client, message: Message):
     while True:
@@ -79,7 +71,7 @@ async def batch(client: Client, message: Message):
         if f_msg_id:
             break
         else:
-            await first_message.reply("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Error: This forwarded post is not from my db channel or this link is not valid.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>", quote = True)
+            await first_message.reply("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Error: This forwarded post is not from my db channel or this link is not valid.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>", quote=True)
             continue
 
     while True:
@@ -91,25 +83,15 @@ async def batch(client: Client, message: Message):
         if s_msg_id:
             break
         else:
-            await second_message.reply("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: This forwarded post is not from my db channel or this link is not valid.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
-                quote=True,", quote = True)
+            await second_message.reply("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Error: This forwarded post is not from my db channel or this link is not valid.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>", quote=True)
             continue
-
 
     string = f"get-{f_msg_id * abs(client.db_channel.id)}-{s_msg_id * abs(client.db_channel.id)}"
     base64_string = await encode(string)
     link = f"https://t.me/{client.username}?start={base64_string}"
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
-    await second_message.reply_text(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>, quote=True, reply_markup=reply_markup)
-    
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+    await second_message.reply_text(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>", quote=True, reply_markup=reply_markup)
+
 @Bot.on_message(filters.private & admin & filters.command('genlink'))
 async def link_generator(client: Client, message: Message):
     while True:
@@ -144,14 +126,7 @@ async def link_generator(client: Client, message: Message):
         reply_markup=reply_markup,
         parse_mode=ParseMode.HTML
     )
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_message(filters.private & admin & filters.command("custom_batch"))
 async def custom_batch(client: Client, message: Message):
     collected = []
@@ -204,14 +179,7 @@ async def custom_batch(client: Client, message: Message):
         reply_markup=reply_markup,
         parse_mode=ParseMode.HTML
     )
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_message(filters.private & filters.command('flink'))
 async def flink_command(client: Client, message: Message):
     logger.info(to_small_caps_with_html(f"flink command triggered by user {message.from_user.id}"))
@@ -276,14 +244,7 @@ async def show_flink_main_menu(client: Client, message: Message, edit: bool = Fa
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in show_flink_main_menu: {e}"))
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while showing menu.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_callback_query(filters.regex(r"^flink_set_format$"))
 async def flink_set_format_callback(client: Client, query: CallbackQuery):
     logger.info(to_small_caps_with_html(f"flink_set_format callback triggered by user {query.from_user.id}"))
@@ -324,14 +285,7 @@ async def flink_set_format_callback(client: Client, query: CallbackQuery):
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in flink_set_format_callback: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while setting format.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_message(filters.private & filters.text & filters.regex(r"^[a-zA-Z0-9]+\s*=\s*\d+(,\s*[a-zA-Z0-9]+\s*=\s*\d+)*$"))
 async def handle_format_input(client: Client, message: Message):
     logger.info(to_small_caps_with_html(f"format input received from user {message.from_user.id}"))
@@ -357,14 +311,7 @@ async def handle_format_input(client: Client, message: Message):
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in handle_format_input: {e}"))
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while processing format.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_callback_query(filters.regex(r"^flink_start_process$"))
 async def flink_start_process_callback(client: Client, query: CallbackQuery):
     logger.info(to_small_caps_with_html(f"flink_start_process callback triggered by user {query.from_user.id}"))
@@ -384,7 +331,7 @@ async def flink_start_process_callback(client: Client, query: CallbackQuery):
             "<b>━━━━━━━━━━━━━━━━━━</b>\n"
             "<blockquote><b>Send the first post link from db channel:</b>\n"
             "<b>Forward a message from the db channel or send its direct link (e.g., <code>t.me/channel/123</code>).</b></blockquote>\n\n"
-            "<blockquote><b>Ensure files are in sequence without gaps.</ bowel></blockquote>\n\n"
+            "<blockquote><b>Ensure files are in sequence without gaps.</b></blockquote>\n\n"
             "<b>Send the link or forwarded message in the next message (no need to reply).</b>\n"
             "<b>━━━━━━━━━━━━━━━━━━</b>"
         )
@@ -404,14 +351,7 @@ async def flink_start_process_callback(client: Client, query: CallbackQuery):
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in flink_start_process_callback: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while starting process.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_message(filters.private & filters.text & filters.regex(r"^CANCEL$"))
 async def handle_cancel_text(client: Client, message: Message):
     logger.info(to_small_caps_with_html(f"cancel text received from user {message.from_user.id}"))
@@ -429,14 +369,7 @@ async def handle_cancel_text(client: Client, message: Message):
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in handle_cancel_text: {e}"))
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while cancelling process.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_message(filters.private & (filters.forwarded | filters.regex(r"^https?://t\.me/.*$")))
 async def handle_db_post_input(client: Client, message: Message):
     logger.info(to_small_caps_with_html(f"db post input received from user {message.from_user.id}"))
@@ -596,7 +529,7 @@ async def flink_generate_final_output(client: Client, message: Message):
             )
         else:
             output_msg = await message.reply(
-                text=caption if caption else to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n</blockquote><b>Here are your download buttons:</blockquote></b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                text=caption if caption else to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here are your download buttons:</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                 reply_markup=InlineKeyboardMarkup(buttons),
                 parse_mode=ParseMode.HTML
             )
@@ -612,14 +545,7 @@ async def create_link(client: Client, link_data: Dict) -> str:
     string = f"get-{start_id}-{end_id}"
     base64_string = await encode(string)
     return f"https://t.me/{client.username}?start={base64_string}"
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_callback_query(filters.regex(r"^flink_edit_output$"))
 async def flink_edit_output_callback(client: Client, query: CallbackQuery):
     logger.info(to_small_caps_with_html(f"flink_edit_output callback triggered by user {query.from_user.id}"))
@@ -658,14 +584,7 @@ async def flink_edit_output_callback(client: Client, query: CallbackQuery):
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in flink_edit_output_callback: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while editing output.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_callback_query(filters.regex(r"^flink_add_image$"))
 async def flink_add_image_callback(client: Client, query: CallbackQuery):
     logger.info(to_small_caps_with_html(f"flink_add_image callback triggered by user {query.from_user.id}"))
@@ -686,15 +605,8 @@ async def flink_add_image_callback(client: Client, query: CallbackQuery):
         await query.answer(to_small_caps_with_html("Send image"))
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in flink_add_image_callback: {e}"))
-        await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ An error occurred while adding image.</blockquote></b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+        await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ An error occurred while adding image.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
+
 @Bot.on_message(filters.private & filters.photo & filters.reply)
 async def handle_image_input(client: Client, message: Message):
     logger.info(to_small_caps_with_html(f"image input received from user {message.from_user.id}"))
@@ -734,14 +646,7 @@ async def handle_image_input(client: Client, message: Message):
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in handle_image_input: {e}"))
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while processing image.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_callback_query(filters.regex(r"^flink_add_caption$"))
 async def flink_add_caption_callback(client: Client, query: CallbackQuery):
     logger.info(to_small_caps_with_html(f"flink_add_caption callback triggered by user {query.from_user.id}"))
@@ -774,17 +679,6 @@ async def flink_add_caption_callback(client: Client, query: CallbackQuery):
         logger.error(to_small_caps_with_html(f"error in flink_add_caption_callback: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while adding caption.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-#
-
-
 @Bot.on_message(filters.private & filters.text & filters.reply & ~filters.regex(r"^CANCEL$") & ~filters.forwarded)
 async def handle_caption_input(client: Client, message: Message):
     logger.info(to_small_caps_with_html(f"caption input received from user {message.from_user.id}, text: {message.text}"))
@@ -814,14 +708,7 @@ async def handle_caption_input(client: Client, message: Message):
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in handle_caption_input: {e}"))
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while processing caption.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_callback_query(filters.regex(r"^flink_done_output$"))
 async def flink_done_output_callback(client: Client, query: CallbackQuery):
     logger.info(to_small_caps_with_html(f"flink_done_output callback triggered by user {query.from_user.id}"))
@@ -904,14 +791,7 @@ async def flink_done_output_callback(client: Client, query: CallbackQuery):
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in flink_done_output_callback: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while completing process.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_callback_query(filters.regex(r"^flink_refresh$"))
 async def flink_refresh_callback(client: Client, query: CallbackQuery):
     logger.info(to_small_caps_with_html(f"flink_refresh callback triggered by user {query.from_user.id}"))
@@ -926,14 +806,7 @@ async def flink_refresh_callback(client: Client, query: CallbackQuery):
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in flink_refresh_callback: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while refreshing status.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+
 @Bot.on_callback_query(filters.regex(r"^flink_(back_to_menu|cancel_process|back_to_output|close)$"))
 async def flink_handle_back_buttons(client: Client, query: CallbackQuery):
     logger.info(to_small_caps_with_html(f"flink back/cancel/close callback triggered by user {query.from_user.id} with action {query.data}"))
@@ -964,12 +837,3 @@ async def flink_handle_back_buttons(client: Client, query: CallbackQuery):
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in flink_handle_back_buttons: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while processing action.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-#
