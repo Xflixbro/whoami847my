@@ -1,12 +1,5 @@
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-#
+#(©)AnimeLord_Bots
+#Mehediyt69 on Tg #Dont remove this line
 
 import base64
 import re
@@ -19,33 +12,41 @@ from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
 from shortzy import Shortzy
 from pyrogram.errors import FloodWait
 from database.database import *
-import logging
 
-# Logging setup
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+#
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+#
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
 
-# Used for checking if a user is admin ~Owner also treated as admin level
+#used for cheking if a user is admin ~Owner also treated as admin level
 async def check_admin(filter, client, update):
     try:
-        user_id = update.from_user.id
-        is_owner = user_id == OWNER_ID
-        is_admin = await db.admin_exist(user_id)
-        logger.info(f"Checking admin status for user {user_id}: is_owner={is_owner}, is_admin={is_admin}")
-        return is_owner or is_admin
+        user_id = update.from_user.id       
+        return any([user_id == OWNER_ID, await db.admin_exist(user_id)])
     except Exception as e:
-        logger.error(f"Exception in check_admin: {e}")
+        print(f"! Exception in check_admin: {e}")
         return False
+
+#
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+#
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
 
 async def is_subscribed(client, user_id):
     channel_ids = await db.show_channels()
 
     if not channel_ids:
-        logger.info(f"No channels found for subscription check for user {user_id}")
         return True
 
     if user_id == OWNER_ID:
-        logger.info(f"User {user_id} is OWNER, bypassing subscription check")
         return True
 
     for cid in channel_ids:
@@ -56,17 +57,24 @@ async def is_subscribed(client, user_id):
                 await asyncio.sleep(2)  # give time for @on_chat_join_request to process
                 if await is_sub(client, user_id, cid):
                     continue
-            logger.info(f"User {user_id} is not subscribed to channel {cid}")
             return False
 
-    logger.info(f"User {user_id} is subscribed to all required channels")
     return True
+
+#
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+#
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
 
 async def is_sub(client, user_id, channel_id):
     try:
         member = await client.get_chat_member(channel_id, user_id)
         status = member.status
-        logger.info(f"User {user_id} in channel {channel_id} with status {status}")
+        #print(f"[SUB] User {user_id} in {channel_id} with status {status}")
         return status in {
             ChatMemberStatus.OWNER,
             ChatMemberStatus.ADMINISTRATOR,
@@ -77,14 +85,23 @@ async def is_sub(client, user_id, channel_id):
         mode = await db.get_channel_mode(channel_id)
         if mode == "on":
             exists = await db.req_user_exist(channel_id, user_id)
-            logger.info(f"User {user_id} join request for channel {channel_id}: {exists}")
+            #print(f"[REQ] User {user_id} join request for {channel_id}: {exists}")
             return exists
-        logger.info(f"User {user_id} not in channel {channel_id} and mode != on")
+        #print(f"[NOT SUB] User {user_id} not in {channel_id} and mode != on")
         return False
 
     except Exception as e:
-        logger.error(f"Error in is_sub(): {e}")
+        print(f"[!] Eʀʀᴏʀ ɪɴ ɪꜱ_ꜱᴜʙ(): {e}")
         return False
+
+#
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+#
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
 
 async def encode(string):
     string_bytes = string.encode("ascii")
@@ -93,9 +110,9 @@ async def encode(string):
     return base64_string
 
 async def decode(base64_string):
-    base64_string = base64_string.strip("=")  # Handle links generated before padding fix
+    base64_string = base64_string.strip("=") # links generated before this commit will be having = sign, hence striping them to handle padding errors.
     base64_bytes = (base64_string + "=" * (-len(base64_string) % 4)).encode("ascii")
-    string_bytes = base64.urlsafe_b64decode(base64_bytes)
+    string_bytes = base64.urlsafe_b64decode(base64_bytes) 
     string = string_bytes.decode("ascii")
     return string
 
@@ -103,75 +120,46 @@ async def get_messages(client, message_ids):
     messages = []
     total_messages = 0
     while total_messages != len(message_ids):
-        temp_ids = message_ids[total_messages:total_messages + 200]
+        temb_ids = message_ids[total_messages:total_messages+200]
         try:
             msgs = await client.get_messages(
                 chat_id=client.db_channel.id,
-                message_ids=temp_ids
+                message_ids=temb_ids
             )
         except FloodWait as e:
-            logger.warning(f"FloodWait in get_messages: waiting for {e.value} seconds")
-            await asyncio.sleep(e.value)
+            await asyncio.sleep(e.x)
             msgs = await client.get_messages(
                 chat_id=client.db_channel.id,
-                message_ids=temp_ids
+                message_ids=temb_ids
             )
-        except Exception as e:
-            logger.error(f"Error in get_messages: {e}")
+        except:
             pass
-        total_messages += len(temp_ids)
+        total_messages += len(temb_ids)
         messages.extend(msgs)
     return messages
 
 async def get_message_id(client, message):
-    try:
-        if message.forward_from_chat:
-            if message.forward_from_chat.id == client.db_channel.id:
-                logger.info(f"Message forwarded from db channel, ID: {message.forward_from_message_id}")
-                return message.forward_from_message_id
-            else:
-                logger.warning(f"Message forwarded from different channel: {message.forward_from_chat.id}")
-                return 0
-        elif message.forward_sender_name:
-            logger.warning("Message forwarded from hidden sender")
-            return 0
-        elif message.text:
-            # Updated regex to handle various Telegram link formats
-            pattern = r"https://t\.me/(?:c/)?(?:@)?([a-zA-Z0-9_]+|-?\d+)/(\d+)"
-            matches = re.match(pattern, message.text.strip())
-            if not matches:
-                logger.warning(f"Invalid link format: {message.text}")
-                return 0
-            channel_identifier, msg_id = matches.groups()
-            msg_id = int(msg_id)
-            # Check if the channel identifier is a username or ID
-            if channel_identifier.startswith('-') or channel_identifier.isdigit():
-                # It's a channel ID
-                expected_channel_id = str(client.db_channel.id)
-                if channel_identifier.startswith('-'):
-                    channel_id = channel_identifier
-                else:
-                    channel_id = f"-100{channel_identifier}"
-                if channel_id == expected_channel_id:
-                    logger.info(f"Valid channel ID link: {channel_id}, Message ID: {msg_id}")
-                    return msg_id
-                else:
-                    logger.warning(f"Link channel ID {channel_id} does not match db channel {expected_channel_id}")
-                    return 0
-            else:
-                # It's a username
-                channel_username = f"@{channel_identifier}" if not channel_identifier.startswith('@') else channel_identifier
-                if channel_username.lower() == client.db_channel.username.lower():
-                    logger.info(f"Valid channel username link: {channel_username}, Message ID: {msg_id}")
-                    return msg_id
-                else:
-                    logger.warning(f"Link username {channel_username} does not match db channel {client.db_channel.username}")
-                    return 0
+    if message.forward_from_chat:
+        if message.forward_from_chat.id == client.db_channel.id:
+            return message.forward_from_message_id
         else:
-            logger.warning("Message does not contain valid forward or link")
             return 0
-    except Exception as e:
-        logger.error(f"Error in get_message_id: {e}")
+    elif message.forward_sender_name:
+        return 0
+    elif message.text:
+        pattern = r"https://t.me/(?:c/)?(.*)/(\d+)"
+        matches = re.match(pattern,message.text)
+        if not matches:
+            return 0
+        channel_id = matches.group(1)
+        msg_id = int(matches.group(2))
+        if channel_id.isdigit():
+            if f"-100{channel_id}" == str(client.db_channel.id):
+                return msg_id
+        else:
+            if channel_id == client.db_channel.username:
+                return msg_id
+    else:
         return 0
 
 def get_readable_time(seconds: int) -> str:
@@ -204,15 +192,19 @@ def get_exp_time(seconds):
             result += f'{int(period_value)} {period_name}'
     return result
 
+#
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+#
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
+
 async def get_shortlink(url, api, link):
-    try:
-        shortzy = Shortzy(api_key=api, base_site=url)
-        short_link = await shortzy.convert(link)
-        logger.info(f"Generated short link: {short_link}")
-        return short_link
-    except Exception as e:
-        logger.error(f"Error in get_shortlink: {e}")
-        return link
+    shortzy = Shortzy(api_key=api, base_site=url)
+    link = await shortzy.convert(link)
+    return link
 
 subscribed = filters.create(is_subscribed)
 admin = filters.create(check_admin)
