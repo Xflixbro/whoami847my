@@ -14,6 +14,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 from bot import Bot
 from config import *
 from database.database import db
+from link_generator import batch_command, genlink_command, custom_batch_command, flink_command
 
 # List of message effect IDs for random selection (Converted to integers)
 MESSAGE_EFFECT_IDS = [
@@ -25,7 +26,7 @@ MESSAGE_EFFECT_IDS = [
     5046589136895476101,  # 💩
 ]
 
-@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|rfs_ch_|rfs_toggle_|fsub_back|set_|remove_)"))
+@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|rfs_ch_|rfs_toggle_|fsub_back|set_|remove_|link_batch|link_genlink|link_custom_batch|link_flink)"))
 async def cb_handler(client: Bot, query: CallbackQuery):
     data = query.data
     user = query.from_user
@@ -110,7 +111,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 f"● {PRICE1} ғᴏʀ 0 ᴅᴀʏs ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
                 f"● {PRICE2} ғᴏʀ 1 ᴍᴏɴᴛʜ ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
                 f"● {PRICE3} ғᴏʀ 3 ᴍᴏɴᴛʜs ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
-                f"● {PRICE4} ғᴏʀ 6 ᴍᴏɴᴛʜs ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
+                f"● {PRICE4} ғᴏʀ 6 ᴍᴏɴᴛʜs ᴘʀɪᴮᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
                 f"● {PRICE5} ғᴏʀ 1 ʏᴇᴀʀ ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n\n"
                 f"💵 Aʙsᴋ ᴜᴘɪ ɪᴅ ᴛᴏ ᴀᴅᴍɪɴ ᴀɴᴅ ᴘᴀʏ ᴛʜᴇʀᴇ - <code>{UPI_ID}</code>\n\n\n"
                 f"♻️ Pᴀʏᴍᴇɴᴛ ʏᴏᴜ ᴡɪʟʟ ɢᴇᴛ ɪɴsᴛᴀɴᴛ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n\n"
@@ -211,6 +212,30 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             await query.message.reply_text(text)
         await query.answer()
 
+    elif data == "link_batch":
+        # Trigger /batch command
+        await query.message.delete()
+        await batch_command(client, query.message)
+        await query.answer()
+
+    elif data == "link_genlink":
+        # Trigger /genlink command
+        await query.message.delete()
+        await genlink_command(client, query.message)
+        await query.answer()
+
+    elif data == "link_custom_batch":
+        # Trigger /custom_batch command
+        await query.message.delete()
+        await custom_batch_command(client, query.message)
+        await query.answer()
+
+    elif data == "link_flink":
+        # Trigger /flink command
+        await query.message.delete()
+        await flink_command(client, query.message)
+        await query.answer()
+
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
 #
@@ -219,5 +244,4 @@ async def cb_handler(client: Bot, query: CallbackQuery):
 # Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
 # All rights reserved.
-#
 #
