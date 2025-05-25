@@ -104,11 +104,17 @@ async def batch(client: Client, message: Message):
             continue
 
     # Generate the link only after both messages are received
+    if not hasattr(client, 'db_channel') or not client.db_channel:
+        await second_message.reply_text(
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Error: Database channel not configured.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>",
+            quote=True
+        )
+        return
+
     string = f"get-{f_msg_id * abs(client.db_channel.id)}-{s_msg_id * abs(client.db_channel.id)}"
     base64_string = await encode(string)
     link = f"https://t.me/{client.username}?start={base64_string}"
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
-    # Link is now in normal font style (removed to_small_caps_with_html)
     await second_message.reply_text(
         f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>",
         quote=True,
@@ -140,10 +146,17 @@ async def link_generator(client: Client, message: Message):
             )
             continue
 
+    if not hasattr(client, 'db_channel') or not client.db_channel:
+        await channel_message.reply_text(
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Error: Database channel not configured.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>",
+            quote=True,
+            parse_mode=ParseMode.HTML
+        )
+        return
+
     base64_string = await encode(f"get-{msg_id * abs(client.db_channel.id)}")
     link = f"https://t.me/{client.username}?start={base64_string}"
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
-    # Link is now in normal font style (removed to_small_caps_with_html)
     await channel_message.reply_text(
         f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>",
         quote=True,
@@ -201,6 +214,13 @@ async def custom_batch(client: Client, message: Message):
         )
         return
 
+    if not hasattr(client, 'db_channel') or not client.db_channel:
+        await message.reply(
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Error: Database channel not configured.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>",
+            parse_mode=ParseMode.HTML
+        )
+        return
+
     start_id = collected[0] * abs(client.db_channel.id)
     end_id = collected[-1] * abs(client.db_channel.id)
     string = f"get-{start_id}-{end_id}"
@@ -208,7 +228,6 @@ async def custom_batch(client: Client, message: Message):
     link = f"https://t.me/{client.username}?start={base64_string}"
 
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
-    # Link is now in normal font style (removed to_small_caps_with_html)
     await message.reply(
         f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your custom batch link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>",
         reply_markup=reply_markup,
@@ -469,6 +488,13 @@ async def handle_db_post_input(client: Client, message: Message):
                 parse_mode=ParseMode.HTML
             )
             return
+
+        if not hasattr(client, 'db_channel') or not client.db_channel:
+            await message.reply(
+                "<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Error: Database channel not configured.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>",
+                parse_mode=ParseMode.HTML
+            )
+            return
                 
         format_str = flink_user_data[message.from_user.id]['format']
         format_parts = [part.strip() for part in format_str.split(",")]
@@ -543,7 +569,7 @@ async def handle_db_post_input(client: Client, message: Message):
             parse_mode=ParseMode.HTML
         )
 
-async tacticaldefence_force_final_output(client: Client, message: Message):
+async def flink_generate_final_output(client: Client, message: Message):
     logger.info(to_small_caps_with_html(f"generating final output for user {message.from_user.id}"))
     try:
         user_id = message.from_user.id
@@ -631,6 +657,8 @@ async tacticaldefence_force_final_output(client: Client, message: Message):
         )
 
 async def create_link(client: Client, link_data: Dict) -> str:
+    if not hasattr(client, 'db_channel') or not client.db_channel:
+        raise ValueError("Database channel not configured.")
     start_id = link_data['start'] * abs(client.db_channel.id)
     end_id = link_data['end'] * abs(client.db_channel.id)
     string = f"get-{start_id}-{end_id}"
