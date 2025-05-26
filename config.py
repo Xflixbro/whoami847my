@@ -42,26 +42,106 @@ FORCE_PIC = os.environ.get("FORCE_PIC", "https://telegra.ph/file/e292b12890b8b4b
 # --------------------------------------------
 # List of images for random selection in /start, /help, /about
 RANDOM_IMAGES = [
-    "https://i.postimg.cc/JnJ32yfG/1813ee0c.jpg",
-    "https://i.postimg.cc/0j0Y9T2v/28b1fa77.jpg",
-    "https://i.postimg.cc/sxrPdjzK/169123a1.jpg",
-    "https://i.postimg.cc/pTNzzWmx/6592fdce.jpg",
-    "https://i.postimg.cc/Wbsm51X1/e6afff7a.jpg",
-    "https://i.postimg.cc/8zV2KWxr/dc021327.jpg",
-    "https://i.postimg.cc/Wb9ZS6d5/bca92b0b.jpg",
-    "https://i.postimg.cc/9MtR9G3t/c4b45c9f.jpg",
-    "https://i.postimg.cc/0yMzngRN/ce1ae80f.jpg",
-    "https://i.postimg.cc/NFdKJBjK/f8ca42f6.jpg",
-    "https://i.postimg.cc/5Njy9ctm/ec4acf97.jpg",
-    "https://i.postimg.cc/Kj8zgwDx/04efc805.jpg",
-    "https://i.postimg.cc/13jpRcP8/f2ce6fdf.jpg",
-    "https://i.postimg.cc/L5JSSpVY/af94fb0f.jpg",
-    "https://i.postimg.cc/YSQhc1SK/06dc3bf7.jpg",
-    "https://i.postimg.cc/TwGhTpyy/99376c97.jpg",
-    "https://i.postimg.cc/HxxD0gRZ/ae49a6f5.jpg",
-    "https://i.postimg.cc/K8S26C3j/fdee09a7.jpg",
-    "https://i.postimg.cc/90shFnxx/7963dd00.jpg",
-    "https://i.postimg.cc/j5ZqKv09/1c847bb6.jpg",
+    "https://i.postimg.cc/13pMdkmg/d356bdfb.jpg",
+    "https://i.postimg.cc/Qt6fbcX0/b8d54419.jpg",
+    "https://i.postimg.cc/yY3LmJ2y/8b9e5ade.jpg",
+    "https://i.postimg.cc/wjK00qp8/49813b4a.jpg",
+    "https://i.postimg.cc/qB5m6cD7/6c576e92.jpg",
+    "https://i.postimg.cc/BQRwk52z/76033dd9.jpg",
+    "https://i.postimg.cc/wjJbptVj/7d964bb9.jpg",
+    "https://i.postimg.cc/SR3D0qY9/19b6b471.jpg",
+    "https://i.postimg.cc/G23MGX14/866e109c.jpg",
+    "https://i.postimg.cc/FKVWY2wt/79c62968.jpg",
+    "https://i.postimg.cc/hvfp3hvg/c8da71f2.jpg",
+    "https://i.postimg.cc/LsKwYkXP/a4fcfce8.jpg",
+    "https://i.postimg.cc/1tydM9D5/b6062902.jpg",
+    "https://i.postimg.cc/hv53ST6f/69679b9e.jpg",
+    "https://i.postimg.cc/CMm3PfPy/2042520a.jpg",
+    "https://i.postimg.cc/W4GKMDFH/6d48d1b1.jpg",
+    "https://i.postimg.cc/mDV550S3/4ca7b67e.jpg",
+    "https://i.postimg.cc/nLJScHRY/4447ce15.jpg",
+    "https://i.postimg.cc/mZXnNWkB/c5f3b6b9.jpg",
+    "https://i.postimg.cc/rFDPfZRW/b537ef3d.jpg",
+    "https://i.postimg.cc/vTBNF3PJ/f7cf3c04.jpg",
+    "https://i.postimg.cc/8zrxzX1D/e2aab718.jpg",
+    "https://i.postimg.cc/pTvw7QMv/62881630.jpg",
+    "https://i.postimg.cc/2y8Pjz5X/6feaaca3.jpg",
+    "https://i.postimg.cc/zXv99X6y/88ed9df7.jpg",
+    "https://i.postimg.cc/cHcpNKdn/c5c90314.jpg",
+    "https://i.postimg.cc/8cKxjqJk/b8a8fe75.jpg",
+    "https://i.postimg.cc/ncLJp1jc/bbb0f2ae.jpg",
+    "https://i.postimg.cc/W1FcJbwB/1be60ed8.jpg",
+    "https://i.postimg.cc/Nj3q8qN5/4375233f.jpg",
+    "https://i.postimg.cc/BZLzgwKF/ae14ca6d.jpg",
+    "https://i.postimg.cc/wxCGbcXG/41f94fb2.jpg",
+    "https://i.postimg.cc/YqQscG8q/d72690c2.jpg",
+    "https://i.postimg.cc/htg3KD38/3853b95b.jpg",
+    "https://i.postimg.cc/rwJZmBvB/71102c42.jpg",
+    "https://i.postimg.cc/CKxPfv0z/a2a9b463.jpg",
+    "https://i.postimg.cc/W4Y9mMpS/57a48500.jpg",
+    "https://i.postimg.cc/sXBTTvvz/effd6748.jpg",
+    "https://i.postimg.cc/tTL2wpxx/67483d60.jpg",
+    "https://i.postimg.cc/XqdQ0mfD/f622366f.jpg",
+    "https://i.postimg.cc/3w2MnS69/c4cb7967.jpg",
+    "https://i.postimg.cc/bNFjJ2k0/2a4839f6.jpg",
+    "https://i.postimg.cc/RCdBkY0D/9ea305a1.jpg",
+    "https://i.postimg.cc/wjZHWsBx/acfe005d.jpg",
+    "https://i.postimg.cc/mkmW7Pqs/433d7985.jpg",
+    "https://i.postimg.cc/90mj4dLb/f6f20b4d.jpg",
+    "https://i.postimg.cc/mDG44fM0/bbf42737.jpg",
+    "https://i.postimg.cc/Xv5Wt7Zf/03d91930.jpg",
+    "https://i.postimg.cc/cHMS49B6/703f1491.jpg",
+    "https://i.postimg.cc/bN6qt5ct/51d7ef57.jpg",
+    "https://i.postimg.cc/RFcMJV4S/a64e9d8d.jpg",
+    "https://i.postimg.cc/qBxJkR1Q/c5c76509.jpg",
+    "https://i.postimg.cc/KjfxQq1C/543bef60.jpg",
+    "https://i.postimg.cc/c4cr5Tqx/ef20762f.jpg",
+    "https://i.postimg.cc/g2nmqKmB/251e6076.jpg",
+    "https://i.postimg.cc/tgqdM7vf/ec2b82f2.jpg",
+    "https://i.postimg.cc/0jP9YRyp/1e732953.jpg",
+    "https://i.postimg.cc/pXV2yH7v/421d28be.jpg",
+    "https://i.postimg.cc/1RGtfM3G/8764426c.jpg",
+    "https://i.postimg.cc/q7NqqTNq/805d08e8.jpg",
+    "https://i.postimg.cc/TwSr102M/0bd079a6.jpg",
+    "https://i.postimg.cc/yN36ByGS/503cbd75.jpg",
+    "https://i.postimg.cc/0yQ2Xsdn/6c60b12f.jpg",
+    "https://i.postimg.cc/v8grjJXQ/c12da0bb.jpg",
+    "https://i.postimg.cc/sXFj2ZFH/0552f2c8.jpg",
+    "https://i.postimg.cc/vm07FMpm/3b557384.jpg",
+    "https://i.postimg.cc/C5gxcnmn/ac7ac5cd.jpg",
+    "https://i.postimg.cc/tT739wjN/97974e38.jpg",
+    "https://i.postimg.cc/P5rPGZhm/2ff5d9e0.jpg",
+    "https://i.postimg.cc/g2d3xnpJ/95b264c0.jpg",
+    "https://i.postimg.cc/zDsC1xPT/34715973.jpg",
+    "https://i.postimg.cc/PJw1wDNL/c97b2ca2.jpg",
+    "https://i.postimg.cc/kXWxMWkz/25881c5f.jpg",
+    "https://i.postimg.cc/nrbCNPcz/2101537a.jpg",
+    "https://i.postimg.cc/L6msffJr/5a10499e.jpg",
+    "https://i.postimg.cc/d0g1TxCB/382a3ccc.jpg",
+    "https://i.postimg.cc/Y2WF81q0/4c9fd376.jpg",
+    "https://i.postimg.cc/MpFZhF9S/308acd05.jpg",
+    "https://i.postimg.cc/TPNbN0DL/0d7f49fc.jpg",
+    "https://i.postimg.cc/d3jtpQxH/33fd9789.jpg",
+    "https://i.postimg.cc/GpmYjVHn/651d6af3.jpg",
+    "https://i.postimg.cc/NjJLQMfZ/79231686.jpg",
+    "https://i.postimg.cc/qvLyy4BG/1c111b46.jpg",
+    "https://i.postimg.cc/vB64qsyk/9afa42bf.jpg",
+    "https://i.postimg.cc/3RpwjFCH/0e73df87.jpg",
+    "https://i.postimg.cc/qqyCRdZy/99b50b8e.jpg",
+    "https://i.postimg.cc/gJwZChVM/9ac2e1f9.jpg",
+    "https://i.postimg.cc/tJ3YbNYz/53d24df2.jpg",
+    "https://i.postimg.cc/63DvtQzB/8f8f759b.jpg",
+    "https://i.postimg.cc/2jhqnr2B/a1e31adf.jpg",
+    "https://i.postimg.cc/VLPChddR/b7dcd4a1.jpg"
+]
+
+MESSAGE_EFFECT_IDS = [
+    5104841245755180586,  # 🔥
+    5107584321108051014,  # 👍
+    5044134455711629726,  # ❤️
+    5046509860389126442,  # 🎉
+    5104858069142078462,  # 👎
+    5046589136895476101,  # 💩
 ]
 
 SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "linkshortify.com")
@@ -81,28 +161,20 @@ FORCE_MSG = os.environ.get("FORCE_SUB_MESSAGE", "ʜᴇʟʟᴏ {first}\n\n<b>ᴊ�
 
 CMD_TXT = """<blockquote><b>» ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs:</b></blockquote>
 
-<b>›› /auto_delete :</b> ᴍᴀɴᴀɢᴇ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ sᴇᴛᴛɪɴɢs
-<b>›› /dbroadcast :</b> ʙʀᴏᴀᴅᴄᴀsᴛ ᴅᴏᴄᴜᴍᴇɴᴛ / ᴠɪᴅᴇᴏ
-<b>›› /ban :</b> ʙᴀɴ ᴀ ᴜꜱᴇʀ
-<b>›› /unban :</b> ᴜɴʙᴀɴ ᴀ ᴜꜱᴇʀ
-<b>›› /banlist :</b> ɢᴇᴛ ʟɪsᴛ ᴏꜰ ʙᴀɴɴᴇᴅ ᴜꜱᴇʀs
-<b>›› /addchnl :</b> ᴀᴅᴅ ꜰᴏʀᴄᴇ sᴜʙ ᴄʜᴀɴɴᴇʟ
-<b>›› /delchnl :</b> ʀᴇᴍᴏᴠᴇ ꜰᴏʀᴄᴇ sᴜʙ ᴄʜᴀɴɴᴇʟ
-<b>›› /listchnl :</b> ᴠɪᴇᴡ ᴀᴅᴅᴇᴅ ᴄʜᴀɴɴᴇʟs
-<b>›› /fsub_mode :</b> ᴛᴏɢɢʟᴇ ꜰᴏʀᴄᴇ sᴜʙ ᴍᴏᴅᴇ
-<b>›› /pbroadcast :</b> sᴇɴᴅ ᴘʜᴏᴛᴏ ᴛᴏ ᴀʟʟ ᴜsᴇʀs
-<b>›› /add_admin :</b> ᴀᴅᴅ ᴀɴ ᴀᴅᴍɪɴ
-<b>›› /deladmin :</b> ʀᴇᴍᴏᴠᴇ ᴀɴ ᴀᴅᴍɪɴ
-<b>›› /admins :</b> ɢᴇᴛ ʟɪsᴛ ᴏꜴ ᴀᴅᴍɪɴs
-<b>›› /addpremium :</b> ᴀᴅᴅ ᴀ ᴘʀᴇᴍɪᴜᴍ ᴜꜱᴇʀ
-<b>›› /delpremium :</b> ʀᴇᴍᴏᴠᴇ ᴀ ᴘʀᴇᴍɪᴜᴍ ᴜꜱᴇʀ
-<b>›› /premiumusers :</b> ɢᴇᴛ ʟɪsᴛ ᴏꜰ ᴘʀᴇᴍɪᴜᴍ ᴜꜱᴇʀs
-<b>›› /broadcast :</b> ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇ ᴛᴏ ᴀʟʟ ᴜsᴇʀs
-<b>›› /stats :</b> ɢᴇᴛ ʙᴏᴛ sᴛᴀᴛs
-<b>›› /logs :</b> ɢᴇᴛ ʟᴏɢs ᴏꜰ ʙᴏᴛ
-<b>›› /setvar :</b> sᴇᴛ ᴇɴᴠɪʀᴏɴᴍᴇɴᴛ ᴠᴀʀɪᴀʙʟᴇ
-<b>›› /getvar :</b> ɢᴇᴛ ᴇɴᴠɪʀᴏɴᴍᴇɴᴛ ᴠᴀʀɪᴀʙʟᴇ
-<b>›› /restart :</b> ʀᴇsᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ"""
+<b>›› /start :</b> sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ & ɢᴇᴛ ᴘᴏsᴛs
+<b>›› /batch :</b> ᴄʀᴇᴀᴛᴇ ʟɪɴᴋs ғᴏʀ ᴍᴜʟᴛɪᴘʟᴇ ᴘᴏsᴛs
+<b>›› /custom_batch :</b> ᴄʀᴇᴀᴛᴇ ᴄᴜsᴛᴏᴍ ʙᴀᴛᴄʜ ғʀᴏᴍ ᴄʜᴀɴɴᴇʟ/ɢʀᴏᴜᴘ
+<b>›› /genlink :</b> ᴄʀᴇᴀᴛᴇ ʟɪɴᴋ ғᴏʀ ᴀ sɪɴɢʟᴇ ᴘᴏsᴛ
+<b>›› /flink :</b> ꜱᴇᴛ ᴀᴜᴛᴏ ʙᴀᴛᴄʜ ꜰᴏʀᴍᴀᴛ
+<b>›› /forcesub :</b> ɢᴇᴛ ᴀʟʟ ғᴏʀᴄᴇ sᴜʙ sᴇᴛᴛɪɴɢs
+<b>›› /admin :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ᴍᴀɴᴀɢᴇ ᴀᴅᴍɪɴs (ᴀᴅᴅ/ʀᴇᴍᴏᴠᴇ/ʟɪsᴛ)
+<b>›› /user :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ɢᴇᴛ ᴜsᴇʀ-ʀᴇʟᴀᴛᴇᴅ ᴛᴏᴏʟs
+<b>›› /auto_delete :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ sᴇᴛ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ
+<b>›› /fsettings :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ᴍᴀɴᴀɢᴇ ғᴏʀᴄᴇ sᴜʙsᴄʀɪᴘᴛɪᴏɴs
+<b>›› /premium_cmd :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ᴍᴀɴᴀɢᴇ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs
+<b>›› /broadcast_cmd :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇs
+<b>›› /myplan :</b> ᴄʜᴇᴄᴋ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ sᴛᴀᴛᴜs & ᴅᴇᴛᴀɪʟs
+<b>›› /count :</b> ᴛʀᴀᴄᴋ sʜᴏʀᴛɴᴇʀ ᴄʟɪᴄᴋs & ᴀɴᴀʟʏᴛɪᴄs"""
 
 CUSTOM_CAPTION = os.environ.get("CUSTOM_CAPTION", "<b>• ʙʏ @Anime_Lord_Official</b>")
 # --------------------------------------------
