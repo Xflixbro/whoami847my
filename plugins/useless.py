@@ -21,12 +21,29 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
 from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated, UserNotParticipant
 from bot import Bot
-from config import *
+from config import RANDOM_IMAGES, START_PIC
 from helper_func import *
 from database.database import *
 
 # Set up logging for this module
 logger = logging.getLogger(__name__)
+
+# Define message effect IDs
+MESSAGE_EFFECT_IDS = [
+    5104841245755180586,  # 🔥
+    5107584321108051014,  # 👍
+    5044134455711629726,  # ❤️
+    5046509860389126442,  # 🎉
+    5104858069142078462,  # 👎
+    5046589136895476101,  # 💩
+]
+
+# Custom filter for timer input to avoid conflict with request_fsub
+async def timer_input_filter(_, __, message: Message):
+    chat_id = message.chat.id
+    state = await db.get_temp_state(chat_id)
+    logger.info(f"Checking timer_input_filter for chat {chat_id}: state={state}, message_text={message.text}")
+    return state == "awaiting_timer_input" and message.text and message.text.isdigit()
 
 #=====================================================================================##
 
@@ -45,11 +62,48 @@ WAIT_MSG = "<b>Wᴏʀᴋɪɴɢ...</b>"
 
 @Bot.on_message(filters.command('users') & filters.private & admin)
 async def get_users(client: Bot, message: Message):
-    msg = await client.send_message(chat_id=message.chat.id, text=WAIT_MSG)
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    try:
+        msg = await client.send_photo(
+            chat_id=message.chat.id,
+            photo=selected_image,
+            caption=WAIT_MSG,
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+        )
+    except Exception as e:
+        logger.error(f"Failed to send photo: {e}")
+        msg = await client.send_message(
+            chat_id=message.chat.id,
+            text=WAIT_MSG,
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+        )
     users = await db.full_userbase()
-    await msg.edit(f"{len(users)} Uꜱᴇʀꜱ ᴀʀᴇ ᴜꜱɪɴɢ ᴛʜɪꜱ ʙᴏᴛ")
-
-#=====================================================================================##
+    try:
+        await msg.edit_media(
+            media=InputMediaPhoto(
+                media=selected_image,
+                caption=f"{len(users)} Uꜱᴇʀꜱ ᴀʀᴇ ᴜꜱɪɴɢ ᴛʜɪꜱ ʙᴏᴛ"
+            ),
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("• Bᴀᴄᴋ •", callback_data="user_back"),
+                    InlineKeyboardButton("• Cʟᴏꜱᴇ •", callback_data="user_close")
+                ]
+            ]),
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+        )
+    except Exception as e:
+        logger.error(f"Failed to edit message with image: {e}")
+        await msg.edit(
+            text=f"{len(users)} Uꜱᴇʀꜱ ᴀʀᴇ ᴜꜱɪɴɢ ᴛʜɪꜱ ʙᴏᴛ",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("• Bᴀᴄᴋ •", callback_data="user_back"),
+                    InlineKeyboardButton("• Cʟᴏꜱᴇ •", callback_data="user_close")
+                ]
+            ]),
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+        )
 
 # AUTO-DELETE SETTINGS
 
@@ -62,35 +116,36 @@ async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int =
     timer_text = get_readable_time(delete_timer)
 
     settings_text = (
-        "» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Sᴇᴛᴛɪɴɢs</b>\n\n"
-        f"» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ:</b> {mode_status}\n"
-        f"» <b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ:</b> {timer_text}\n\n"
-        "<b>Cʟɪᴄᴋ Bᴇʟᴏᴡ Bᴜᴛᴛᴏɴs Tᴏ Cʜᴀɴɢᴇ Sᴇᴛᴛɪɴɢs</b>"
+        "» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Sᴇᴛᴛɪɴɢꜱ</b>\n\n"
+        f"<blockquote>» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ:</b> {mode_status}</blockquote>\n"
+        f"<blockquote>» <b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ:</b> {timer_text}</blockquote>\n\n"
+        "<b>Cʟɪᴄᴋ Bᴇʟᴏᴡ Bᴜᴛᴛᴏɴꜱ Tᴏ Cʜᴀɴɢᴇ Sᴇᴛᴛɪɴɢꜱ</b>"
     )
 
     keyboard = InlineKeyboardMarkup(
         [
             [
                 InlineKeyboardButton("• Dɪsᴀʙʟᴇᴅ ❌" if auto_delete_mode else "• Eɴᴀʙʟᴇᴅ ✅", callback_data="auto_toggle"),
-                InlineKeyboardButton("• Sᴇᴛ Tɪᴍᴇʀ •", callback_data="auto_set_timer")
+                InlineKeyboardButton(" Sᴇᴛ Tɪᴍᴇʀ •", callback_data="auto_set_timer")
             ],
             [
-                InlineKeyboardButton("• Rᴇғʀᴇsʜ", callback_data="auto_refresh"),
+                InlineKeyboardButton("• Rᴇғʀᴇꜱʜ", callback_data="auto_refresh"),
                 InlineKeyboardButton("Bᴀᴄᴋ •", callback_data="auto_back")
             ]
         ]
     )
 
-    # Image link to be used
-    image_url = "https://i.postimg.cc/Px15Fkgn/96da122b.jpg"
+    # Select a random image
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
 
     if message_id:
         try:
             await client.edit_message_media(
                 chat_id=chat_id,
                 message_id=message_id,
-                media=InputMediaPhoto(media=image_url, caption=settings_text),
-                reply_markup=keyboard
+                media=InputMediaPhoto(media=selected_image, caption=settings_text),
+                reply_markup=keyboard,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
         except Exception as e:
             logger.error(f"Failed to edit message with image: {e}")
@@ -99,16 +154,18 @@ async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int =
                 message_id=message_id,
                 text=settings_text,
                 reply_markup=keyboard,
-                parse_mode=ParseMode.HTML
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
     else:
         try:
             await client.send_photo(
                 chat_id=chat_id,
-                photo=image_url,
+                photo=selected_image,
                 caption=settings_text,
                 reply_markup=keyboard,
-                parse_mode=ParseMode.HTML
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
         except Exception as e:
             logger.error(f"Failed to send photo: {e}")
@@ -116,67 +173,119 @@ async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int =
                 chat_id=chat_id,
                 text=settings_text,
                 reply_markup=keyboard,
-                parse_mode=ParseMode.HTML
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
 
 @Bot.on_message(filters.private & filters.command('auto_delete') & admin)
 async def auto_delete_settings(client: Bot, message: Message):
+    # Reset state to avoid conflicts with previous operations
+    await db.set_temp_state(message.chat.id, "")
+    logger.info(f"Reset state for chat {message.chat.id} before showing auto-delete settings")
     await show_auto_delete_settings(client, message.chat.id)
 
 @Bot.on_callback_query(filters.regex(r"^auto_"))
 async def auto_delete_callback(client: Bot, callback: CallbackQuery):
     data = callback.data
     chat_id = callback.message.chat.id
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
 
     if data == "auto_toggle":
         current_mode = await db.get_auto_delete_mode()
         new_mode = not current_mode
         await db.set_auto_delete_mode(new_mode)
         await show_auto_delete_settings(client, chat_id, callback.message.id)
-        await callback.answer(f"Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ {'Eɴᴀʙʟᴇᴅ' if new_mode else 'Dɪsᴀʙʟᴇᴅ'}!")
+        await callback.answer(f"<blockquote><b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ {'Eɴᴀʙʟᴇᴅ' if new_mode else 'Dɪꜱᴀʙʟᴇᴅ'}!</b></blockquote>")
     
     elif data == "auto_set_timer":
         # Set a state to indicate that we are expecting a timer input
         await db.set_temp_state(chat_id, "awaiting_timer_input")
         logger.info(f"Set state to 'awaiting_timer_input' for chat {chat_id}")
-        await callback.message.reply(
-            "<b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ sᴇᴄᴏɴᴅs ғᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b>\n"
-            "Eᴄᴀᴍᴘʟᴇ: 300 (ғᴏʀ 5 ᴍɪɴᴜᴛᴇs)",
-            parse_mode=ParseMode.HTML
-        )
-        await callback.answer("Eɴᴛᴇʀ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ!")
+        try:
+            await callback.message.reply_photo(
+                photo=selected_image,
+                caption=(
+                    "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
+                    "<blockquote><b>Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)</b></blockquote>"
+                ),
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
+            await callback.message.reply(
+                "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴐီᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
+                "<blockquote><b>Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)</b></blockquote>",
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        await callback.answer("<blockquote><b>Eɴᴛᴇʀ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ!</b></blockquote>")
     
     elif data == "auto_refresh":
         await show_auto_delete_settings(client, chat_id, callback.message.id)
-        await callback.answer("Sᴇᴛᴛɪɴɢs ʀᴇғʀᴇsʜᴇᴅ!")
+        await callback.answer("<blockquote><b>Sᴇᴛᴛɪɴɢꜱ ʀᴇꜰʀᴇꜱʜᴇᴅ!</b></blockquote>")
     
     elif data == "auto_back":
+        await db.set_temp_state(chat_id, "")
         await callback.message.delete()
-        await callback.answer("Bᴀᴄᴋ ᴛᴏ ᴘʀᴇᴠɪᴏᴜs ᴍᴇɴᴜ!")
+        await callback.answer("<blockquote><b>Bᴀᴄᴋ ᴛᴏ ᴘʀᴇᴠɪᴏᴜꜱ ᴍᴇɴᴜ!</b></blockquote>")
 
-@Bot.on_message(filters.private & filters.regex(r"^\d+$") & admin)
+@Bot.on_message(filters.private & admin & filters.create(timer_input_filter), group=2)
 async def set_timer(client: Bot, message: Message):
     chat_id = message.chat.id
-    state = await db.get_temp_state(chat_id)
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
     
-    logger.info(f"Received numeric input: {message.text} from chat {chat_id}, current state: {state}")
+    logger.info(f"Received numeric input: {message.text} from chat {chat_id} in set_timer")
 
-    # Only process the input if the state is "awaiting_timer_input"
-    if state == "awaiting_timer_input":
+    try:
+        duration = int(message.text)
+        if duration <= 0:
+            raise ValueError("Duration must be a positive integer")
+        await db.set_del_timer(duration)
+        # Verify the timer was set
+        new_timer = await db.get_del_timer()
+        if new_timer == duration:
+            try:
+                await message.reply_photo(
+                    photo=selected_image,
+                    caption=f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀꜱ ʙᴇᴇɴ ꜱᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>",
+                    parse_mode=ParseMode.HTML,
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
+            except Exception as e:
+                logger.error(f"Failed to send photo: {e}")
+                await message.reply(
+                    f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀꜱ ʙᴇᴇɴ ꜱᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>",
+                    parse_mode=ParseMode.HTML,
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                )
+            logger.info(f"Successfully set delete timer to {duration} seconds for chat {chat_id}")
+        else:
+            logger.error(f"Failed to set delete timer to {duration} seconds for chat {chat_id}")
+            await message.reply(
+                "<blockquote><b>Fᴀɪʟᴇᴅ ᴛᴏ ꜱᴇᴛ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ. Pʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ.</b></blockquote>",
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        # Clear the state after processing
+        await db.set_temp_state(chat_id, "")
+        logger.info(f"Cleared state for chat {chat_id}")
+    except ValueError as e:
+        logger.error(f"Invalid duration input: {message.text} from chat {chat_id} - {str(e)}")
         try:
-            duration = int(message.text)
-            await db.set_del_timer(duration)
-            await message.reply(f"<b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀs ʙᴇᴇɴ sᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b>", parse_mode=ParseMode.HTML)
-            logger.info(f"Set delete timer to {duration} seconds for chat {chat_id}")
-            # Clear the state after processing
-            await db.set_temp_state(chat_id, "")
-        except ValueError:
-            await message.reply("<b>Pʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ sᴇᴄᴏɴᴅs.</b>", parse_mode=ParseMode.HTML)
-            logger.error(f"Invalid duration input: {message.text} from chat {chat_id}")
-    else:
-        logger.info(f"Ignoring numeric input: {message.text} as state is not 'awaiting_timer_input' for chat {chat_id}")
-
-#=====================================================================================##
+            await message.reply_photo(
+                photo=selected_image,
+                caption="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b></blockquote>",
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
+            await message.reply(
+                "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b></blockquote>",
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
 
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
