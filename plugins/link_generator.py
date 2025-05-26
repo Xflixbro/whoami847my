@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # Small caps conversion dictionary
 SMALL_CAPS = {
     'a': 'ᴀ', 'b': 'ʙ', 'c': 'ᴄ', 'd': 'ᴅ', 'e': 'ᴇ', 'f': 'ꜰ', 'g': 'ɢ', 'h': 'ʜ',
-    'i': 'ɪ', 'j': 'ᴊ', 'k': 'ᴋ', 'l': 'ʟ', 'm': 'ᴍ', 'n': 'ɴ', 'o': 'ᴏ', 'p': 'ᴘ',
+    'i': 'ɪ', 'j': 'ᴊ', 'k': 'ᴋ', 'l': 'ʟ', 'm': 'ᴍ', 'n': 'ɴ', 'o': 'ᴏ', 'p*KEEP* 'p': 'ᴘ',
     'q': 'Q', 'r': 'ʀ', 's': 'ꜱ', 't': 'ᴛ', 'u': 'ᴜ', 'v': 'ᴠ', 'w': 'ᴡ', 'x': 'x',
     'y': 'ʏ', 'z': 'ᴢ'
 }
@@ -66,7 +66,7 @@ async def batch_state_filter(_, __, message: Message):
         return False
     state = batch_user_data[chat_id].get('state')
     logger.info(f"batch_state_filter for chat {chat_id}: state={state}, message_text={message.text}")
-    return state in ['awaiting_first_message', 'awaiting_second_message'] and (message.forwarded_from_chat or re.match(r"^https?://t\.me/.*$", message.text))
+    return state in ['awaiting_first_message', 'awaiting_second_message'] and (message.forward_from_chat or re.match(r"^https?://t\.me/.*$", message.text))
 
 @Bot.on_message(filters.private & admin & filters.command('batch'))
 async def batch(client: Client, message: Message):
@@ -76,14 +76,79 @@ async def batch(client: Client, message: Message):
 
     # Initialize batch user data
     batch_user_data[chat_id] = {
-        'state': 'awaiting_first_message',
-        'first_message_id': None
+        'state': 'initial',
+        'first_message_id': None,
+        'menu_message': None
     }
 
-    await message.reply(
-        to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward the first message from db channel (with quotes).\nOr send the db channel post link\n</b></blockquote><b>━━━━━━━━━━━━━━━━━━</b>"),
+    # Show the batch menu with Start Process button
+    text = to_small_caps_with_html(
+        "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+        "<blockquote><b>Batch Link Generator</b></blockquote>\n\n"
+        "<blockquote><b>Click 'Start Process' to begin generating a batch link.</b></blockquote>\n"
+        "<b>━━━━━━━━━━━━━━━━━━</b>"
+    )
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("• Start Process •", callback_data="batch_start_process")],
+        [InlineKeyboardButton("• Close •", callback_data="batch_close")]
+    ])
+
+    msg = await message.reply(
+        text=text,
+        reply_markup=buttons,
         parse_mode=ParseMode.HTML
     )
+    batch_user_data[chat_id]['menu_message'] = msg
+
+@Bot.on_callback_query(filters.regex(r"^batch_start_process$"))
+async def batch_start_process_callback(client: Client, query: CallbackQuery):
+    """Handle callback to start the batch process."""
+    chat_id = query.from_user.id
+    logger.info(f"Batch start process callback triggered by user {chat_id}")
+
+    if chat_id not in batch_user_data:
+        batch_user_data[chat_id] = {
+            'state': 'awaiting_first_message',
+            'first_message_id': None,
+            'menu_message': query.message
+        }
+    else:
+        batch_user_data[chat_id]['state'] = 'awaiting_first_message'
+
+    await query.message.edit_text(
+        to_small_caps_with_html(
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+            "<blockquote><b>Forward the first message from db channel (with quotes).</b></blockquote>\n"
+            "<blockquote><b>Or send the db channel post link</b></blockquote>\n"
+            "<b>━━━━━━━━━━━━━━━━━━</b>"
+        ),
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("✖️ Cancel", callback_data="batch_cancel_process")]
+        ]),
+        parse_mode=ParseMode.HTML
+    )
+    await query.answer(to_small_caps_with_html("Send the first message or link"))
+
+@Bot.on_callback_query(filters.regex(r"^batch_(cancel_process|close)$"))
+async def batch_handle_cancel_close(client: Client, query: CallbackQuery):
+    """Handle cancel and close actions for batch command."""
+    chat_id = query.from_user.id
+    action = query.data.split("_")[-1]
+    logger.info(f"Batch {action} callback triggered by user {chat_id}")
+
+    if action == "cancel_process":
+        if chat_id in batch_user_data:
+            del batch_user_data[chat_id]
+        await query.message.edit_text(
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Process cancelled.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        await query.answer(to_small_caps_with_html("Process cancelled"))
+    elif action == "close":
+        if chat_id in batch_user_data:
+            del batch_user_data[chat_id]
+        await query.message.delete()
+        await query.answer(to_small_caps_with_html("Menu closed"))
 
 @Bot.on_message(filters.private & admin & filters.create(batch_state_filter))
 async def handle_batch_input(client: Client, message: Message):
@@ -106,7 +171,7 @@ async def handle_batch_input(client: Client, message: Message):
             batch_user_data[chat_id]['first_message_id'] = f_msg_id
             batch_user_data[chat_id]['state'] = 'awaiting_second_message'
             await message.reply(
-                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward the last message from db channel (with quotes).\nOr send the db channel post link\n</b></blockquote><b>━━━━━━━━━━━━━━━━━━</b>"),
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward the last message from db channel (with quotes).</b></blockquote>\n<blockquote><b>Or send the db channel post link</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                 parse_mode=ParseMode.HTML
             )
 
@@ -160,7 +225,7 @@ async def link_generator(client: Client, message: Message):
     while True:
         try:
             channel_message = await client.ask(
-                text=to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward message from the db channel (with quotes).\nOr send the db channel post link\n</b></blockquote><b>━━━━━━━━━━━━━━━━━━</b>"),
+                text=to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward message from the db channel (with quotes).</b></blockquote>\n<blockquote><b>Or send the db channel post link</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                 chat_id=message.from_user.id,
                 filters=(filters.forwarded | (filters.text & ~filters.forwarded)),
                 timeout=60,
@@ -197,7 +262,7 @@ async def custom_batch(client: Client, message: Message):
     STOP_KEYBOARD = ReplyKeyboardMarkup([["stop"]], resize_keyboard=True)
 
     await message.reply(
-        to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Send all messages you want to include in batch.\n\nPress Stop when you're done.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+        to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Send all messages you want to include in batch.</b></blockquote>\n\n<blockquote><b>Press Stop when you're done.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
         reply_markup=STOP_KEYBOARD,
         parse_mode=ParseMode.HTML
     )
@@ -206,7 +271,7 @@ async def custom_batch(client: Client, message: Message):
         try:
             user_msg = await client.ask(
                 chat_id=message.chat.id,
-                text=to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Waiting for files/messages...\nPress Stop to finish.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                text=to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Waiting for files/messages...</b></blockquote>\n<blockquote><b>Press Stop to finish.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                 timeout=60,
                 parse_mode=ParseMode.HTML
             )
@@ -396,8 +461,8 @@ async def flink_start_process_callback(client: Client, query: CallbackQuery):
         current_text = query.message.text if query.message.text else ""
         new_text = to_small_caps_with_html(
             "<b>━━━━━━━━━━━━━━━━━━</b>\n"
-            "<blockquote><b>Send the first post link from db channel:</b>\n"
-            "<b>Forward a message from the db channel or send its direct link (e.g., <code>t.me/channel/123</code>).</b></blockquote>\n\n"
+            "<blockquote><b>Send the first post link from db channel:</b></blockquote>\n"
+            "<blockquote><b>Forward a message from the db channel or send its direct link (e.g., <code>t.me/channel/123</code>).</b></blockquote>\n\n"
             "<blockquote><b>Ensure files are in sequence without gaps.</b></blockquote>\n\n"
             "<b>Send the link or forwarded message in the next message (no need to reply).</b>\n"
             "<b>━━━━━━━━━━━━━━━━━━</b>"
@@ -694,7 +759,7 @@ async def handle_image_input(client: Client, message: Message):
 
         flink_user_data[user_id]['edit_data']['image'] = message.photo.file_id
         await message.reply_text(
-            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>✅ Image saved successfully.</b></blockquote>\n<blockquote	Type a caption if needed, or proceed with 'Done'.</blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>✅ Image saved successfully.</b></blockquote>\n<blockquote>Type a caption if needed, or proceed with 'Done'.</blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
         )
         await flink_generate_final_output(client, message)
