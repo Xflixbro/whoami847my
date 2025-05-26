@@ -39,134 +39,124 @@ def to_small_caps_with_html(text: str) -> str:
     i = 0
     while i < len(text):
         if text[i] == '<':
-            # Find the closing '>' of the HTML tag
             j = i + 1
             while j < len(text) and text[j] != '>':
                 j += 1
             if j < len(text):
-                # Include the HTML tag as is
                 result += text[i:j+1]
                 i = j + 1
             else:
-                # Incomplete tag, treat as normal text
                 result += text[i]
                 i += 1
         else:
-            # Convert non-tag character to small caps
             result += SMALL_CAPS.get(text[i].lower(), text[i])
             i += 1
     return result
 
-# Store user data for flink command
+# Store user data for batch and flink commands
+batch_user_data: Dict[int, Dict] = {}
 flink_user_data: Dict[int, Dict] = {}
 
-@Bot.on_message(filters.private & admin & filters.command('batch') & ~filters.regex(r"^-?\d+$|^all$"))
+# Filter for batch command input
+async def batch_state_filter(_, __, message: Message):
+    """Filter to ensure messages are processed only when awaiting batch input."""
+    chat_id = message.chat.id
+    if chat_id not in batch_user_data:
+        logger.info(f"batch_state_filter: No batch data for chat {chat_id}")
+        return False
+    state = batch_user_data[chat_id].get('state')
+    logger.info(f"batch_state_filter for chat {chat_id}: state={state}, message_text={message.text}")
+    return state in ['awaiting_first_message', 'awaiting_second_message'] and (message.forwarded_from_chat or re.match(r"^https?://t\.me/.*$", message.text))
+
+@Bot.on_message(filters.private & admin & filters.command('batch'))
 async def batch(client: Client, message: Message):
-    """
-    Handle /batch command to generate a link for a range of messages from the db channel.
-    Ensures the command does not conflict with request_fsub.py filters and waits for both
-    first and last messages before generating the link.
-    """
-    user_id = message.from_user.id
-    # Initialize state for batch command to prevent conflicts
-    batch_state = {'awaiting_first': True, 'awaiting_second': False, 'first_msg_id': None}
-    flink_user_data[user_id] = flink_user_data.get(user_id, {})
-    flink_user_data[user_id]['batch_state'] = batch_state
+    """Handle /batch command to generate a link for a range of messages."""
+    chat_id = message.from_user.id
+    logger.info(f"Batch command triggered by user {chat_id}")
 
-    while True:
-        try:
-            first_message = await client.ask(
-                text=to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward the first message from db channel (with quotes).\nOr send the db channel post link\n</b></blockquote><b>━━━━━━━━━━━━━━━━━━</b>"),
-                chat_id=user_id,
-                filters=(filters.forwarded | (filters.text & ~filters.forwarded)),
-                timeout=60,
-                parse_mode=ParseMode.HTML
-            )
-            # Check if user cancelled the operation
-            if first_message.text and first_message.text.strip().lower() == "cancel":
-                await first_message.reply(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Batch process cancelled.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-                if user_id in flink_user_data:
-                    del flink_user_data[user_id]['batch_state']
-                return
+    # Initialize batch user data
+    batch_user_data[chat_id] = {
+        'state': 'awaiting_first_message',
+        'first_message_id': None
+    }
 
-            f_msg_id = await get_message_id(client, first_message)
-            if f_msg_id:
-                batch_state['first_msg_id'] = f_msg_id
-                batch_state['awaiting_first'] = False
-                batch_state['awaiting_second'] = True
-                break
-            else:
-                await first_message.reply(
+    await message.reply(
+        to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward the first message from db channel (with quotes).\nOr send the db channel post link\n</b></blockquote><b>━━━━━━━━━━━━━━━━━━</b>"),
+        parse_mode=ParseMode.HTML
+    )
+
+@Bot.on_message(filters.private & admin & filters.create(batch_state_filter))
+async def handle_batch_input(client: Client, message: Message):
+    """Handle input for batch command based on state."""
+    chat_id = message.from_user.id
+    state = batch_user_data.get(chat_id, {}).get('state')
+    logger.info(f"Handling batch input for chat {chat_id}, state: {state}")
+
+    try:
+        if state == 'awaiting_first_message':
+            f_msg_id = await get_message_id(client, message)
+            if not f_msg_id:
+                await message.reply(
                     to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Error: This forwarded post is not from my db channel or this link is not valid.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                     quote=True,
                     parse_mode=ParseMode.HTML
                 )
-                continue
-        except TimeoutError:
-            logger.error(to_small_caps_with_html(f"Timeout error waiting for first message in batch command for user {user_id}"))
-            await message.reply(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Timeout: No response received for first message.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-            if user_id in flink_user_data:
-                del flink_user_data[user_id]['batch_state']
-            return
-
-    while batch_state.get('awaiting_second', False):
-        try:
-            second_message = await client.ask(
-                text=to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward the last message from db channel (with quotes).\nOr send the db channel post link\n</b></blockquote><b>━━━━━━━━━━━━━━━━━━</b>"),
-                chat_id=user_id,
-                filters=(filters.forwarded | (filters.text & ~filters.forwarded)),
-                timeout=60,
-                parse_mode=ParseMode.HTML
-            )
-            # Check if user cancelled the operation
-            if second_message.text and second_message.text.strip().lower() == "cancel":
-                await second_message.reply(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Batch process cancelled.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-                if user_id in flink_user_data:
-                    del flink_user_data[user_id]['batch_state']
                 return
 
-            s_msg_id = await get_message_id(client, second_message)
-            if s_msg_id:
-                # Validate that the second message ID is greater than or equal to the first
-                if s_msg_id < batch_state['first_msg_id']:
-                    await second_message.reply(
-                        to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: Last message ID must be greater than or equal to the first message ID.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
-                        quote=True,
-                        parse_mode=ParseMode.HTML
-                    )
-                    continue
-                break
-            else:
-                await second_message.reply(
+            batch_user_data[chat_id]['first_message_id'] = f_msg_id
+            batch_user_data[chat_id]['state'] = 'awaiting_second_message'
+            await message.reply(
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward the last message from db channel (with quotes).\nOr send the db channel post link\n</b></blockquote><b>━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
+            )
+
+        elif state == 'awaiting_second_message':
+            s_msg_id = await get_message_id(client, message)
+            if not s_msg_id:
+                await message.reply(
                     to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: This forwarded post is not from my db channel or this link is not valid.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                     quote=True,
                     parse_mode=ParseMode.HTML
                 )
-                continue
-        except TimeoutError:
-            logger.error(to_small_caps_with_html(f"Timeout error waiting for second message in batch command for user {user_id}"))
-            await message.reply(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Timeout: No response received for last message.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-            if user_id in flink_user_data:
-                del flink_user_data[user_id]['batch_state']
-            return
+                return
 
-    # Generate the link only after both message IDs are received
-    string = f"get-{batch_state['first_msg_id'] * abs(client.db_channel.id)}-{s_msg_id * abs(client.db_channel.id)}"
-    base64_string = await encode(string)
-    link = f"https://t.me/{client.username}?start={base64_string}"
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
-    await second_message.reply_text(
-        to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>"),
-        quote=True,
-        reply_markup=reply_markup,
-        parse_mode=ParseMode.HTML
-    )
-    # Clean up state after completion
-    if user_id in flink_user_data:
-        del flink_user_data[user_id]['batch_state']
+            f_msg_id = batch_user_data[chat_id]['first_message_id']
+            string = f"get-{f_msg_id * abs(client.db_channel.id)}-{s_msg_id * abs(client.db_channel.id)}"
+            base64_string = await encode(string)
+            link = f"https://t.me/{client.username}?start={base64_string}"
+            reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
+
+            await message.reply_text(
+                to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                quote=True,
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML
+            )
+
+            # Clean up user data
+            if chat_id in batch_user_data:
+                del batch_user_data[chat_id]
+
+    except TimeoutError:
+        logger.error(to_small_caps_with_html(f"Timeout error waiting for batch input in state {state} for user {chat_id}"))
+        await message.reply(
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Timeout: No response received.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        if chat_id in batch_user_data:
+            del batch_user_data[chat_id]
+    except Exception as e:
+        logger.error(to_small_caps_with_html(f"Error in handle_batch_input for user {chat_id}: {e}"))
+        await message.reply(
+            to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: {str(e)}</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        if chat_id in batch_user_data:
+            del batch_user_data[chat_id]
 
 @Bot.on_message(filters.private & admin & filters.command('genlink'))
 async def link_generator(client: Client, message: Message):
+    """Handle /genlink command to generate a link for a single message."""
     while True:
         try:
             channel_message = await client.ask(
@@ -202,6 +192,7 @@ async def link_generator(client: Client, message: Message):
 
 @Bot.on_message(filters.private & admin & filters.command("custom_batch"))
 async def custom_batch(client: Client, message: Message):
+    """Handle /custom_batch command to collect and generate a batch link."""
     collected = []
     STOP_KEYBOARD = ReplyKeyboardMarkup([["stop"]], resize_keyboard=True)
 
@@ -255,15 +246,14 @@ async def custom_batch(client: Client, message: Message):
 
 @Bot.on_message(filters.private & filters.command('flink'))
 async def flink_command(client: Client, message: Message):
+    """Handle /flink command for formatted link generation."""
     logger.info(to_small_caps_with_html(f"flink command triggered by user {message.from_user.id}"))
     try:
-        # Check if user is owner or admin
         admin_ids = await db.get_all_admins() or []
         if message.from_user.id not in admin_ids and message.from_user.id != OWNER_ID:
             await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
             return
 
-        # Initialize user data
         flink_user_data[message.from_user.id] = {
             'format': None,
             'links': {},
@@ -282,6 +272,7 @@ async def flink_command(client: Client, message: Message):
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred. Please try again.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 async def show_flink_main_menu(client: Client, message: Message, edit: bool = False):
+    """Show the main menu for the flink command."""
     try:
         current_format = flink_user_data[message.from_user.id]['format'] or "Not set"
         text = to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>Formatted Link Generator</b>\n\n<blockquote><b>Current format:</b></blockquote>\n<blockquote><code>{current_format}</code></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>")
@@ -320,6 +311,7 @@ async def show_flink_main_menu(client: Client, message: Message, edit: bool = Fa
 
 @Bot.on_callback_query(filters.regex(r"^flink_set_format$"))
 async def flink_set_format_callback(client: Client, query: CallbackQuery):
+    """Handle callback for setting format in flink command."""
     logger.info(to_small_caps_with_html(f"flink_set_format callback triggered by user {query.from_user.id}"))
     try:
         admin_ids = await db.get_all_admins() or []
@@ -361,6 +353,7 @@ async def flink_set_format_callback(client: Client, query: CallbackQuery):
 
 @Bot.on_message(filters.private & filters.text & filters.regex(r"^[a-zA-Z0-9]+\s*=\s*\d+(,\s*[a-zA-Z0-9]+\s*=\s*\d+)*$"))
 async def handle_format_input(client: Client, message: Message):
+    """Handle format input for flink command."""
     logger.info(to_small_caps_with_html(f"format input received from user {message.from_user.id}"))
     try:
         admin_ids = await db.get_all_admins() or []
@@ -387,6 +380,7 @@ async def handle_format_input(client: Client, message: Message):
 
 @Bot.on_callback_query(filters.regex(r"^flink_start_process$"))
 async def flink_start_process_callback(client: Client, query: CallbackQuery):
+    """Handle callback to start the flink process."""
     logger.info(to_small_caps_with_html(f"flink_start_process callback triggered by user {query.from_user.id}"))
     try:
         admin_ids = await db.get_all_admins() or []
@@ -425,26 +419,9 @@ async def flink_start_process_callback(client: Client, query: CallbackQuery):
         logger.error(to_small_caps_with_html(f"error in flink_start_process_callback: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while starting process.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
-@Bot.on_message(filters.private & filters.text & filters.regex(r"^CANCEL$"))
-async def handle_cancel_text(client: Client, message: Message):
-    logger.info(to_small_caps_with_html(f"cancel text received from user {message.from_user.id}"))
-    try:
-        admin_ids = await db.get_all_admins() or []
-        if message.from_user.id not in admin_ids and message.from_user.id != OWNER_ID:
-            await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-            return
-
-        if message.from_user.id in flink_user_data:
-            del flink_user_data[message.from_user.id]
-            await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Process cancelled.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-        else:
-            await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ No active process to cancel.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-    except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in handle_cancel_text: {e}"))
-        await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while cancelling process.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-
 @Bot.on_message(filters.private & (filters.forwarded | filters.regex(r"^https?://t\.me/.*$")))
 async def handle_db_post_input(client: Client, message: Message):
+    """Handle db channel post input for flink command."""
     logger.info(to_small_caps_with_html(f"db post input received from user {message.from_user.id}"))
     try:
         admin_ids = await db.get_all_admins() or []
@@ -532,6 +509,7 @@ async def handle_db_post_input(client: Client, message: Message):
         await message.reply_text(to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: {str(e)}</b>\nPlease ensure the input is valid and try again.\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 async def flink_generate_final_output(client: Client, message: Message):
+    """Generate the final output for flink command with download buttons."""
     logger.info(to_small_caps_with_html(f"generating final output for user {message.from_user.id}"))
     try:
         user_id = message.from_user.id
@@ -602,7 +580,7 @@ async def flink_generate_final_output(client: Client, message: Message):
             )
         else:
             output_msg = await message.reply(
-                text=caption if caption else to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here are your download buttons:</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                text=caption if caption else to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n</blockquote><b>Here are your download buttons:</blockquote></b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                 reply_markup=InlineKeyboardMarkup(buttons),
                 parse_mode=ParseMode.HTML
             )
@@ -613,6 +591,7 @@ async def flink_generate_final_output(client: Client, message: Message):
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while generating output. Please try again.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 async def create_link(client: Client, link_data: Dict) -> str:
+    """Create a Telegram link for a range of message IDs."""
     start_id = link_data['start'] * abs(client.db_channel.id)
     end_id = link_data['end'] * abs(client.db_channel.id)
     string = f"get-{start_id}-{end_id}"
@@ -621,6 +600,7 @@ async def create_link(client: Client, link_data: Dict) -> str:
 
 @Bot.on_callback_query(filters.regex(r"^flink_edit_output$"))
 async def flink_edit_output_callback(client: Client, query: CallbackQuery):
+    """Handle callback for editing flink output."""
     logger.info(to_small_caps_with_html(f"flink_edit_output callback triggered by user {query.from_user.id}"))
     try:
         admin_ids = await db.get_all_admins() or []
@@ -660,6 +640,7 @@ async def flink_edit_output_callback(client: Client, query: CallbackQuery):
 
 @Bot.on_callback_query(filters.regex(r"^flink_add_image$"))
 async def flink_add_image_callback(client: Client, query: CallbackQuery):
+    """Handle callback for adding an image to flink output."""
     logger.info(to_small_caps_with_html(f"flink_add_image callback triggered by user {query.from_user.id}"))
     try:
         admin_ids = await db.get_all_admins() or []
@@ -678,10 +659,11 @@ async def flink_add_image_callback(client: Client, query: CallbackQuery):
         await query.answer(to_small_caps_with_html("Send image"))
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in flink_add_image_callback: {e}"))
-        await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ An error occurred while adding image.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
+        await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ An error occurred while adding image.</blockquote></b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.private & filters.photo & filters.reply)
 async def handle_image_input(client: Client, message: Message):
+    """Handle image input for flink output."""
     logger.info(to_small_caps_with_html(f"image input received from user {message.from_user.id}"))
     try:
         admin_ids = await db.get_all_admins() or []
@@ -712,7 +694,7 @@ async def handle_image_input(client: Client, message: Message):
 
         flink_user_data[user_id]['edit_data']['image'] = message.photo.file_id
         await message.reply_text(
-            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>✅ Image saved successfully.</b></blockquote>\n<blockquote>Type a caption if needed, or proceed with 'Done'.</blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>✅ Image saved successfully.</b></blockquote>\n<blockquote	Type a caption if needed, or proceed with 'Done'.</blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
         )
         await flink_generate_final_output(client, message)
@@ -722,6 +704,7 @@ async def handle_image_input(client: Client, message: Message):
 
 @Bot.on_callback_query(filters.regex(r"^flink_add_caption$"))
 async def flink_add_caption_callback(client: Client, query: CallbackQuery):
+    """Handle callback for adding a caption to flink output."""
     logger.info(to_small_caps_with_html(f"flink_add_caption callback triggered by user {query.from_user.id}"))
     try:
         admin_ids = await db.get_all_admins() or []
@@ -736,7 +719,7 @@ async def flink_add_caption_callback(client: Client, query: CallbackQuery):
             + "<blockquote><b>Example:</b></blockquote>\n\n"
             "<blockquote><code>ᴛɪᴛʟᴇ- BLACK CLOVER\n"
             "Aᴜᴅɪᴏ TʀᴀᴄK- Hɪɴᴅɪ Dᴜʙʙᴇᴅ\n\n"
-            "Qᴜᴀʟɪᴛʏ - 360ᴘ, 720ᴘ, 1080ᴘ\n\n"
+            "Qᴜᴀʟɪᴛʏ - 360ᴘ, 720�禄, 1080ᴘ\n\n"
             "Eᴘɪsᴏᴅᴇ - 01 & S1 Uᴘʟᴏᴀᴅᴇᴅ\n\n"
             "Aʟʟ Qᴜᴀʟɪᴛʏ - ( Hɪɴᴅɪ Dᴜʙʙᴇᴅ )\n"
             "━━━━━━━━━━━━━━━━━━\n"
@@ -754,6 +737,7 @@ async def flink_add_caption_callback(client: Client, query: CallbackQuery):
 
 @Bot.on_message(filters.private & filters.text & filters.reply & ~filters.regex(r"^CANCEL$") & ~filters.forwarded)
 async def handle_caption_input(client: Client, message: Message):
+    """Handle caption input for flink command."""
     logger.info(to_small_caps_with_html(f"caption input received from user {message.from_user.id}, text: {message.text}"))
     try:
         admin_ids = await db.get_all_admins() or []
@@ -784,6 +768,7 @@ async def handle_caption_input(client: Client, message: Message):
 
 @Bot.on_callback_query(filters.regex(r"^flink_done_output$"))
 async def flink_done_output_callback(client: Client, query: CallbackQuery):
+    """Handle callback for finalizing flink output."""
     logger.info(to_small_caps_with_html(f"flink_done_output callback triggered by user {query.from_user.id}"))
     try:
         admin_ids = await db.get_all_admins() or []
@@ -867,6 +852,7 @@ async def flink_done_output_callback(client: Client, query: CallbackQuery):
 
 @Bot.on_callback_query(filters.regex(r"^flink_refresh$"))
 async def flink_refresh_callback(client: Client, query: CallbackQuery):
+    """Handle callback to refresh flink menu."""
     logger.info(to_small_caps_with_html(f"flink_refresh callback triggered by user {query.from_user.id}"))
     try:
         admin_ids = await db.get_all_admins() or []
@@ -882,6 +868,7 @@ async def flink_refresh_callback(client: Client, query: CallbackQuery):
 
 @Bot.on_callback_query(filters.regex(r"^flink_(back_to_menu|cancel_process|back_to_output|close)$"))
 async def flink_handle_back_buttons(client: Client, query: CallbackQuery):
+    """Handle back, cancel, and close actions for flink command."""
     logger.info(to_small_caps_with_html(f"flink back/cancel/close callback triggered by user {query.from_user.id} with action {query.data}"))
     try:
         admin_ids = await db.get_all_admins() or []
