@@ -402,17 +402,17 @@ async def handle_Chatmembers(client: Client, chat_member_updated: ChatMemberUpda
                 await db.del_req_user(chat_id, user_id)
 
 @Bot.on_chat_join_request()
-async def handle_join_request(client: Client, chat_join_request: CallbackQuery):
-    """Handle join requests for force-subscribed channels."""
+async def handle_join_request(client: Client, chat_join_request):
+    """Handle join requests for force-sub channels."""
     chat_id = chat_join_request.chat.id
     user_id = chat_join_request.from_user.id
 
     if await db.reqChannel_exist(chat_id):
         if not await db.req_user_exist(chat_id, user_id):
-            await db.set_req_user(user_id, chat_id)
+            await db.set_req_user(chat_id, user_id)
 
 @Bot.on_message(filters.command('addchnl') & filters.private & admin)
-async def add_force_sub_channel(client: Client, message: Message):
+async def add_force_sub(client: Client, message: Message):
     """Handle /addchnl command to add a force-sub channel."""
     temp = await message.reply("<b><i>Waiting...</i></b>", quote=True)
     args = message.text.split(maxsplit=1)
@@ -420,7 +420,7 @@ async def add_force_sub_channel(client: Client, message: Message):
     if len(args) != 2:
         buttons = [[InlineKeyboardButton("Close", callback_data="close")]]
         await temp.edit(
-            "<blockquote><b>Usage:</b></blockquote>\n<code>/addchnl -1001234567890</code>\n\n"
+            "<blockquote><b>Usage:</b></blockquote>\n<code>/addchnl -100XXXXXXXXXX</code>\n\n"
             "<b>Add only one channel at a time.</b>",
             reply_markup=InlineKeyboardMarkup(buttons)
         )
@@ -428,7 +428,7 @@ async def add_force_sub_channel(client: Client, message: Message):
 
     try:
         channel_id = int(args[1])
-    except ValueError, e:
+    except ValueError as e:
         await temp.edit("<blockquote><b>❌ Invalid channel ID!</b></blockquote>")
         return
 
@@ -549,7 +549,7 @@ async def check_force_sub(client: Client, message: Message):
     for ch_id in channels:
         try:
             member = await client.get_chat_member(ch_id, user_id)
-            if member.status not in [ChatMemberStatus.MEMBERBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+            if member.status not in [ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
                 chat = await client.get_chat(ch_id)
                 link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
                 not_subscribed.append((ch_id, chat.title, link))
@@ -560,12 +560,12 @@ async def check_force_sub(client: Client, message: Message):
 
     if not_subscribed:
         text = "<blockquote><b>❌ You must join the following channels to proceed:</b></blockquote>\n\n"
-        for _, _, title, link in not_subscribed:
-            text += f"<blockquote><b><a href='{link}'>{title}</a></blockquote>\n"
+        for _, title, link in not_subscribed:
+            text += f"<blockquote><b><a href='{link}'>{title}</a></b></blockquote>\n"
         
         buttons.append([InlineKeyboardButton("🔄 Try accessing again", callback_data="check_fsub")])
         await message.reply(
-            text=text,
+            text,
             reply_markup=InlineKeyboardMarkup(buttons),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
@@ -605,7 +605,7 @@ async def check_fsub_callback(client: Client, callback: CallbackQuery):
 
         buttons.append([InlineKeyboardButton("🔄 Try again", callback_data="check_fsub")])
         await callback.message.edit_text(
-            text=text,
+            text,
             reply_markup=InlineKeyboardMarkup(buttons),
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
