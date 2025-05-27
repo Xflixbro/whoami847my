@@ -569,7 +569,7 @@ async def handle_format_input(client: Client, message: Message):
                 parse_mode=ParseMode.HTML
 
             )
-        )
+        
     except Exception as e:
         logger.error(to_small_caps_with_html(f"error in handle_format_input: {e}"))        )
         await message.reply_text(
