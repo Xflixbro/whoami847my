@@ -129,6 +129,14 @@ async def force_sub_settings(client: Client, message: Message):
     logger.info(f"Received /forcesub command from chat {message.chat.id}")
     await show_force_sub_settings(client, message.chat.id)
 
+@Bot.on_message(filters.command('clearstate') & filters.private & admin)
+async def clear_state(client: Client, message: Message):
+    """Clear temporary state for the user."""
+    chat_id = message.chat.id
+    await db.set_temp_state(chat_id, "")
+    await message.reply("<blockquote><b>✅ State cleared successfully!</b></blockquote>", parse_mode=ParseMode.HTML)
+    logger.info(f"State cleared for chat {chat_id}")
+
 @Bot.on_callback_query(filters.regex(r"^fsub_"))
 async def force_sub_callback(client: Client, callback: CallbackQuery):
     """Handle callback queries for force-sub settings."""
@@ -229,6 +237,12 @@ async def fsub_state_filter(_, __, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
     logger.info(f"Checking fsub_state_filter for chat {chat_id}: state={state}, message_text={message.text}")
+    
+    # Bypass filter for /link command
+    if message.text and message.text.startswith('/link'):
+        logger.info(f"Bypassing fsub_state_filter for /link command in chat {chat_id}")
+        return False
+        
     if state not in ["awaiting_add_channel_input", "awaiting_remove_channel_input"]:
         logger.info(f"State {state} not relevant for fsub_state_filter in chat {chat_id}")
         return False
