@@ -440,7 +440,9 @@ async def flink_command(client: Client, message: Message):
             await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
             return
 
-        flink_user_data[message.from_user.id]['format'] = None,
+        # Correct code:
+        flink_user_data[message.from_user.id] = {
+        'format': None,
         'links': {},
         'edit_data': {},
         'menu_message': None,
