@@ -133,12 +133,12 @@ async def link_command(client: Client, message: Message):
     
     buttons = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("ʙᴀᴛᴄʜ", callback_data="link_trigger_batch"),
-            InlineKeyboardButton("ɢᴇɴʟɪɴᴋ", callback_data="link_trigger_genlink")
+            InlineKeyboardButton("ʙᴀᴛᴄʜ", callback_data="batch_start_process"),
+            InlineKeyboardButton("ɢᴇɴʟɪɴᴋ", callback_data="genlink_start_process")
         ],
         [
-            InlineKeyboardButton("ᴄᴜsᴛᴏᴍ", callback_data="link_trigger_custom"),
-            InlineKeyboardButton("ꜰʟɪɴᴋ", callback_data="link_trigger_flink")
+            InlineKeyboardButton("ᴄᴜsᴛᴏᴍ", callback_data="custom_batch_start_process"),
+            InlineKeyboardButton("ꜰʟɪɴᴋ", callback_data="flink_start_process")
         ],
         [InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="link_close")]
     ])
