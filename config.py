@@ -54,7 +54,6 @@ RANDOM_IMAGES = [
     "https://i.postimg.cc/FKVWY2wt/79c62968.jpg",
     "https://i.postimg.cc/hvfp3hvg/c8da71f2.jpg",
     "https://i.postimg.cc/LsKwYkXP/a4fcfce8.jpg",
-    "https://i.postimg.cc/1tydM9D5/b6062902.jpg",
     "https://i.postimg.cc/hv53ST6f/69679b9e.jpg",
     "https://i.postimg.cc/CMm3PfPy/2042520a.jpg",
     "https://i.postimg.cc/W4GKMDFH/6d48d1b1.jpg",
@@ -84,7 +83,6 @@ RANDOM_IMAGES = [
     "https://i.postimg.cc/XqdQ0mfD/f622366f.jpg",
     "https://i.postimg.cc/3w2MnS69/c4cb7967.jpg",
     "https://i.postimg.cc/bNFjJ2k0/2a4839f6.jpg",
-    "https://i.postimg.cc/RCdBkY0D/9ea305a1.jpg",
     "https://i.postimg.cc/wjZHWsBx/acfe005d.jpg",
     "https://i.postimg.cc/mkmW7Pqs/433d7985.jpg",
     "https://i.postimg.cc/90mj4dLb/f6f20b4d.jpg",
@@ -101,8 +99,6 @@ RANDOM_IMAGES = [
     "https://i.postimg.cc/0jP9YRyp/1e732953.jpg",
     "https://i.postimg.cc/pXV2yH7v/421d28be.jpg",
     "https://i.postimg.cc/1RGtfM3G/8764426c.jpg",
-    "https://i.postimg.cc/q7NqqTNq/805d08e8.jpg",
-    "https://i.postimg.cc/TwSr102M/0bd079a6.jpg",
     "https://i.postimg.cc/yN36ByGS/503cbd75.jpg",
     "https://i.postimg.cc/0yQ2Xsdn/6c60b12f.jpg",
     "https://i.postimg.cc/v8grjJXQ/c12da0bb.jpg",
@@ -128,7 +124,6 @@ RANDOM_IMAGES = [
     "https://i.postimg.cc/vB64qsyk/9afa42bf.jpg",
     "https://i.postimg.cc/3RpwjFCH/0e73df87.jpg",
     "https://i.postimg.cc/qqyCRdZy/99b50b8e.jpg",
-    "https://i.postimg.cc/gJwZChVM/9ac2e1f9.jpg",
     "https://i.postimg.cc/tJ3YbNYz/53d24df2.jpg",
     "https://i.postimg.cc/63DvtQzB/8f8f759b.jpg",
     "https://i.postimg.cc/2jhqnr2B/a1e31adf.jpg",
@@ -144,6 +139,7 @@ MESSAGE_EFFECT_IDS = [
     5046589136895476101,  # 💩
 ]
 
+
 SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "linkshortify.com")
 SHORTLINK_API = os.environ.get("SHORTLINK_API", "")
 TUT_VID = os.environ.get("TUT_VID", "https://t.me/hwdownload/3")
@@ -157,7 +153,7 @@ HELP_TXT = os.environ.get("HELP_TXT","<blockquote><b>ʜᴇʟʟᴏ {first}<b/></b
 ABOUT_TXT = os.environ.get("ABOUT_TXT","<blockquote><b>ʜᴇʟʟᴏ {first}<b/></blockquote>\n\n<b><blockquote>◈ ᴄʀᴇᴀᴛᴏʀ: <a href=https://t.me/Anime_Lord_Bots>MehediYT</a>\n◈ ꜰᴏᴜɴᴅᴇʀ ᴏꜰ : <a href=@who_am_i_69>WHO-AM-I</a>\n◈ ᴀɴɪᴍᴇ ᴄʜᴀɴɴᴇʟ : <a href=https://t.me/Anime_Lord_Official>Aɴɪᴍᴇ Lᴏʀᴅ</a>\n◈ sᴇʀɪᴇs ᴄʜᴀɴɴᴇʟ : <a href=https://t.me/Anime_Lord_Series>Aɴɪᴍᴇ Lᴏʀᴅ sᴇʀɪᴇs ғʟɪx</a>\n◈ ᴀᴅᴜʟᴛ ᴍᴀɴʜᴡᴀ : <a href=https://t.me/Anime_Lord_Hentai>Aɴɪᴍᴇ Lᴏʀᴅ Pᴏʀɴʜᴡᴀs</a>\n◈ ᴅᴇᴠᴇʟᴏᴘᴇʀ : <a href=https://t.me/Anime_Lord_Bots>Aɴɪᴍᴇ Lᴏʀᴅ</a></blockquote></b>")
 # --------------------------------------------
 START_MSG = os.environ.get("START_MESSAGE", "<blockquote><b>ʜᴇʟʟᴏ {first}</b></blockquote>\n\n<blockquote><b> ɪ ᴀᴍ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ ᴄʀᴇᴀᴛᴇᴅ ʙʏ  <a href=https://t.me/Anime_Lord_Official>Aɴɪᴍᴇ Lᴏʀᴅ</a>, ɪ ᴄᴀɴ sᴛᴏʀᴇ ᴘʀɪᴠᴀᴛᴇ ғɪʟᴇs ɪɴ sᴘᴇᴄɪғɪᴇᴅ ᴄʜᴀɴɴᴇʟ ᴀɴᴅ ᴏᴛʜᴇʀ ᴜsᴇʀs ᴄᴀɴ ᴀᴄᴄᴇss ɪᴛ ғʀᴏᴍ sᴘᴇᴄɪᴀʟ ʟɪɴᴋ.</blockquote></b>")
-FORCE_MSG = os.environ.get("FORCE_SUB_MESSAGE", "ʜᴇʟʟᴏ {first}\n\n<b>ᴊᴏɪɴ ᴏᴜʀ ᴄʜᴀɴɴᴇʟs ᴀɴᴅ ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ ʀᴇʟᴏᴀᴅ button ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ʀᴇǫᴜᴇꜱᴛᴇᴅ ꜰɪʟᴇ.</b>")
+FORCE_MSG = os.environ.get("FORCE_SUB_MESSAGE", "<blockquote><b>ʜᴇʟʟᴏ {first}<b/></blockquote>\n\<blockquote><b>ᴊᴏɪɴ ᴏᴜʀ ᴄʜᴀɴɴᴇʟs ᴀɴᴅ ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ ʀᴇʟᴏᴀᴅ button ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ʀᴇǫᴜᴇꜱᴛᴇᴅ ꜰɪʟᴇ.</b></blockquote>")
 
 CMD_TXT = """<blockquote><b>» ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs:</b></blockquote>
 
