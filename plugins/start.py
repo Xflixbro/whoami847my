@@ -70,7 +70,7 @@ async def start_command(client: Client, message: Message):
     banned_users = await db.get_ban_users()
     if user_id in banned_users:
         return await message.reply_text(
-            "ʏᴏᴜ ᴀʀᴇ ʙᴀɴɴᴇᴅ ғʀᴏᴍ ᴜsɪɴɢ ᴛʜɪs ʙᴏᴛ.\n\nᴄᴏɴᴛᴀᴄᴛ sᴜᴘᴘᴏʀᴛ ɪғ ʏᴏᴜ ᴛʜɪɴᴋ ᴛʜɪs ɪs ᴀ ᴍɪsᴛᴀᴋᴇ.",
+            "ʏᴏᴜ ᴀʀᴇ ʙᴀɴɴᴇᴅ ғʀᴏᴍ ᴜsɪɴɢ ᴛʜɪs ʙᴏᴛ.\n\nᴄᴏɴᴛᴀᴄᴛ sᴜᴘᴘᴏʀᴛ ɪғ ʏᴏᴜ ᴛʜɪɴᴋ ᴛʜɪs ɪs ᴀ �18 ᴍɪsᴛᴀᴋᴇ.",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("ᴄᴏɴᴛᴀᴄᴛ sᴜᴘᴘᴏʀᴛ", url=BAN_SUPPORT)]])
         )
     if not await is_subscribed(client, user_id):
@@ -81,25 +81,6 @@ async def start_command(client: Client, message: Message):
             await db.add_user(user_id)
         except:
             pass
-
-    # Animation messages
-    m = await message.reply_text("<blockquote><b>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴍʏ ʙᴏᴛ.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...</b></blockquote>")
-    await asyncio.sleep(0.4)
-    await m.edit_text("<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ...</b></blockquote>")
-    await asyncio.sleep(0.5)
-    await m.edit_text("<blockquote>🎊</blockquote>")
-    await asyncio.sleep(0.5)
-    await m.edit_text("<blockquote>⚡</blockquote>")
-    await asyncio.sleep(0.5)
-    await m.edit_text("<blockquote><b>sᴛᴀʀᴛɪɴɢ...</b></blockquote>")
-    await asyncio.sleep(0.4)
-    await m.delete()
-
-    # Send sticker
-    if STICKER_ID:
-        m = await message.reply_sticker(STICKER_ID)
-        await asyncio.sleep(1)
-        await m.delete()
 
     text = message.text
     if len(text) > 7:
@@ -128,15 +109,18 @@ async def start_command(client: Client, message: Message):
             except Exception as e:
                 print(f"ᴇʀʀᴏʀ ᴅᴇᴄᴏᴅɪɴɢ ɪᴅ: {e}")
                 return
-        temp_msg = await message.reply("ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ...")
+        # New animation messages for file request
+        m = await message.reply_text("<blockquote><b>Checking...</b></blockquote>")
+        await asyncio.sleep(0.4)
+        await m.edit_text("<blockquote><b>Getting your files...</b></blockquote>")
+        await asyncio.sleep(0.5)
+        await m.delete()
         try:
             messages = await get_messages(client, ids)
         except Exception as e:
             await message.reply_text("sᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ ᴡʀᴏɴɢ!")
             print(f"ᴇʀʀᴏʀ ɢᴇᴛᴛɪɴɢ ᴍᴇssᴀɢᴇs: {e}")
             return
-        finally:
-            await temp_msg.delete()
         animelord_msgs = []
         # Load settings dynamically before copying messages
         settings = await db.get_settings()
@@ -180,6 +164,25 @@ async def start_command(client: Client, message: Message):
             except Exception as e:
                 print(f"ᴇʀʀᴏʀ ᴜᴘᴅᴀᴛɪɴɢ ɴᴏᴛɪғɪᴄᴀᴛɪᴏɴ: {e}")
         return
+
+    # Original animation messages for /start command
+    m = await message.reply_text("<blockquote><b>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴍʏ ʙᴏᴛ.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...</b></blockquote>")
+    await asyncio.sleep(0.4)
+    await m.edit_text("<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ...</b></blockquote>")
+    await asyncio.sleep(0.5)
+    await m.edit_text("<blockquote>🎊</blockquote>")
+    await asyncio.sleep(0.5)
+    await m.edit_text("<blockquote>⚡</blockquote>")
+    await asyncio.sleep(0.5)
+    await m.edit_text("<blockquote><b>sᴛᴀʀᴛɪɴɢ...</b></blockquote>")
+    await asyncio.sleep(0.4)
+    await m.delete()
+
+    # Send sticker
+    if STICKER_ID:
+        m = await message.reply_sticker(STICKER_ID)
+        await asyncio.sleep(1)
+        await m.delete()
 
     # Send start message
     reply_markup = InlineKeyboardMarkup([
@@ -371,39 +374,14 @@ async def bcmd(bot: Bot, message: Message):
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
     await message.reply_text(text=CMD_TXT, reply_markup=reply_markup, quote=True)
 
-@Bot.on_message(filters.command('admin_cmd') & filters.private & admin)
-async def admin_cmd(bot: Bot, message: Message):
-    reply_text = (
-        "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ᴀᴅᴅ, ʀᴇᴍᴏᴠᴇ, ᴀɴᴅ ɢᴇᴛ ᴀ ʟɪsᴛ ᴏғ ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs.</b>\n\n"
-        "<b>ʙᴏᴛ ᴄᴏᴍᴍᴀɴᴅs:</b></blockquote>\n"
-        "- /add_admin - <b>ᴀᴅᴅ ɴᴇᴡ ᴀᴅᴍɪɴ [ᴀᴅᴍɪɴ]</b>\n"
-        "- /deladmin - <b>ʀᴇᴍᴏᴠᴇ ᴀᴅᴍɪɴ [ᴀᴅᴍɪɴ]</b>\n"
-        "- /admins - <b>ʟɪsᴛ ᴀʟʟ ᴀᴅᴍɪɴs [ᴀᴅᴍɪɴ]</b>"
-    )
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
-
 @Bot.on_message(filters.command('premium_cmd') & filters.private & admin)
 async def premium_cmd(bot: Bot, message: Message):
     reply_text = (
-        "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ɢᴇᴛ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs ʀᴇʟᴀᴛᴇᴅ ᴄᴏᴍᴍᴀɴᴅs.</b>\n\n"
-        "<b>ᴏᴛ ᴄᴏᴍᴍᴀɴᴅs:</b></blockquote>\n"
+        "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ɢᴇᴛ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs ʀᴇʟᴀᴛᴇᴅ ᴄᴏᴍᴮᴍᴀɴᴅs.</b>\n\n"
+        "<b>ᴏᴛ ᴄᴏᴍᴮᴍᴀɴᴅs:</b></blockquote>\n"
         "- /addpremium - <b>ɢʀᴀɴᴛ ᴘʀᴇᴮᴍɪᴜᴍ ᴀᴄᴄᴇss [ᴀᴅᴍɪɴ]</b>\n"
         "- /remove_premium - <b>ʀᴇᴠᴏᴋᴇ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss [ᴀᴅᴍɪɴ]</b>\n"
-        "- /premium_users - <b>ᴛ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs [ᴀᴅᴍɪɴ]</b>"
-    )
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
-
-@Bot.on_message(filters.command('user_cmd') & filters.private & admin)
-async def user_cmd(bot: Bot, message: Message):
-    reply_text = (
-        "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ɢᴇᴛ ᴜsᴇʀs ʀᴇʟᴀᴛᴇᴅ ᴄᴏᴍᴍᴀɴᴅs.</b>\n\n"
-        "<b>ᴏᴛ ᴄᴏᴍᴍᴀɴᴅs:</b></blockquote>\n"
-        "- /users - <b>ᴠɪᴇᴡ ʙᴏᴛ sᴛᴀᴛɪsᴛɪᴄs [ᴀᴅᴍɪɴ]</b>\n"
-        "- /ban - <b>ᴀɴ ᴀ ᴜsᴇʀ [ᴀᴅᴍɪɴ]</b>\n"
-        "- /unban - <b>ᴜɴʙᴀɴ ᴀ ᴜsᴇʀ [ᴀᴅᴍɪɴ]</b>\n"
-        "- /banlist - <b>ᴛ ʙᴀɴɴᴇᴅ ᴜsᴇʀs [ᴀᴅᴮᴍɪɴ]</b>"
+        "- /premium_users - <b>ᴛ ᴘʰᴇᴍɪᴜᴍ ᴜsᴇʀs [ᴀᴅᴍɪɴ]</b>"
     )
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
     await message.reply_text(reply_text, reply_markup=reply_markup)
@@ -411,48 +389,11 @@ async def user_cmd(bot: Bot, message: Message):
 @Bot.on_message(filters.command('broadcast_cmd') & filters.private & admin)
 async def broadcast_cmd(bot: Bot, message: Message):
     reply_text = (
-        "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ɢᴇᴛ ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴍᴀɴᴅs.</b>\n\n"
-        "</b>ᴏᴛ ᴄᴏᴍᴍᴀɴᴅs:</b></blockquote>\n"
-        "- /broadcast - <b>ᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇs ᴛᴏ ᴜsᴇʀs [ᴀᴅᴍɪɴ]</b>\n"
-        "- /dbroadcast - <b>ᴏᴀᴅᴄᴀsᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ [ᴀᴅᴍɪɴ]</b>\n"
-        "- /pbroadcast - <b>ᴘɪɴ ʙʀᴏᴀᴅᴄᴀsᴛ ᴛᴏ ᴀʟʟ ᴜsᴇʀs [ᴀᴅᴍɪɴ]</b>"
-    )
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
-
-@Bot.on_message(filters.command('force_chn_cmd') & filters.private & admin)
-async def force_chn_cmd(bot: Bot, message: Message):
-    reply_text = (
-        "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ɢᴇᴛ ғᴏʀᴄᴇ sᴜʙ ᴄᴏᴍᴍᴀɴᴅs.</b>\n\n"
-        "<b>ᴏᴛ ᴄᴏᴍᴮᴍᴀɴᴅs:</b></blockquote>\n"
-        "- /fsub_mode - <b>ᴛᴏɢɢʟᴇ ғᴏʀᴄᴇ-sᴜʙsᴄʀɪʙᴇ [ᴀᴅᴍɪɴ]</b>\n"
-        "- /addchnl - <b>ᴀᴅᴅ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟ [ᴀᴅᴍɪɴ]</b>\n"
-        "- /delchnl - <b>ᴇᴍᴏᴠᴇ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟ [ᴀᴅᴍɪɴ]</b>\n"
-        "- /listchnl - <b>ᴠɪᴇᴡ ғᴏʀᴄᴇ-sᴜʙ ᴄʜᴀɴɴᴇʟs [ᴀᴅᴍɪɴ]</b>"
-    )
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
-
-@Bot.on_message(filters.command('auto_dlt_cmd') & filters.private & admin)
-async def auto_dlt_cmd(bot: Bot, message: Message):
-    reply_text = (
-        "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ɢᴇᴛ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴄᴏᴍᴮᴍᴀɴᴅs.</b>\n\n"
-        "<b>ᴏᴛ ᴄᴏᴍᴮᴍᴀɴᴅs:</b></blockquote>\n"
-        "- /dlt_time - sᴇᴛ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴮᴍᴇ [ᴀᴅᴍɪɴ]</b>\n"
-        "- /check_dlt_time - <b>ᴄʜᴇᴄᴋ ᴅᴇʟᴇᴛᴇ ᴛɪᴮᴍᴇ [ᴀᴅᴍɪɴ]</b>"
-    )
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
-
-@Bot.on_message(filters.command('links_cmd') & filters.private & admin)
-async def links_cmd(bot: Bot, message: Message):
-    reply_text = (
-        "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴮᴍᴀɴᴅs ᴛᴏ ɢᴇᴛ sɪɴɢʟᴇ ғɪʟᴇ, ʙᴀᴛᴄʜ ᴀɴᴅ ᴄᴜsᴛᴏᴍ ʙᴀᴛᴄʜ ʟɪɴᴋs ᴄᴏᴍᴮᴍᴀɴᴅs.</b>\n\n"
-        "<b>ʙᴏᴛ ᴄᴏᴍᴮᴍᴀɴᴅs:</b></blockquote>\n"
-        "- /batch - <b>ᴄʀᴇᴀᴛᴇ ʟɪɴᴋs ғᴏʀ ᴮᴍᴜʟᴛɪᴘʟᴇ ᴘᴏsᴛs</b>\n"
-        "- /flink - <b>ꜱᴇᴛ ᴀᴜᴛᴏ ʙᴀᴛᴄʜ ꜰᴏʀᴮᴍᴀᴛ</b>\n"
-        "- /custom_batch - <b>ᴄʀᴇᴀᴛᴇ ᴄᴜsᴛᴏᴍ ʙᴀᴛᴄʜ ғʀᴏᴮᴍ ᴄʜᴀɴɴᴇʟ/ɢʀᴏᴜᴘ</b>\n"
-        "- /genlink - <b>ᴄʀᴇᴀᴛᴇ ʟɪɴᴋ ғᴏʀ ᴀ sɪɴɢʟᴇ ᴘᴏsᴛ</b>"
+        "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴮᴍᴀɴᴅs ᴛᴏ ɢᴇᴛ ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴮᴍᴀɴᴅs.</b>\n\n"
+        "</b>ᴏᴛ ᴄᴏᴍᴮᴍᴀɴᴅs:</b></blockquote>\n"
+        "- /broadcast - <b>ᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇs ᴛᴏ ᴜsᴇʀs [ᴀᴅᴮᴍɪɴ]</b>\n"
+        "- /dbroadcast - <b>ᴏᴀᴅᴄᴀsᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ [ᴀᴅᴮᴮᴍɪɴ]</b>\n"
+        "- /pbroadcast - <b>ᴘɪɴ ʙʀᴏᴀᴅᴄᴀsᴛ ᴛᴏ ᴀʟʟ ᴜsᴇʀs [ᴀᴅᴮᴮᴍɪɴ]</b>"
     )
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
     await message.reply_text(reply_text, reply_markup=reply_markup)
