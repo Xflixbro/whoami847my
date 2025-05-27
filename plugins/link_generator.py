@@ -635,7 +635,6 @@ async def flink_command(client: Client, message: Message):
         )
         buttons = InlineKeyboardMarkup([
             [InlineKeyboardButton("• Start Process •", callback_data="flink_start_process")],
-            [InlineKeyboardButton("• Set Format •", callback_data="flink_set_format")],
             [InlineKeyboardButton("• Close •", callback_data="flink_close")]
         ])
 
