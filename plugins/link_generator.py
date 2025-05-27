@@ -555,7 +555,7 @@ async def handle_format_input(client: Client, message: Message):
             format_text = message.text.strip()
             flink_user_data[user_id]['format'] = format_text
             flink_user_data[user_id]['awaiting_format'] = False
-            await message.reply_text(to_small_caps_with_html(f"<b> f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>✅ Format saved successfully:</b></blockquote>\n\n<code>{format_text}</code>\n\n<b>━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
+            await message.reply_text(to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>✅ Format saved successfully:</b></blockquote>\n\n<code>{format_text}</code>\n\n<b>━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
             await show_flink_main_menu(client, message)
         else:
             logger.info(to_small_caps_with_html(f"Format input ignored for user {user_id} - not awaiting format"))
