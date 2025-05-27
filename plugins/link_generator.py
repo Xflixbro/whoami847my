@@ -600,7 +600,7 @@ async def flink_start_process_callback(client: Client, query: CallbackQuery):
             "<blockquote><b>Ensure files are in sequence without gaps.</b></blockquote>\n\n"
             "<b>Send the link or forwarded message in the next message (no need to reply).</b>\n\n"
             "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"
-        ))
+ )
         
         if current_text != new_text:
             await query.message.edit_text(
