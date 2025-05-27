@@ -20,6 +20,7 @@ import logging
 from config import OWNER_ID
 from database.database import db
 from asyncio import TimeoutError
+import random  # Added for random image selection in /link command
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -53,9 +54,20 @@ def to_small_caps_with_html(text: str) -> str:
             i += 1
     return result
 
-# Store user data for batch and flink commands
+# Store user data for batch, genlink, custom_batch, and flink commands
 batch_user_data: Dict[int, Dict] = {}
+genlink_user_data: Dict[int, Dict] = {}  # Added for /genlink command
+custom_batch_user_data: Dict[int, Dict] = {}  # Added for /custom_batch command
 flink_user_data: Dict[int, Dict] = {}
+
+# List of image URLs for /link command (you can replace these with your own image URLs)
+IMAGE_URLS = [
+    "https://example.com/image1.jpg",
+    "https://example.com/image2.jpg",
+    "https://example.com/image3.jpg",
+    "https://example.com/image4.jpg",
+    "https://example.com/image5.jpg"
+]
 
 # Filter for batch command input
 async def batch_state_filter(_, __, message: Message):
@@ -67,6 +79,84 @@ async def batch_state_filter(_, __, message: Message):
     state = batch_user_data[chat_id].get('state')
     logger.info(f"batch_state_filter for chat {chat_id}: state={state}, message_text={message.text}")
     return state in ['awaiting_first_message', 'awaiting_second_message'] and (message.forward_from_chat or re.match(r"^https?://t\.me/.*$", message.text))
+
+# Filter for genlink command input
+async def genlink_state_filter(_, __, message: Message):
+    """Filter to ensure messages are processed only when awaiting genlink input."""
+    chat_id = message.chat.id
+    if chat_id not in genlink_user_data:
+        logger.info(f"genlink_state_filter: No genlink data for chat {chat_id}")
+        return False
+    state = genlink_user_data[chat_id].get('state')
+    logger.info(f"genlink_state_filter for chat {chat_id}: state={state}, message_text={message.text}")
+    return state == 'awaiting_message' and (message.forward_from_chat or re.match(r"^https?://t\.me/.*$", message.text))
+
+# Filter for custom_batch command input
+async def custom_batch_state_filter(_, __, message: Message):
+    """Filter to ensure messages are processed only when awaiting custom_batch input."""
+    chat_id = message.chat.id
+    if chat_id not in custom_batch_user_data:
+        logger.info(f"custom_batch_state_filter: No custom_batch data for chat {chat_id}")
+        return False
+    state = custom_batch_user_data[chat_id].get('state')
+    logger.info(f"custom_batch_state_filter for chat {chat_id}: state={state}, message_text={message.text}")
+    return state == 'collecting_messages'
+
+@Bot.on_message(filters.private & admin & filters.command('link'))
+async def link_command(client: Client, message: Message):
+    """Handle /link command to show a menu with buttons to trigger other commands."""
+    logger.info(f"Link command triggered by user {message.from_user.id}")
+    
+    # Select a random image from IMAGE_URLS
+    random_image = random.choice(IMAGE_URLS)
+    
+    text = to_small_caps_with_html(
+        "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+        "<blockquote><b>If you want to generate link for files then use those buttons according to your need.</b></blockquote>\n"
+        "<b>━━━━━━━━━━━━━━━━━━</b>"
+    )
+    
+    buttons = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("ʙᴀᴛᴄʜ", callback_data="link_trigger_batch"),
+            InlineKeyboardButton("ɢᴇɴʟɪɴᴋ", callback_data="link_trigger_genlink")
+        ],
+        [
+            InlineKeyboardButton("ᴄᴜsᴛᴏᴍ", callback_data="link_trigger_custom"),
+            InlineKeyboardButton("ꜰʟɪɴᴋ", callback_data="link_trigger_flink")
+        ],
+        [InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="link_close")]
+    ])
+    
+    await message.reply_photo(
+        photo=random_image,
+        caption=text,
+        reply_markup=buttons,
+        parse_mode=ParseMode.HTML
+    )
+
+@Bot.on_callback_query(filters.regex(r"^link_(trigger_batch|trigger_genlink|trigger_custom|trigger_flink|close)$"))
+async def link_handle_callbacks(client: Client, query: CallbackQuery):
+    """Handle callbacks for /link command buttons."""
+    chat_id = query.from_user.id
+    action = query.data.split("_")[-1]
+    logger.info(f"Link {action} callback triggered by user {chat_id}")
+    
+    if action == "trigger_batch":
+        await batch(client, query.message)
+        await query.answer(to_small_caps_with_html("Batch command started"))
+    elif action == "trigger_genlink":
+        await link_generator(client, query.message)
+        await query.answer(to_small_caps_with_html("Genlink command started"))
+    elif action == "trigger_custom":
+        await custom_batch(client, query.message)
+        await query.answer(to_small_caps_with_html("Custom batch command started"))
+    elif action == "trigger_flink":
+        await flink_command(client, query.message)
+        await query.answer(to_small_caps_with_html("Flink command started"))
+    elif action == "close":
+        await query.message.delete()
+        await query.answer(to_small_caps_with_html("Menu closed"))
 
 @Bot.on_message(filters.private & admin & filters.command('batch'))
 async def batch(client: Client, message: Message):
@@ -191,8 +281,9 @@ async def handle_batch_input(client: Client, message: Message):
             link = f"https://t.me/{client.username}?start={base64_string}"
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
 
+            # Modified: Removed small caps for the link output
             await message.reply_text(
-                to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>",
                 quote=True,
                 reply_markup=reply_markup,
                 parse_mode=ParseMode.HTML
@@ -203,7 +294,7 @@ async def handle_batch_input(client: Client, message: Message):
                 del batch_user_data[chat_id]
 
     except TimeoutError:
-        logger.error(to_small_caps_with_html(f"Timeout error waiting for batch input in state {state} for user {chat_id}"))
+        logger.error(f"Timeout error waiting for batch input in state {state} for user {chat_id}")
         await message.reply(
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Timeout: No response received.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
@@ -211,7 +302,7 @@ async def handle_batch_input(client: Client, message: Message):
         if chat_id in batch_user_data:
             del batch_user_data[chat_id]
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"Error in handle_batch_input for user {chat_id}: {e}"))
+        logger.error(f"Error in handle_batch_input for user {chat_id}: {e}")
         await message.reply(
             to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: {str(e)}</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
@@ -222,97 +313,286 @@ async def handle_batch_input(client: Client, message: Message):
 @Bot.on_message(filters.private & admin & filters.command('genlink'))
 async def link_generator(client: Client, message: Message):
     """Handle /genlink command to generate a link for a single message."""
-    while True:
-        try:
-            channel_message = await client.ask(
-                text=to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward message from the db channel (with quotes).</b></blockquote>\n<blockquote><b>Or send the db channel post link</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
-                chat_id=message.from_user.id,
-                filters=(filters.forwarded | (filters.text & ~filters.forwarded)),
-                timeout=60,
-                parse_mode=ParseMode.HTML
-            )
-        except TimeoutError:
-            print(to_small_caps_with_html(f"timeout error waiting for message in genlink command"))
-            return
-        msg_id = await get_message_id(client, channel_message)
-        if msg_id:
-            break
-        else:
-            await channel_message.reply(
+    chat_id = message.from_user.id
+    logger.info(f"Genlink command triggered by user {chat_id}")
+
+    # Added: Initialize genlink user data
+    genlink_user_data[chat_id] = {
+        'state': 'initial',
+        'menu_message': None
+    }
+
+    # Added: Show the genlink menu with Start Process button
+    text = to_small_caps_with_html(
+        "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+        "<blockquote><b>Single Link Generator</b></blockquote>\n\n"
+        "<blockquote><b>Click 'Start Process' to begin generating a single message link.</b></blockquote>\n"
+        "<b>━━━━━━━━━━━━━━━━━━</b>"
+    )
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("• Start Process •", callback_data="genlink_start_process")],
+        [InlineKeyboardButton("• Close •", callback_data="genlink_close")]
+    ])
+
+    msg = await message.reply(
+        text=text,
+        reply_markup=buttons,
+        parse_mode=ParseMode.HTML
+    )
+    genlink_user_data[chat_id]['menu_message'] = msg
+
+@Bot.on_callback_query(filters.regex(r"^genlink_start_process$"))
+async def genlink_start_process_callback(client: Client, query: CallbackQuery):
+    """Handle callback to start the genlink process."""
+    chat_id = query.from_user.id
+    logger.info(f"Genlink start process callback triggered by user {chat_id}")
+
+    if chat_id not in genlink_user_data:
+        genlink_user_data[chat_id] = {
+            'state': 'awaiting_message',
+            'menu_message': query.message
+        }
+    else:
+        genlink_user_data[chat_id]['state'] = 'awaiting_message'
+
+    await query.message.edit_text(
+        to_small_caps_with_html(
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+            "<blockquote><b>Forward message from the db channel (with quotes).</b></blockquote>\n"
+            "<blockquote><b>Or send the db channel post link</b></blockquote>\n"
+            "<b>━━━━━━━━━━━━━━━━━━</b>"
+        ),
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("✖️ Cancel", callback_data="genlink_cancel_process")]
+        ]),
+        parse_mode=ParseMode.HTML
+    )
+    await query.answer(to_small_caps_with_html("Send the message or link"))
+
+@Bot.on_callback_query(filters.regex(r"^genlink_(cancel_process|close)$"))
+async def genlink_handle_cancel_close(client: Client, query: CallbackQuery):
+    """Handle cancel and close actions for genlink command."""
+    chat_id = query.from_user.id
+    action = query.data.split("_")[-1]
+    logger.info(f"Genlink {action} callback triggered by user {chat_id}")
+
+    if action == "cancel_process":
+        if chat_id in genlink_user_data:
+            del genlink_user_data[chat_id]
+        await query.message.edit_text(
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Process cancelled.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        await query.answer(to_small_caps_with_html("Process cancelled"))
+    elif action == "close":
+        if chat_id in genlink_user_data:
+            del genlink_user_data[chat_id]
+        await query.message.delete()
+        await query.answer(to_small_caps_with_html("Menu closed"))
+
+@Bot.on_message(filters.private & admin & filters.create(genlink_state_filter))
+async def handle_genlink_input(client: Client, message: Message):
+    """Handle input for genlink command."""
+    chat_id = message.from_user.id
+    logger.info(f"Handling genlink input for chat {chat_id}")
+
+    try:
+        msg_id = await get_message_id(client, message)
+        if not msg_id:
+            await message.reply(
                 to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Error: This forwarded post is not from my db channel or this link is not valid.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                 quote=True,
                 parse_mode=ParseMode.HTML
             )
-            continue
+            return
 
-    base64_string = await encode(f"get-{msg_id * abs(client.db_channel.id)}")
-    link = f"https://t.me/{client.username}?start={base64_string}"
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
-    await channel_message.reply_text(
-        to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>"),
-        quote=True,
-        reply_markup=reply_markup,
-        parse_mode=ParseMode.HTML
-    )
+        base64_string = await encode(f"get-{msg_id * abs(client.db_channel.id)}")
+        link = f"https://t.me/{client.username}?start={base64_string}"
+        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
+
+        # Modified: Removed small caps for the link output
+        await message.reply_text(
+            f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>",
+            quote=True,
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.HTML
+        )
+
+        # Clean up user data
+        if chat_id in genlink_user_data:
+            del genlink_user_data[chat_id]
+
+    except TimeoutError:
+        logger.error(f"Timeout error waiting for genlink input for user {chat_id}")
+        await message.reply(
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Timeout: No response received.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        if chat_id in genlink_user_data:
+            del genlink_user_data[chat_id]
+    except Exception as e:
+        logger.error(f"Error in handle_genlink_input for user {chat_id}: {e}")
+        await message.reply(
+            to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: {str(e)}</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        if chat_id in genlink_user_data:
+            del genlink_user_data[chat_id]
 
 @Bot.on_message(filters.private & admin & filters.command("custom_batch"))
 async def custom_batch(client: Client, message: Message):
     """Handle /custom_batch command to collect and generate a batch link."""
-    collected = []
-    STOP_KEYBOARD = ReplyKeyboardMarkup([["stop"]], resize_keyboard=True)
+    chat_id = message.from_user.id
+    logger.info(f"Custom batch command triggered by user {chat_id}")
 
-    await message.reply(
-        to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Send all messages you want to include in batch.</b></blockquote>\n\n<blockquote><b>Press Stop when you're done.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
-        reply_markup=STOP_KEYBOARD,
+    # Added: Initialize custom_batch user data
+    custom_batch_user_data[chat_id] = {
+        'state': 'initial',
+        'menu_message': None,
+        'collected': []
+    }
+
+    # Added: Show the custom_batch menu with Start Process button
+    text = to_small_caps_with_html(
+        "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+        "<blockquote><b>Custom Batch Link Generator</b></blockquote>\n\n"
+        "<blockquote><b>Click 'Start Process' to begin collecting messages for a batch link.</b></blockquote>\n"
+        "<b>━━━━━━━━━━━━━━━━━━</b>"
+    )
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("• Start Process •", callback_data="custom_batch_start_process")],
+        [InlineKeyboardButton("• Close •", callback_data="custom_batch_close")]
+    ])
+
+    msg = await message.reply(
+        text=text,
+        reply_markup=buttons,
         parse_mode=ParseMode.HTML
     )
+    custom_batch_user_data[chat_id]['menu_message'] = msg
 
-    while True:
-        try:
-            user_msg = await client.ask(
-                chat_id=message.chat.id,
-                text=to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Waiting for files/messages...</b></blockquote>\n<blockquote><b>Press Stop to finish.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
-                timeout=60,
+@Bot.on_callback_query(filters.regex(r"^custom_batch_start_process$"))
+async def custom_batch_start_process_callback(client: Client, query: CallbackQuery):
+    """Handle callback to start the custom_batch process."""
+    chat_id = query.from_user.id
+    logger.info(f"Custom batch start process callback triggered by user {chat_id}")
+
+    if chat_id not in custom_batch_user_data:
+        custom_batch_user_data[chat_id] = {
+            'state': 'collecting_messages',
+            'menu_message': query.message,
+            'collected': []
+        }
+    else:
+        custom_batch_user_data[chat_id]['state'] = 'collecting_messages'
+        custom_batch_user_data[chat_id]['collected'] = []
+
+    await query.message.edit_text(
+        to_small_caps_with_html(
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+            "<blockquote><b>Send all messages you want to include in batch.</b></blockquote>\n\n"
+            "<blockquote><b>Press Stop when you're done.</b></blockquote>\n"
+            "<b>━━━━━━━━━━━━━━━━━━</b>"
+        ),
+        reply_markup=ReplyKeyboardMarkup([["stop"]], resize_keyboard=True),
+        parse_mode=ParseMode.HTML
+    )
+    await query.answer(to_small_caps_with_html("Start sending messages"))
+
+@Bot.on_callback_query(filters.regex(r"^custom_batch_(cancel_process|close)$"))
+async def custom_batch_handle_cancel_close(client: Client, query: CallbackQuery):
+    """Handle cancel and close actions for custom_batch command."""
+    chat_id = query.from_user.id
+    action = query.data.split("_")[-1]
+    logger.info(f"Custom batch {action} callback triggered by user {chat_id}")
+
+    if action == "cancel_process":
+        if chat_id in custom_batch_user_data:
+            del custom_batch_user_data[chat_id]
+        await query.message.edit_text(
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Process cancelled.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        await query.answer(to_small_caps_with_html("Process cancelled"))
+    elif action == "close":
+        if chat_id in custom_batch_user_data:
+            del custom_batch_user_data[chat_id]
+        await query.message.delete()
+        await query.answer(to_small_caps_with_html("Menu closed"))
+
+@Bot.on_message(filters.private & admin & filters.create(custom_batch_state_filter))
+async def handle_custom_batch_input(client: Client, message: Message):
+    """Handle input for custom_batch command."""
+    chat_id = message.from_user.id
+    logger.info(f"Handling custom batch input for chat {chat_id}")
+
+    try:
+        if message.text and message.text.strip().lower() == "stop":
+            collected = custom_batch_user_data[chat_id]['collected']
+            await message.reply(
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>✅ Batch collection complete.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                reply_markup=ReplyKeyboardRemove(),
                 parse_mode=ParseMode.HTML
             )
-        except TimeoutError:
-            print(to_small_caps_with_html(f"timeout error waiting for message in custom_batch command"))
-            break
 
-        if user_msg.text and user_msg.text.strip().lower() == "stop":
-            break
+            if not collected:
+                await message.reply(
+                    to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ No messages were added to batch.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                    parse_mode=ParseMode.HTML
+                )
+                return
+
+            start_id = collected[0] * abs(client.db_channel.id)
+            end_id = collected[-1] * abs(client.db_channel.id)
+            string = f"get-{start_id}-{end_id}"
+            base64_string = await encode(string)
+            link = f"https://t.me/{client.username}?start={base64_string}"
+            reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
+
+            # Modified: Removed small caps for the link output
+            await message.reply(
+                f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your custom batch link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>",
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML
+            )
+
+            # Clean up user data
+            if chat_id in custom_batch_user_data:
+                del custom_batch_user_data[chat_id]
+            return
 
         try:
-            sent = await user_msg.copy(client.db_channel.id, disable_notification=True)
-            collected.append(sent.id)
+            sent = await message.copy(client.db_channel.id, disable_notification=True)
+            custom_batch_user_data[chat_id]['collected'].append(sent.id)
         except Exception as e:
-            await message.reply(to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Failed to store a message:</b></blockquote>\n<code>{e}</code>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-            print(to_small_caps_with_html(f"error storing message in custom_batch: {e}"))
-            continue
+            await message.reply(
+                to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Failed to store a message:</b></blockquote>\n<code>{e}</code>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
+            )
+            logger.error(f"Error storing message in custom_batch: {e}")
+            return
 
-    await message.reply(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>✅ Batch collection complete.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"), reply_markup=ReplyKeyboardRemove(), parse_mode=ParseMode.HTML)
+    except TimeoutError:
+        logger.error(f"Timeout error waiting for custom_batch input for user {chat_id}")
+        await message.reply(
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Timeout: No response received.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        if chat_id in custom_batch_user_data:
+            del custom_batch_user_data[chat_id]
+    except Exception as e:
+        logger.error(f"Error in handle_custom_batch_input for user {chat_id}: {e}")
+        await message.reply(
+            to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: {str(e)}</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        if chat_id in custom_batch_user_data:
+            del custom_batch_user_data[chat_id]
 
-    if not collected:
-        await message.reply(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ No messages were added to batch.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-        return
-
-    start_id = collected[0] * abs(client.db_channel.id)
-    end_id = collected[-1] * abs(client.db_channel.id)
-    string = f"get-{start_id}-{end_id}"
-    base64_string = await encode(string)
-    link = f"https://t.me/{client.username}?start={base64_string}"
-
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
-    await message.reply(
-        to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your custom batch link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>"),
-        reply_markup=reply_markup,
-        parse_mode=ParseMode.HTML
-    )
-
-@Bot.on_message(filters.private & filters.command('flink'))
+@Bot.on_message(filters.private & admin & filters.command('flink'))
 async def flink_command(client: Client, message: Message):
     """Handle /flink command for formatted link generation."""
-    logger.info(to_small_caps_with_html(f"flink command triggered by user {message.from_user.id}"))
+    logger.info(f"Flink command triggered by user {message.from_user.id}")
     try:
         admin_ids = await db.get_all_admins() or []
         if message.from_user.id not in admin_ids and message.from_user.id != OWNER_ID:
@@ -331,9 +611,27 @@ async def flink_command(client: Client, message: Message):
             'awaiting_db_post': False
         }
         
-        await show_flink_main_menu(client, message)
+        # Modified: Show the flink menu with Start Process button
+        text = to_small_caps_with_html(
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+            "<blockquote><b>Formatted Link Generator</b></blockquote>\n\n"
+            "<blockquote><b>Click 'Start Process' to begin generating formatted links.</b></blockquote>\n"
+            "<b>━━━━━━━━━━━━━━━━━━</b>"
+        )
+        buttons = InlineKeyboardMarkup([
+            [InlineKeyboardButton("• Start Process •", callback_data="flink_start_process")],
+            [InlineKeyboardButton("• Set Format •", callback_data="flink_set_format")],
+            [InlineKeyboardButton("• Close •", callback_data="flink_close")]
+        ])
+
+        msg = await message.reply(
+            text=text,
+            reply_markup=buttons,
+            parse_mode=ParseMode.HTML
+        )
+        flink_user_data[message.from_user.id]['menu_message'] = msg
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in flink_command: {e}"))
+        logger.error(f"Error in flink_command: {e}")
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred. Please try again.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 async def show_flink_main_menu(client: Client, message: Message, edit: bool = False):
@@ -362,7 +660,7 @@ async def show_flink_main_menu(client: Client, message: Message, edit: bool = Fa
                 )
                 flink_user_data[message.from_user.id]['menu_message'] = msg
             else:
-                logger.info(to_small_caps_with_html(f"skipping edit in show_flink_main_menu for user {message.from_user.id} - content unchanged"))
+                logger.info(f"Skipping edit in show_flink_main_menu for user {message.from_user.id} - content unchanged")
         else:
             msg = await message.reply(
                 text=text,
@@ -371,13 +669,13 @@ async def show_flink_main_menu(client: Client, message: Message, edit: bool = Fa
             )
             flink_user_data[message.from_user.id]['menu_message'] = msg
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in show_flink_main_menu: {e}"))
+        logger.error(f"Error in show_flink_main_menu: {e}")
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while showing menu.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_callback_query(filters.regex(r"^flink_set_format$"))
 async def flink_set_format_callback(client: Client, query: CallbackQuery):
     """Handle callback for setting format in flink command."""
-    logger.info(to_small_caps_with_html(f"flink_set_format callback triggered by user {query.from_user.id}"))
+    logger.info(f"Flink_set_format callback triggered by user {query.from_user.id}")
     try:
         admin_ids = await db.get_all_admins() or []
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
@@ -409,17 +707,17 @@ async def flink_set_format_callback(client: Client, query: CallbackQuery):
                 parse_mode=ParseMode.HTML
             )
         else:
-            logger.info(to_small_caps_with_html(f"skipping edit in flink_set_format_callback for user {query.from_user.id} - content unchanged"))
+            logger.info(f"Skipping edit in flink_set_format_callback for user {query.from_user.id} - content unchanged")
         
         await query.answer(to_small_caps_with_html("Enter format"))
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in flink_set_format_callback: {e}"))
+        logger.error(f"Error in flink_set_format_callback: {e}")
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while setting format.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.private & filters.text & filters.regex(r"^[a-zA-Z0-9]+\s*=\s*\d+(,\s*[a-zA-Z0-9]+\s*=\s*\d+)*$"))
 async def handle_format_input(client: Client, message: Message):
     """Handle format input for flink command."""
-    logger.info(to_small_caps_with_html(f"format input received from user {message.from_user.id}"))
+    logger.info(f"Format input received from user {message.from_user.id}")
     try:
         admin_ids = await db.get_all_admins() or []
         if message.from_user.id not in admin_ids and message.from_user.id != OWNER_ID:
@@ -434,19 +732,19 @@ async def handle_format_input(client: Client, message: Message):
             await message.reply_text(to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>✅ Format saved successfully:</b></blockquote>\n<code>{format_text}</code>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
             await show_flink_main_menu(client, message)
         else:
-            logger.info(to_small_caps_with_html(f"format input ignored for user {message.from_user.id} - not awaiting format"))
+            logger.info(f"Format input ignored for user {message.from_user.id} - not awaiting format")
             await message.reply_text(
                 to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Please use the 'Set Format' option first and provide a valid format</b></blockquote>\n<blockquote>Example:</blockquote> <code>360p = 2, 720p = 1</code>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                 parse_mode=ParseMode.HTML
             )
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in handle_format_input: {e}"))
+        logger.error(f"Error in handle_format_input: {e}")
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while processing format.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_callback_query(filters.regex(r"^flink_start_process$"))
 async def flink_start_process_callback(client: Client, query: CallbackQuery):
     """Handle callback to start the flink process."""
-    logger.info(to_small_caps_with_html(f"flink_start_process callback triggered by user {query.from_user.id}"))
+    logger.info(f"Flink_start_process callback triggered by user {query.from_user.id}")
     try:
         admin_ids = await db.get_all_admins() or []
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
@@ -477,17 +775,17 @@ async def flink_start_process_callback(client: Client, query: CallbackQuery):
                 parse_mode=ParseMode.HTML
             )
         else:
-            logger.info(to_small_caps_with_html(f"skipping edit in flink_start_process_callback for user {query.from_user.id} - content unchanged"))
+            logger.info(f"Skipping edit in flink_start_process_callback for user {query.from_user.id} - content unchanged")
         
         await query.answer(to_small_caps_with_html("Send db channel post"))
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in flink_start_process_callback: {e}"))
+        logger.error(f"Error in flink_start_process_callback: {e}")
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while starting process.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.private & (filters.forwarded | filters.regex(r"^https?://t\.me/.*$")))
 async def handle_db_post_input(client: Client, message: Message):
     """Handle db channel post input for flink command."""
-    logger.info(to_small_caps_with_html(f"db post input received from user {message.from_user.id}"))
+    logger.info(f"DB post input received from user {message.from_user.id}")
     try:
         admin_ids = await db.get_all_admins() or []
         if message.from_user.id not in admin_ids and message.from_user.id != OWNER_ID:
@@ -496,7 +794,7 @@ async def handle_db_post_input(client: Client, message: Message):
 
         user_id = message.from_user.id
         if user_id not in flink_user_data or not flink_user_data[user_id].get('awaiting_db_post'):
-            logger.info(to_small_caps_with_html(f"db post input ignored for user {user_id} - not awaiting db channel input"))
+            logger.info(f"DB post input ignored for user {user_id} - not awaiting db channel input")
             await message.reply_text(
                 to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Please use the 'Start Process' option first and provide a valid forwarded message or link from the db channel.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                 parse_mode=ParseMode.HTML
@@ -523,29 +821,31 @@ async def handle_db_post_input(client: Client, message: Message):
             quality = quality.strip().upper()
             count = int(count.strip())
             
-            end_id = current_id + count - 1
-            if end_id < current_id:
-                logger.error(to_small_caps_with_html(f"invalid count for quality {quality}: start_id={current_id}, count={count}"))
-                await message.reply(to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Invalid count for {quality}: Ensure enough files exist in sequence.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-                return
-            
-            missing_files = []
-            for file_id in range(current_id, end_id + 1):
+            # Modified: Handle missing IDs by finding the next available ID
+            valid_ids = []
+            temp_id = current_id
+            ids_checked = 0
+            while len(valid_ids) < count and ids_checked < count * 2:  # Limit checks to prevent infinite loops
                 try:
-                    msg = await client.get_messages(client.db_channel.id, file_id)
-                    if not (msg.video or msg.document):
-                        missing_files.append(file_id)
+                    msg = await client.get_messages(client.db_channel.id, temp_id)
+                    if msg.video or msg.document:
+                        valid_ids.append(temp_id)
+                    temp_id += 1
+                    ids_checked += 1
                 except Exception as e:
-                    logger.error(to_small_caps_with_html(f"error fetching message {file_id}: {e}"))
-                    missing_files.append(file_id)
+                    logger.info(f"Skipping missing message ID {temp_id}: {e}")
+                    temp_id += 1
+                    ids_checked += 1
             
-            if missing_files:
-                logger.error(to_small_caps_with_html(f"missing media for {quality}: {missing_files}"))
+            if len(valid_ids) < count:
+                logger.error(f"Not enough valid media files found for {quality}: required {count}, found {len(valid_ids)}")
                 await message.reply(
-                    to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Missing video media for {quality} at message IDs:</b> <code>{missing_files}</code>\n<b>Ensure all files are in sequence.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                    to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Not enough valid media files for {quality}: required {count}, found {len(valid_ids)}</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                     parse_mode=ParseMode.HTML
                 )
                 return
+            
+            end_id = valid_ids[-1]
             
             additional_count = 0
             next_id = end_id + 1
@@ -555,32 +855,32 @@ async def handle_db_post_input(client: Client, message: Message):
                     additional_count = 1
                     end_id = next_id
             except Exception as e:
-                logger.info(to_small_caps_with_html(f"no additional sticker/gif found at id {next_id}: {e}"))
+                logger.info(f"No additional sticker/gif found at id {next_id}: {e}")
             
             links[quality] = {
-                'start': current_id,
+                'start': valid_ids[0],
                 'end': end_id,
-                'count': count + additional_count
+                'count': len(valid_ids) + additional_count
             }
             
             current_id = end_id + 1
-            logger.info(to_small_caps_with_html(f"processed {quality}: start={links[quality]['start']}, end={links[quality]['end']}, total files={links[quality]['count']}"))
+            logger.info(f"Processed {quality}: start={links[quality]['start']}, end={links[quality]['end']}, total files={links[quality]['count']}")
         
         flink_user_data[message.from_user.id]['links'] = links
         flink_user_data[message.from_user.id]['awaiting_db_post'] = False
         await flink_generate_final_output(client, message)
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in handle_db_post_input: {e}"))
+        logger.error(f"Error in handle_db_post_input: {e}")
         await message.reply_text(to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: {str(e)}</b>\nPlease ensure the input is valid and try again.\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 async def flink_generate_final_output(client: Client, message: Message):
     """Generate the final output for flink command with download buttons."""
-    logger.info(to_small_caps_with_html(f"generating final output for user {message.from_user.id}"))
+    logger.info(f"Generating final output for user {message.from_user.id}")
     try:
         user_id = message.from_user.id
         links = flink_user_data[user_id]['links']
         if not links:
-            logger.error(to_small_caps_with_html("no links generated in flink_user_data"))
+            logger.error("No links generated in flink_user_data")
             await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ No links generated. Please check the input and try again.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
             return
         
@@ -652,7 +952,7 @@ async def flink_generate_final_output(client: Client, message: Message):
         
         flink_user_data[user_id]['output_message'] = output_msg
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in flink_generate_final_output: {e}"))
+        logger.error(f"Error in flink_generate_final_output: {e}")
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while generating output. Please try again.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 async def create_link(client: Client, link_data: Dict) -> str:
@@ -666,7 +966,7 @@ async def create_link(client: Client, link_data: Dict) -> str:
 @Bot.on_callback_query(filters.regex(r"^flink_edit_output$"))
 async def flink_edit_output_callback(client: Client, query: CallbackQuery):
     """Handle callback for editing flink output."""
-    logger.info(to_small_caps_with_html(f"flink_edit_output callback triggered by user {query.from_user.id}"))
+    logger.info(f"Flink_edit_output callback triggered by user {query.from_user.id}")
     try:
         admin_ids = await db.get_all_admins() or []
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
@@ -696,17 +996,17 @@ async def flink_edit_output_callback(client: Client, query: CallbackQuery):
                 parse_mode=ParseMode.HTML
             )
         else:
-            logger.info(to_small_caps_with_html(f"skipping edit in flink_edit_output_callback for user {query.from_user.id} - content unchanged"))
+            logger.info(f"Skipping edit in flink_edit_output_callback for user {query.from_user.id} - content unchanged")
         
         await query.answer()
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in flink_edit_output_callback: {e}"))
+        logger.error(f"Error in flink_edit_output_callback: {e}")
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while editing output.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_callback_query(filters.regex(r"^flink_add_image$"))
 async def flink_add_image_callback(client: Client, query: CallbackQuery):
     """Handle callback for adding an image to flink output."""
-    logger.info(to_small_caps_with_html(f"flink_add_image callback triggered by user {query.from_user.id}"))
+    logger.info(f"Flink_add_image callback triggered by user {query.from_user.id}")
     try:
         admin_ids = await db.get_all_admins() or []
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
@@ -719,17 +1019,17 @@ async def flink_add_image_callback(client: Client, query: CallbackQuery):
         if current_text != new_text:
             await query.message.edit_text(new_text, parse_mode=ParseMode.HTML)
         else:
-            logger.info(to_small_caps_with_html(f"skipping edit in flink_add_image_callback for user {query.from_user.id} - content unchanged"))
+            logger.info(f"Skipping edit in flink_add_image_callback for user {query.from_user.id} - content unchanged")
         
         await query.answer(to_small_caps_with_html("Send image"))
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in flink_add_image_callback: {e}"))
+        logger.error(f"Error in flink_add_image_callback: {e}")
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ An error occurred while adding image.</blockquote></b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.private & filters.photo & filters.reply)
 async def handle_image_input(client: Client, message: Message):
     """Handle image input for flink output."""
-    logger.info(to_small_caps_with_html(f"image input received from user {message.from_user.id}"))
+    logger.info(f"Image input received from user {message.from_user.id}")
     try:
         admin_ids = await db.get_all_admins() or []
         if message.from_user.id not in admin_ids and message.from_user.id != OWNER_ID:
@@ -753,7 +1053,7 @@ async def handle_image_input(client: Client, message: Message):
             flink_user_data[user_id]['edit_data'] = {}
 
         if not (message.reply_to_message and to_small_caps_with_html("send the image:") in message.reply_to_message.text.lower()):
-            logger.info(to_small_caps_with_html(f"image input ignored for user {user_id} - not a reply to image prompt"))
+            logger.info(f"Image input ignored for user {user_id} - not a reply to image prompt")
             await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Please reply to the image prompt with a valid image.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
             return
 
@@ -764,13 +1064,13 @@ async def handle_image_input(client: Client, message: Message):
         )
         await flink_generate_final_output(client, message)
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in handle_image_input: {e}"))
+        logger.error(f"Error in handle_image_input: {e}")
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while processing image.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_callback_query(filters.regex(r"^flink_add_caption$"))
 async def flink_add_caption_callback(client: Client, query: CallbackQuery):
     """Handle callback for adding a caption to flink output."""
-    logger.info(to_small_caps_with_html(f"flink_add_caption callback triggered by user {query.from_user.id}"))
+    logger.info(f"Flink_add_caption callback triggered by user {query.from_user.id}")
     try:
         admin_ids = await db.get_all_admins() or []
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
@@ -797,13 +1097,13 @@ async def flink_add_caption_callback(client: Client, query: CallbackQuery):
         
         await query.answer(to_small_caps_with_html("Type caption"))
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in flink_add_caption_callback: {e}"))
+        logger.error(f"Error in flink_add_caption_callback: {e}")
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while adding caption.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_message(filters.private & filters.text & filters.reply & ~filters.regex(r"^CANCEL$") & ~filters.forwarded)
 async def handle_caption_input(client: Client, message: Message):
     """Handle caption input for flink command."""
-    logger.info(to_small_caps_with_html(f"caption input received from user {message.from_user.id}, text: {message.text}"))
+    logger.info(f"Caption input received from user {message.from_user.id}, text: {message.text}")
     try:
         admin_ids = await db.get_all_admins() or []
         if message.from_user.id not in admin_ids and message.from_user.id != OWNER_ID:
@@ -817,7 +1117,7 @@ async def handle_caption_input(client: Client, message: Message):
 
         caption_prompt_msg = flink_user_data[user_id].get('caption_prompt_message')
         if not caption_prompt_msg or not message.reply_to_message or message.reply_to_message.id != caption_prompt_msg.id:
-            logger.info(to_small_caps_with_html(f"caption input ignored for user {message.from_user.id} - not a reply to caption prompt"))
+            logger.info(f"Caption input ignored for user {message.from_user.id} - not a reply to caption prompt")
             await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Please reply to the caption prompt message with your caption.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
             return
 
@@ -828,13 +1128,13 @@ async def handle_caption_input(client: Client, message: Message):
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>✅ Caption saved successfully.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
         await flink_generate_final_output(client, message)
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in handle_caption_input: {e}"))
+        logger.error(f"Error in handle_caption_input: {e}")
         await message.reply_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while processing caption.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_callback_query(filters.regex(r"^flink_done_output$"))
 async def flink_done_output_callback(client: Client, query: CallbackQuery):
     """Handle callback for finalizing flink output."""
-    logger.info(to_small_caps_with_html(f"flink_done_output callback triggered by user {query.from_user.id}"))
+    logger.info(f"Flink_done_output callback triggered by user {query.from_user.id}")
     try:
         admin_ids = await db.get_all_admins() or []
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
@@ -912,13 +1212,13 @@ async def flink_done_output_callback(client: Client, query: CallbackQuery):
             del flink_user_data[user_id]
         await query.answer(to_small_caps_with_html("Process completed"))
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in flink_done_output_callback: {e}"))
+        logger.error(f"Error in flink_done_output_callback: {e}")
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while completing process.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_callback_query(filters.regex(r"^flink_refresh$"))
 async def flink_refresh_callback(client: Client, query: CallbackQuery):
     """Handle callback to refresh flink menu."""
-    logger.info(to_small_caps_with_html(f"flink_refresh callback triggered by user {query.from_user.id}"))
+    logger.info(f"Flink_refresh callback triggered by user {query.from_user.id}")
     try:
         admin_ids = await db.get_all_admins() or []
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
@@ -928,13 +1228,13 @@ async def flink_refresh_callback(client: Client, query: CallbackQuery):
         await show_flink_main_menu(client, query.message, edit=True)
         await query.answer(to_small_caps_with_html("Format status refreshed"))
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in flink_refresh_callback: {e}"))
+        logger.error(f"Error in flink_refresh_callback: {e}")
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while refreshing status.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_callback_query(filters.regex(r"^flink_(back_to_menu|cancel_process|back_to_output|close)$"))
 async def flink_handle_back_buttons(client: Client, query: CallbackQuery):
     """Handle back, cancel, and close actions for flink command."""
-    logger.info(to_small_caps_with_html(f"flink back/cancel/close callback triggered by user {query.from_user.id} with action {query.data}"))
+    logger.info(f"Flink back/cancel/close callback triggered by user {query.from_user.id} with action {query.data}")
     try:
         admin_ids = await db.get_all_admins() or []
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
@@ -960,7 +1260,7 @@ async def flink_handle_back_buttons(client: Client, query: CallbackQuery):
                 del flink_user_data[query.from_user.id]
             await query.answer(to_small_caps_with_html("Menu closed"))
     except Exception as e:
-        logger.error(to_small_caps_with_html(f"error in flink_handle_back_buttons: {e}"))
+        logger.error(f"Error in flink_handle_back_buttons: {e}")
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while processing action.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 #
