@@ -17,7 +17,8 @@ from helper_func import encode, get_message_id, admin
 import re
 from typing import Dict
 import logging
-from config import OWNER_ID
+from config import OWNER_ID, RANDOM_IMAGES
+import random  # Added for random image selection
 from database.database import db
 from asyncio import TimeoutError
 
@@ -67,6 +68,78 @@ async def batch_state_filter(_, __, message: Message):
     state = batch_user_data[chat_id].get('state')
     logger.info(f"batch_state_filter for chat {chat_id}: state={state}, message_text={message.text}")
     return state in ['awaiting_first_message', 'awaiting_second_message'] and (message.forward_from_chat or re.match(r"^https?://t\.me/.*$", message.text))
+
+@Bot.on_message(filters.private & admin & filters.command('link'))
+async def link_command(client: Client, message: Message):
+    """Handle /link command to display a menu with buttons to trigger link generation commands."""
+    logger.info(f"Link command triggered by user {message.from_user.id}")
+
+    # Prepare the message text
+    text = to_small_caps_with_html(
+        "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+        "<blockquote><b>If you want to generate link for files then use those buttons according to your need.</b></blockquote>\n"
+        "<b>━━━━━━━━━━━━━━━━━━</b>"
+    )
+
+    # Define the button layout
+    buttons = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("• ʙᴀᴛᴄʜ •", callback_data="link_batch"),
+            InlineKeyboardButton("• ɢᴇɴʟɪɴᴋ •", callback_data="link_genlink")
+        ],
+        [
+            InlineKeyboardButton("• ᴄᴜsᴛᴏᴍ •", callback_data="link_custom_batch"),
+            InlineKeyboardButton("• ꜰʟɪɴᴋ •", callback_data="link_flink")
+        ],
+        [
+            InlineKeyboardButton("• ᴄʟᴏsᴇ •", callback_data="link_close")
+        ]
+    ])
+
+    # Select a random image from RANDOM_IMAGES
+    random_image = random.choice(RANDOM_IMAGES)
+
+    # Send the message with the random image and buttons
+    await message.reply_photo(
+        photo=random_image,
+        caption=text,
+        reply_markup=buttons,
+        parse_mode=ParseMode.HTML
+    )
+
+@Bot.on_callback_query(filters.regex(r"^link_(batch|genlink|custom_batch|flink|close)$"))
+async def link_callback_handler(client: Client, query: CallbackQuery):
+    """Handle callback queries for /link command buttons."""
+    logger.info(f"Link callback triggered by user {query.from_user.id} with action {query.data}")
+    action = query.data.split("_")[-1]
+    user_id = query.from_user.id
+
+    # Check if user is admin or owner
+    admin_ids = await db.get_all_admins() or []
+    if user_id not in admin_ids and user_id != OWNER_ID:
+        await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
+        return
+
+    if action == "batch":
+        # Trigger the /batch command logic
+        await batch(client, query.message)
+        await query.answer(to_small_caps_with_html("Batch process started"))
+    elif action == "genlink":
+        # Trigger the /genlink command logic
+        await link_generator(client, query.message)
+        await query.answer(to_small_caps_with_html("Genlink process started"))
+    elif action == "custom_batch":
+        # Trigger the /custom_batch command logic
+        await custom_batch(client, query.message)
+        await query.answer(to_small_caps_with_html("Custom batch process started"))
+    elif action == "flink":
+        # Trigger the /flink command logic
+        await flink_command(client, query.message)
+        await query.answer(to_small_caps_with_html("Flink process started"))
+    elif action == "close":
+        # Delete the menu message
+        await query.message.delete()
+        await query.answer(to_small_caps_with_html("Menu closed"))
 
 @Bot.on_message(filters.private & admin & filters.command('batch'))
 async def batch(client: Client, message: Message):
@@ -309,7 +382,7 @@ async def custom_batch(client: Client, message: Message):
         parse_mode=ParseMode.HTML
     )
 
-@Bot.on_message(filters.private & filters.command('flink'))
+@Bot.on_message(filters.private & admin & filters.command('flink'))
 async def flink_command(client: Client, message: Message):
     """Handle /flink command for formatted link generation."""
     logger.info(to_small_caps_with_html(f"flink command triggered by user {message.from_user.id}"))
