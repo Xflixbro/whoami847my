@@ -192,7 +192,7 @@ async def handle_batch_input(client: Client, message: Message):
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
 
             await message.reply_text(
-                to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>",
                 quote=True,
                 reply_markup=reply_markup,
                 parse_mode=ParseMode.HTML
@@ -249,7 +249,7 @@ async def link_generator(client: Client, message: Message):
     link = f"https://t.me/{client.username}?start={base64_string}"
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
     await channel_message.reply_text(
-        to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+        f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>",
         quote=True,
         reply_markup=reply_markup,
         parse_mode=ParseMode.HTML
@@ -304,7 +304,7 @@ async def custom_batch(client: Client, message: Message):
 
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
     await message.reply(
-        to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your custom batch link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+        f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here is your custom batch link:</b></blockquote>\n\n{link}\n<b>━━━━━━━━━━━━━━━━━━</b>",
         reply_markup=reply_markup,
         parse_mode=ParseMode.HTML
     )
@@ -523,29 +523,33 @@ async def handle_db_post_input(client: Client, message: Message):
             quality = quality.strip().upper()
             count = int(count.strip())
             
-            end_id = current_id + count - 1
-            if end_id < current_id:
-                logger.error(to_small_caps_with_html(f"invalid count for quality {quality}: start_id={current_id}, count={count}"))
-                await message.reply(to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Invalid count for {quality}: Ensure enough files exist in sequence.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
-                return
-            
+            valid_ids = []
             missing_files = []
-            for file_id in range(current_id, end_id + 1):
-                try:
-                    msg = await client.get_messages(client.db_channel.id, file_id)
-                    if not (msg.video or msg.document):
-                        missing_files.append(file_id)
-                except Exception as e:
-                    logger.error(to_small_caps_with_html(f"error fetching message {file_id}: {e}"))
-                    missing_files.append(file_id)
+            temp_id = current_id
             
-            if missing_files:
-                logger.error(to_small_caps_with_html(f"missing media for {quality}: {missing_files}"))
+            # Collect valid message IDs, skipping missing ones
+            while len(valid_ids) < count and temp_id <= current_id + count * 2:  # Limit search to avoid infinite loops
+                try:
+                    msg = await client.get_messages(client.db_channel.id, temp_id)
+                    if msg.video or msg.document:
+                        valid_ids.append(temp_id)
+                    else:
+                        missing_files.append(temp_id)
+                except Exception as e:
+                    logger.info(to_small_caps_with_html(f"message {temp_id} not found or invalid: {e}"))
+                    missing_files.append(temp_id)
+                temp_id += 1
+            
+            if len(valid_ids) < count:
+                logger.error(to_small_caps_with_html(f"not enough valid media files for {quality}: found {len(valid_ids)}, required {count}"))
                 await message.reply(
-                    to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Missing video media for {quality} at message IDs:</b> <code>{missing_files}</code>\n<b>Ensure all files are in sequence.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                    to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Not enough valid media files for {quality}. Found {len(valid_ids)} files, but {count} required.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                     parse_mode=ParseMode.HTML
                 )
                 return
+            
+            start_id = valid_ids[0]
+            end_id = valid_ids[count - 1]
             
             additional_count = 0
             next_id = end_id + 1
@@ -558,12 +562,15 @@ async def handle_db_post_input(client: Client, message: Message):
                 logger.info(to_small_caps_with_html(f"no additional sticker/gif found at id {next_id}: {e}"))
             
             links[quality] = {
-                'start': current_id,
+                'start': start_id,
                 'end': end_id,
                 'count': count + additional_count
             }
             
             current_id = end_id + 1
+            if missing_files:
+                logger.info(to_small_caps_with_html(f"skipped missing files for {quality}: {missing_files}"))
+            
             logger.info(to_small_caps_with_html(f"processed {quality}: start={links[quality]['start']}, end={links[quality]['end']}, total files={links[quality]['count']}"))
         
         flink_user_data[message.from_user.id]['links'] = links
