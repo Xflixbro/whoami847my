@@ -854,7 +854,7 @@ async def handle_caption_input(client: Client, message: Message):
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>❌ An error occurred while processing caption.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
         )
-        )
+        
 
 @Bot.on_callback_query(filters.regex(r"&(^flink_done_output$)"))
 async def flink_done_output_callback(client: Client, query: CallbackQuery):
