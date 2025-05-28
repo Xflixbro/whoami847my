@@ -21,6 +21,7 @@ import logging
 from config import OWNER_ID, RANDOM_IMAGES, START_PIC
 from database.database import db
 from asyncio import TimeoutError
+from pyrogram.errors import UserIsBot
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -72,7 +73,7 @@ async def batch_state_filter(_, __, message: Message):
 @Bot.on_message(filters.private & admin & filters.command('link'))
 async def link_menu(client: Client, message: Message):
     """Handle /link command to display a menu for link generation options."""
-    chat_id = message.chat.id
+    chat_id = message.from_user.id
     logger.info(f"Link command triggered by user {chat_id}")
 
     # Prepare the menu text
@@ -124,8 +125,6 @@ async def link_menu(client: Client, message: Message):
 async def link_callback(client: Client, callback: CallbackQuery):
     """Handle callback queries for the /link command menu."""
     data = callback.data
-    chat_id = callback.message.chat.id
-    message_id = callback.message.id
     user_id = callback.from_user.id
     logger.info(f"Link callback triggered by user {user_id} with data {data}")
 
@@ -142,7 +141,7 @@ async def link_callback(client: Client, callback: CallbackQuery):
         await callback.answer(to_small_caps_with_html("Batch link generation started"))
     elif data == "link_genlink":
         # Simulate /genlink command
-        await link_generator(client, callback.message)
+        await link_generator(client, callback.message, user_id)
         await callback.answer(to_small_caps_with_html("Single link generation started"))
     elif data == "link_custom":
         # Simulate /custom_batch command
@@ -150,7 +149,7 @@ async def link_callback(client: Client, callback: CallbackQuery):
         await callback.answer(to_small_caps_with_html("Custom batch link generation started"))
     elif data == "link_flink":
         # Simulate /flink command
-        await flink_command(client, callback.message)
+        await flink_command(client, callback.message, user_id)
         await callback.answer(to_small_caps_with_html("Formatted link generation started"))
     elif data == "link_close":
         # Delete the menu message
@@ -309,10 +308,35 @@ async def handle_batch_input(client: Client, message: Message):
             del batch_user_data[chat_id]
 
 @Bot.on_message(filters.private & admin & filters.command('genlink'))
-async def link_generator(client: Client, message: Message):
+async def link_generator(client: Client, message: Message, user_id: int = None):
     """Handle /genlink command to generate a link for a single message."""
-    chat_id = message.from_user.id
+    chat_id = user_id or message.from_user.id
     logger.info(f"Genlink command triggered by user {chat_id}")
+
+    try:
+        # Verify chat_id is not a bot
+        user = await client.get_users(chat_id)
+        if user.is_bot:
+            logger.error(f"Cannot send message to chat_id {chat_id}: User is a bot")
+            await message.reply_text(
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: Cannot send messages to a bot.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
+            )
+            return
+    except UserIsBot:
+        logger.error(f"UserIsBot error for chat_id {chat_id}")
+        await message.reply_text(
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: Cannot send messages to a bot.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        return
+    except Exception as e:
+        logger.error(f"Error verifying user for chat_id {chat_id}: {e}")
+        await message.reply_text(
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error verifying user.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        return
 
     while True:
         try:
@@ -330,6 +354,21 @@ async def link_generator(client: Client, message: Message):
                 parse_mode=ParseMode.HTML
             )
             return
+        except UserIsBot:
+            logger.error(f"UserIsBot error in client.ask for chat_id {chat_id}")
+            await message.reply_text(
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: Cannot send messages to a bot.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
+            )
+            return
+        except Exception as e:
+            logger.error(f"Error in client.ask for user {chat_id}: {e}")
+            await message.reply_text(
+                to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: {str(e)}</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
+            )
+            return
+
         msg_id = await get_message_id(client, channel_message)
         if msg_id:
             break
@@ -377,6 +416,13 @@ async def custom_batch(client: Client, message: Message):
         except TimeoutError:
             logger.error(f"Timeout error waiting for message in custom_batch command for user {chat_id}")
             break
+        except UserIsBot:
+            logger.error(f"UserIsBot error in custom_batch for chat_id {chat_id}")
+            await message.reply_text(
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: Cannot send messages to a bot.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
+            )
+            break
 
         if user_msg.text and user_msg.text.strip().lower() == "stop":
             break
@@ -419,9 +465,9 @@ async def custom_batch(client: Client, message: Message):
     )
 
 @Bot.on_message(filters.private & admin & filters.command('flink'))
-async def flink_command(client: Client, message: Message):
+async def flink_command(client: Client, message: Message, user_id: int = None):
     """Handle /flink command for formatted link generation."""
-    user_id = message.from_user.id
+    user_id = user_id or message.from_user.id
     logger.info(f"Flink command triggered by user {user_id}")
     
     try:
