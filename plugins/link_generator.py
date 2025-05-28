@@ -617,7 +617,216 @@ async def flink_set_format_callback(client: Client, query: CallbackQuery):
     except Exception as e:
         logger.error(f"Error in flink_set_format_callback for user {user_id}: {e}")
         await query.message.edit_text(
-            to_small_caps_with_html("<b>ERROR error occurred while setting format.</b>"),
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while setting format.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+
+@Bot.on_message(filters.private & filters.text & filters.regex(r"^[a-zA-Z0-9\s]+=\s*\d+(,\s*[a-zA-Z0-9\s]+=\s*\d+)*$"))
+async def handle_format_input(client: Client, message: Message):
+    """Handle format input for flink command."""
+    user_id = message.from_user.id
+    logger.info(f"Format input received from user {user_id}, text: {message.text}")
+
+    # Verify admin access
+    admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in handle_format_input for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
+    if user_id not in admin_ids and user_id != OWNER_ID:
+        await message.reply_text(
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        return
+
+    try:
+        if user_id not in flink_user_data or not flink_user_data[user_id].get('awaiting_format'):
+            logger.info(f"Format input ignored for user {user_id} - not awaiting format")
+            await message.reply_text(
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Please use the 'Set Format' option first and provide a valid format</b></blockquote>\n<blockquote>Example:</blockquote> <code>360p = 2, 720p = 1</code>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
+            )
+            return
+
+        format_text = message.text.strip()
+        # Validate format
+        format_parts = [part.strip() for part in format_text.split(",")]
+        for part in format_parts:
+            if not re.match(r"^[a-zA-Z0-9\s]+=\s*\d+$", part):
+                await message.reply_text(
+                    to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Invalid format part:</b> <code>{part}</code>\n<b>Please use the correct pattern (e.g., 360p = 2)</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                    parse_mode=ParseMode.HTML
+                )
+                return
+
+        flink_user_data[user_id]['format'] = format_text
+        flink_user_data[user_id]['awaiting_format'] = False
+        await message.reply_text(
+            to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>✅ Format saved successfully:</b></blockquote>\n<code>{format_text}</code>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        await show_flink_main_menu(client, message)
+    except Exception as e:
+        logger.error(f"Error in handle_format_input for user {user_id}: {e}")
+        await message.reply_text(
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while processing format.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+
+@Bot.on_callback_query(filters.regex(r"^flink_start_process$"))
+async def flink_start_process_callback(client: Client, query: CallbackQuery):
+    """Handle callback to start the flink process."""
+    user_id = query.from_user.id
+    logger.info(f"Flink start process callback triggered by user {user_id}")
+
+    # Verify admin access
+    admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in flink_start_process for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
+    if user_id not in admin_ids and user_id != OWNER_ID:
+        await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
+        return
+
+    try:
+        if not flink_user_data[user_id]['format']:
+            await query.answer(to_small_caps_with_html("❌ Please set format first!"), show_alert=True)
+            return
+        
+        flink_user_data[user_id]['awaiting_db_post'] = True
+        current_text = query.message.text if query.message.text else ""
+        new_text = to_small_caps_with_html(
+            "<b>━━━━━━━━━━━━━━━━━━</b>\n"
+            "<blockquote><b>Send the first post link from db channel:</b></blockquote>\n"
+            "<blockquote><b>Forward a message from the db channel or send its direct link (e.g., <code>t.me/channel/123</code>).</b></blockquote>\n\n"
+            "<blockquote><b>Ensure files are in sequence without gaps.</b></blockquote>\n\n"
+            "<b>Send the link or forwarded message in the next message (no need to reply).</b>\n"
+            "<b>━━━━━━━━━━━━━━━━━━</b>"
+        )
+        
+        if current_text != new_text:
+            await query.message.edit_text(
+                text=new_text,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("✖️ Cancel", callback_data="flink_cancel_process")]
+                ]),
+                parse_mode=ParseMode.HTML
+            )
+        else:
+            logger.info(f"Skipping edit in flink_start_process_callback for user {user_id} - content unchanged")
+        
+        await query.answer(to_small_caps_with_html("Send db channel post"))
+    except Exception as e:
+        logger.error(f"Error in flink_start_process_callback for user {user_id}: {e}")
+        await query.message.edit_text(
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while starting process.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+
+@Bot.on_message(filters.private & (filters.forwarded | filters.regex(r"^https?://t\.me/.*$")))
+async def handle_db_post_input(client: Client, message: Message):
+    """Handle db channel post input for flink command."""
+    user_id = message.from_user.id
+    logger.info(f"DB post input received from user {user_id}")
+
+    # Verify admin access
+    admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in handle_db_post_input for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
+    if user_id not in admin_ids and user_id != OWNER_ID:
+        await message.reply_text(
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        return
+
+    try:
+        if user_id not in flink_user_data or not flink_user_data[user_id].get('awaiting_db_post'):
+            logger.info(f"DB post input ignored for user {user_id} - not awaiting db channel input")
+            await message.reply_text(
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Please use the 'Start Process' option first and provide a valid forwarded message or link from the db channel.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
+            )
+            return
+
+        msg_id = await get_message_id(client, message)
+        if not msg_id:
+            await message.reply_text(
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Invalid db channel post! Ensure it's a valid forwarded message or link from the db channel.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
+            )
+            return
+                
+        format_str = flink_user_data[user_id]['format']
+        format_parts = [part.strip() for part in format_str.split(",")]
+        
+        current_id = msg_id
+        links = {}
+        
+        for part in format_parts:
+            match = re.match(r"([a-zA-Z0-9\s]+)\s*=\s*(\d+)", part)
+            if not match:
+                await message.reply_text(
+                    to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Invalid format part:</b> <code>{part}</code>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                    parse_mode=ParseMode.HTML
+                )
+                return
+            quality, count = match.groups()
+            quality = quality.strip().upper()
+            count = int(count.strip())
+            
+            valid_ids = []
+            missing_files = []
+            temp_id = current_id
+            
+            # Collect valid message IDs, skipping missing ones
+            while len(valid_ids) < count and temp_id <= current_id + count * 2:  # Limit search to avoid infinite loops
+                try:
+                    msg = await client.get_messages(client.db_channel.id, temp_id)
+                    if msg.video or msg.document:
+                        valid_ids.append(temp_id)
+                    else:
+                        missing_files.append(temp_id)
+                except Exception as e:
+                    logger.info(f"Message {temp_id} not found or invalid: {e}")
+                    missing_files.append(temp_id)
+                temp_id += 1
+            
+            if len(valid_ids) < count:
+                logger.error(f"Not enough valid media files for {quality}: found {len(valid_ids)}, required {count}")
+                await message.reply_text(
+                    to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ Not enough valid media files for {quality}. Found {len(valid_ids)} files, but {count} required.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                    parse_mode=ParseMode.HTML
+                )
+                return
+            
+            start_id = valid_ids[0]
+            end_id = valid_ids[count - 1]
+            
+            additional_count = 0
+            next_id = end_id + 1
+            try:
+                next_msg = await client.get_messages(client.db_channel.id, next_id)
+                if next_msg.sticker or next_msg.animation:
+                    additional_count = 1
+                    end_id = next_id
+            except Exception as e:
+                logger.info(f"No additional sticker/gif found at id {next_id}: {e}")
+            
+            links[quality] = {
+                'start': start_id,
+                'end': end_id,
+                'count': count + additional_count
+            }
+            
+            current_id = end_id + 1
+            if missing_files:
+                logger.info(f"Skipped missing files for {quality}: {missing_files}")
+            
+            logger.info(f"Processed {quality}: start={links[quality]['start']}, end={links[quality]['end']}, total files={links[quality]['count']}")
+        
+        flink_user_data[user_id]['links'] = links
+        flink_user_data[user_id]['awaiting_db_post'] = False
+        await flink_generate_final_output(client, message)
+    except Exception as e:
+        logger.error(f"Error in handle_db_post_input for user {user_id}: {e}")
+        await message.reply_text(
+            to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: {str(e)}</b>\nPlease ensure the input is valid and try again.\n<b>━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
         )
 
