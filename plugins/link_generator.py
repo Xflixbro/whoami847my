@@ -1004,6 +1004,9 @@ async def flink_add_image_callback(client: Client, query: CallbackQuery):
         if current_text != new_text:
             await query.message.edit_text(
                 text=new_text,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 Back", callback_data="flink_back_to_output")]
+                ]),
                 parse_mode=ParseMode.HTML
             )
         else:
@@ -1013,7 +1016,7 @@ async def flink_add_image_callback(client: Client, query: CallbackQuery):
     except Exception as e:
         logger.error(f"Error in flink_add_image_callback for user {user_id}: {e}")
         await query.message.edit_text(
-            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ An error occurred while adding image.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while adding image.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
         )
 
@@ -1049,8 +1052,10 @@ async def handle_image_input(client: Client, message: Message):
         elif 'edit_data' not in flink_user_data[user_id]:
             flink_user_data[user_id]['edit_data'] = {}
 
-        if not (message.reply_to_message and to_small_caps_with_html("<b>Send the image:</b>") in message.reply_to_message.text.lower()):
-            logger.warning(f"Ignoring image input for user {user_id} - not a reply to an image prompt")
+        # Check if the reply is to an image prompt
+        reply_msg = message.reply_to_message
+        if not reply_msg or not any(prompt.lower() in reply_msg.text.lower() for prompt in ["send the image", "send the image:"]):
+            logger.warning(f"Ignoring image input for user {user_id} - not a reply to an image prompt. Reply text: {reply_msg.text if reply_msg else 'None'}")
             await message.reply_text(
                 to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Please reply to the image prompt with a valid image.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
                 parse_mode=ParseMode.HTML
