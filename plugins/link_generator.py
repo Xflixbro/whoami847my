@@ -462,7 +462,7 @@ async def show_flink_main_menu(client: Client, message: Message, edit: bool = Fa
             flink_user_data[user_id]['menu_message'] = msg
     except Exception as e:
         logger.error(f"Error in show_flink_main_menu for user {user_id}: {str(e)}")
-        await message.reply(to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n</b>\n<b>❌ An error occurred while showing menu.</b>\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>")), parse_mode=ParseMode.HTML)
+        await message.reply(to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n</b>\n<b>❌ An error occurred while showing menu.</b>\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 @Bot.on_callback_query(filters.regex(r"^flink_set_format$"))
 async def flink_set_format_callback(client: Client, callback_query: CallbackQuery):
