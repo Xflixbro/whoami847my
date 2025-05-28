@@ -555,7 +555,7 @@ async def flink_generate_final_output(client: Client, message: Message) -> None:
         if not links:
             logger.error(f"No links generated for user {user_id}")
             await message.reply_text(
-                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ links generated. please try again</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ No links generated. Please try again</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
                 parse_mode=ParseMode.HTML
             )
             return
@@ -564,44 +564,44 @@ async def flink_generate_final_output(client: Client, message: Message) -> None:
         quality_list = list(links.keys())
         num_qualities = len(quality_list)
         
-        if len(quality_list) == 2:
+        if num_qualities == 2:
             buttons.append([
-                InlineKeyboardButton(f"{quality_list[0]} 🦋", url= await create_link(client, links[0])),
-                InlineKeyboardButton(f"{quality_list[1]} 🦋", url= await create_link(client, links[1]))
+                InlineKeyboardButton(f"{quality_list[0]}", url=await create_link(client, links[quality_list[0]])),
+                InlineKeyboardButton(f"{quality_list[1]}", url=await create_link(client, links[quality_list[1]]))
             ])
         elif num_qualities == 3:
             buttons.append([
-                InlineKeyboardButton(f"🦋{quality_list[0]}", url=await create_link(client, links[quality_list[0]])),
-                InlineKeyboardButton(f"🦋{quality_list[1]}", url=await create_link(client, links[quality_list[1]]))
+                InlineKeyboardButton(f"{quality_list[0]}", url=await create_link(client, links[quality_list[0]])),
+                InlineKeyboardButton(f"{quality_list[1]}", url=await create_link(client, links[quality_list[1]]))
             ])
             buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[2]}", url=await create_link(client, links[quality_list[2]]))
+                InlineKeyboardButton(f"{quality_list[2]}", url=await create_link(client, links[quality_list[2]]))
             ])
         elif num_qualities == 4:
             buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[0]}", url=await create_link(client, links[quality_list[0]])),
-                InlineKeyboardButton(f"🦋 {quality_list[1]}", url=await create_link(client, links[quality_list[1]]))
+                InlineKeyboardButton(f"{quality_list[0]}", url=await create_link(client, links[quality_list[0]])),
+                InlineKeyboardButton(f"{quality_list[1]}", url=await create_link(client, links[quality_list[1]]))
             ])
             buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[2]}", url=await create_link(client, links[quality_list[2]])),
-                InlineKeyboardButton(f"🦋 {quality_list[3]}", url=await create_link(client, links[quality_list[3]]))
+                InlineKeyboardButton(f"{quality_list[2]}", url=await create_link(client, links[quality_list[2]])),
+                InlineKeyboardButton(f"{quality_list[3]}", url=await create_link(client, links[quality_list[3]]))
             ])
         elif num_qualities == 5:
             buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[0]}", url=await create_link(client, links[quality_list[0]])),
-                InlineKeyboardButton(f"🦋 {quality_list[1]}", url=await create_link(client, links[quality_list[1]]))
+                InlineKeyboardButton(f"{quality_list[0]}", url=await create_link(client, links[quality_list[0]])),
+                InlineKeyboardButton(f"{quality_list[1]}", url=await create_link(client, links[quality_list[1]]))
             ])
             buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[2]}", url=await create_link(client, links[quality_list[2]])),
-                InlineKeyboardButton(f"🦋 {quality_list[3]}", url=await create_link(client, links[quality_list[3]]))
+                InlineKeyboardButton(f"{quality_list[2]}", url=await create_link(client, links[quality_list[2]])),
+                InlineKeyboardButton(f"{quality_list[3]}", url=await create_link(client, links[quality_list[3]]))
             ])
             buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[4]}", url=await create_link(client, links[quality_list[4]]))
+                InlineKeyboardButton(f"{quality_list[4]}", url=await create_link(client, links[quality_list[4]]))
             ])
         else:
             for quality in quality_list:
                 buttons.append([
-                    InlineKeyboardButton(f"🦋 {quality}", url=await create_link(client, links[quality]))
+                    InlineKeyboardButton(f"{quality}", url=await create_link(client, links[quality]))
                 ])
         
         buttons.append([
@@ -621,7 +621,7 @@ async def flink_generate_final_output(client: Client, message: Message) -> None:
             )
         else:
             output_msg = await message.reply(
-                text=caption if caption else to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n</blockquote><b>Here are your download buttons:</blockquote></b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
+                text=caption if caption else to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Here are your download buttons:</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
                 reply_markup=InlineKeyboardMarkup(buttons),
                 parse_mode=ParseMode.HTML
             )
@@ -666,11 +666,12 @@ async def flink_edit_output_callback(client: Client, query: CallbackQuery):
             await query.message.edit_text(
                 text=new_text,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("◈ Image ◈", callback_data="flink_add_image"),
-                    InlineKeyboardButton("◈ Caption ◈", callback_data="flink_add_caption")
+                    [
+                        InlineKeyboardButton("◈ Image ◈", callback_data="flink_add_image"),
+                        InlineKeyboardButton("◈ Caption ◈", callback_data="flink_add_caption")
                     ],
                     [
-                        InlineKeyboardButton("✔️ Finish setup 🦋", callback_data="flink_done_output")
+                        InlineKeyboardButton("✔️ Finish setup", callback_data="flink_done_output")
                     ]
                 ]),
                 parse_mode=ParseMode.HTML
@@ -713,7 +714,7 @@ async def flink_add_image_callback(client: Client, query: CallbackQuery):
     except Exception as e:
         logger.error(f"Error in flink_add_image_callback for user {user_id}: {e}")
         await query.message.edit_text(
-            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ An error occurred while adding image.</blockquote></b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ An error occurred while adding image.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
         )
 
@@ -727,7 +728,7 @@ async def handle_image_input(client: Client, message: Message):
         admin_ids = await db.get_all_admins() or []
         if user_id not in admin_ids and user_id != OWNER_ID:
             await message.reply_text(
-                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
                 parse_mode=ParseMode.HTML
             )
             return
@@ -757,7 +758,7 @@ async def handle_image_input(client: Client, message: Message):
 
         flink_user_data[user_id]['edit_data']['image'] = message.photo.file_id
         await message.reply_text(
-            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>✅ Image successfully saved.</b></blockquote>\n<blockquote>Type a caption if needed, or proceed with 'Done'.</blockquote>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>✅ Image successfully saved.</b></blockquote>\n<blockquote>Type a caption if needed, or proceed with 'Done'.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
         )
         await flink_generate_final_output(client, message)
@@ -782,23 +783,23 @@ async def flink_add_caption_callback(client: Client, query: CallbackQuery):
 
         flink_user_data[user_id]['awaiting_caption'] = True
         caption_prompt_text = (
-            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n</blockquote><b>Type your caption:</b></blockquote>\n\n")
-            + "<blockquote><b>Example</b></blockquote>\n\n"
-            "<blockquote><code>ᴛɪᴛʟᴇ- BLACK CLOVER\n"
-            "<b>Aᴜᴅɪᴏ TʀᴀᴄK- Hɪɴᴅɪ Dᴜʙʙᴇᴅ\n\n"
-            "<b>Qᴜᴀʟɪᴛʏ - 360ᴘ, 720P, 1080ᴘ\n\n"
-            "<b>Eᴘɪsᴏᴅᴇ - 01 & S1 Uᴘʟᴏᴀᴅᴇᴇᴅ\n\n"
-            "<b>Aʟʟ Qᴜᴀʟɪᴛʏ - ( Hɪɴᴅɪ Dᴜʙʙᴇᴅ )\n"
-            "━━━━━━━━━━━━━━━━━━━\n"
-            "Cʟɪᴄᴋ Hᴇʀᴇ Tᴏ Dᴏᴡɴʟᴏᴀᴅ | Eᴘ - 01 & S1</code></blockquote>\n\n"
-            + to_small_caps_with_html("<b>Reply to <b>this message with your caption.</b>\n</blockquote>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>")
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Type your caption:</b></blockquote>\n\n") +
+            "<blockquote><b>Example</b></blockquote>\n\n" +
+            "<blockquote><code>ᴛɪᴛʟᴇ- BLACK CLOVER\n" +
+            "<b>Aᴜᴅɪᴏ TʀᴀᴄK- Hɪɴᴅɪ Dᴜʙʙᴇᴅ\n\n" +
+            "<b>Qᴜᴀʟɪᴛʏ - 360ᴘ, 720P, 1080ᴘ\n\n" +
+            "<b>Eᴘɪsᴏᴅᴇ - 01 & S1 Uᴘʟᴏᴀᴅᴇᴅ\n\n" +
+            "<b>Aʟʟ Qᴜᴀʟɪᴛʏ - ( Hɪɴᴅɪ Dᴜʙʙᴇᴅ )\n" +
+            "━━━━━━━━━━━━━━━━━━━\n" +
+            "Cʟɪᴄᴋ Hᴇʀᴇ Tᴏ Dᴏᴡɴʟᴏᴀᴅ | Eᴘ - 01 & S1</code></blockquote>\n\n" +
+            to_small_caps_with_html("<b>Reply to this message with your caption.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>")
         )
         
         caption_prompt_msg = await query.message.reply(
             text=caption_prompt_text,
             parse_mode=ParseMode.HTML
         )
-        flink_user_data[user_id]['caption_prompt_message'] = caption
+        flink_user_data[user_id]['caption_prompt_message'] = caption_prompt_msg
         
         await query.answer(to_small_caps_with_html("Type caption"))
     except Exception as e:
@@ -808,7 +809,7 @@ async def flink_add_caption_callback(client: Client, query: CallbackQuery):
             parse_mode=ParseMode.HTML
         )
 
-@Bot.on_message(filters.private & filters.text & filters.reply & ~filters.regex(r"&(^CANCEL$)") & ~filters.forwarded)
+@Bot.on_message(filters.private & filters.text & filters.reply & ~filters.regex(r"^(?i)CANCEL$") & ~filters.forwarded)
 async def handle_caption_input(client: Client, message: Message):
     """Handle caption input for the flink command."""
     user_id = message.from_user.id
@@ -823,15 +824,15 @@ async def handle_caption_input(client: Client, message: Message):
             )
             return
 
-        if user_id in flink_user_data or not flink_user_data[user_id].get('awaiting_caption'):
+        if user_id not in flink_user_data or not flink_user_data[user_id].get('awaiting_caption'):
             await message.reply_text(
-                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ No active caption prompt found.</b>\n<b>Please use the 'Add Caption' option first.</b>\n</b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ No active caption prompt found.</b>\n<b>Please use the 'Add Caption' option first.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
                 parse_mode=ParseMode.HTML
             )
             return
 
         caption_prompt_msg = flink_user_data[user_id].get('caption_prompt_message')
-        if not user_id or message.reply_to_message or message.reply_to_message.id != caption_prompt_msg.id:
+        if not caption_prompt_msg or not message.reply_to_message or message.reply_to_message.id != caption_prompt_msg.id:
             logger.info(f"Caption input ignored for user {user_id} - not a reply to caption prompt")
             await message.reply_text(
                 to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Please reply to the caption prompt message with your caption.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
@@ -839,24 +840,23 @@ async def handle_caption_input(client: Client, message: Message):
             )
             return
 
-        if not 'edit_data' in flink_user_data[user_id]:
+        if 'edit_data' not in flink_user_data[user_id]:
             flink_user_data[user_id]['edit_data'] = {}
         flink_user_data[user_id]['edit_data']['caption'] = message.text
         flink_user_data[user_id]['awaiting_caption'] = False
         await message.reply_text(
-            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n</b>✅ Caption saved successfully.</b>\n</blockquote>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>✅ Caption saved successfully.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
         )
         await flink_generate_final_output(client, message)
     except Exception as e:
         logger.error(f"Error in handle_caption_input for user {user_id}: {e}")
         await message.reply_text(
-            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>❌ An error occurred while processing caption.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while processing caption.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
         )
-        
 
-@Bot.on_callback_query(filters.regex(r"&(^flink_done_output$)"))
+@Bot.on_callback_query(filters.regex(r"^flink_done_output$"))
 async def flink_done_output_callback(client: Client, query: CallbackQuery):
     """Handle callback for finalizing flink output."""
     user_id = query.from_user.id
@@ -864,89 +864,35 @@ async def flink_done_output_callback(client: Client, query: CallbackQuery):
 
     try:
         admin_ids = await db.get_all_admins() or []
-        if user_id in admin_ids and user_id != OWNER_ID:
+        if user_id not in admin_ids and user_id != OWNER_ID:
             await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
             return
 
-        if not user_id in flink_user_data or 'links' not in flink_user_data[user_id]:
+        if user_id not in flink_user_data or 'links' not in flink_user_data[user_id]:
             await query.message.reply_text(
-                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>❌ No links found.</b>\n<b>Please start the process again using /link.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
-                parse_mode=ParseMode
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ No links found.</b>\n<b>Please start the process again using /link.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
             )
             return
+
+        # Generate the final output and send a new message
+        await flink_generate_final_output(client, query.message)
         
-        links = []
-        quality_list = list(links.keys())
-        num_qualities = len(quality_list)
-        
-        if num_qualities == 2:
-            buttons.append([
-                InlineKeyboardButton(f"{quality_list[0]} 🦋", url=await create_link(client, links[quality_list[0]])),
-                InlineKeyboardButton(f"🦋 {quality_list[1]}", url=await create_link(client, links[quality_list[1]]))
-            ])
-        elif num_qualities == 3:
-            buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[0]}", url=await create_link(client, links[quality_list[0]])),
-                InlineKeyboardButton(f"{🦋 quality_list[1]}", url=await create_link(client, links[quality_list[1]]))
-            ])
-            buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[2]}", url=await create_link(client, links[quality_list[2]]))
-            ])
-        elif num_qualities == 4:
-            buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[0]}", url=await create_link(client, links[quality_list[0]])),
-                InlineKeyboardButton(f"🦋 {quality_list[1]}", url=await create_link(client, links[quality_list[1]]))
-            ])
-            buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[2]}", url=await create_link(client, links[quality_list[2]])),
-                InlineKeyboardButton(f"🦋 {quality_list[3]}", url=await create_link(client, links[quality_list[3]]))
-            ])
-        elif num_qualities == 5:
-            buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[0]}", url=await create_link(client, links[quality_list[0]])),
-                InlineKeyboardButton(f"🦋 {quality_list[1]}", url=await create_link(client, links[quality_list[1]]))
-            ])
-            buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[2]}", url=await create_link(client, links[quality_list[2]])),
-                InlineKeyboardButton(f"🦋 {quality_list[3]}", url=await create_link(client, links[quality_list[3]]))
-            ])
-            buttons.append([
-                InlineKeyboardButton(f"🦋 {quality_list[4]}", url=await create_link(client, links[quality_list[4]]))
-            ])
-        else:
-            for quality in quality_list:
-                buttons.append([
-                    InlineKeyboardButton(f"🦋 {quality}", url=await create_link(client, links[quality]))
-                ])
-        
-        edit_data = flink_user_data[user_id].get('edit_data', {})
-        caption = edit_data.get('caption', '')
-        
-        if edit_data.get('image'):
-            await query.message.reply_photo(
-                photo=edit_data['image'],
-                caption=caption,
-                reply_markup=InlineKeyboardMarkup(buttons),
-                parse_mode=ParseMode.HTML
-            )
-        else:
-            await query.message.reply(
-                text=caption,
-                reply_markup=InlineKeyboardMarkup(buttons),
-                parse_mode=ParseMode.HTML
-            )
-        
+        # Clean up user data
         if user_id in flink_user_data:
-            delete flink_user_data[user_id]
+            del flink_user_data[user_id]
+        
+        # Delete the original menu message
+        await query.message.delete()
         await query.answer(to_small_caps_with_html("Process completed"))
     except Exception as e:
         logger.error(f"Error in flink_done_output_callback for user {user_id}: {e}")
         await query.message.edit_text(
-            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n</b>❌ An error occurred while completing process.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+            to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while completing process.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
         )
 
-@Bot.on_callback_query(filters.regex(r"&(^flink_refresh$)"))
+@Bot.on_callback_query(filters.regex(r"^flink_refresh$"))
 async def flink_refresh_callback(client: Client, query: CallbackQuery):
     """Handle callback to refresh flink menu."""
     user_id = query.from_user.id
@@ -967,7 +913,7 @@ async def flink_refresh_callback(client: Client, query: CallbackQuery):
             parse_mode=ParseMode.HTML
         )
 
-@Bot.on_callback_query(filters.regex(r"&(^flink_(back_to_menu|cancel_process|back_to_output|close)$)"))
+@Bot.on_callback_query(filters.regex(r"^(flink_(back_to_menu|cancel_process|back_to_output|close))$"))
 async def flink_handle_back_buttons(client: Client, query: CallbackQuery):
     """Handle back, cancel, and close actions for flink command."""
     user_id = query.from_user.id
@@ -980,7 +926,6 @@ async def flink_handle_back_buttons(client: Client, query: CallbackQuery):
             await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
             return
 
-        
         if action == "back_to_menu":
             await show_flink_main_menu(client, query.message, edit=True)
             await query.answer(to_small_caps_with_html("Back to menu"))
@@ -989,16 +934,16 @@ async def flink_handle_back_buttons(client: Client, query: CallbackQuery):
                 to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Process cancelled.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
                 parse_mode=ParseMode.HTML
             )
-            if query.from_user.id in flink_user_data:
-                del flink_user_data[query.from_user.id]
+            if user_id in flink_user_data:
+                del flink_user_data[user_id]
             await query.answer(to_small_caps_with_html("Process cancelled"))
         elif action == "back_to_output":
             await flink_generate_final_output(client, query.message)
             await query.answer(to_small_caps_with_html("Back to output"))
         elif action == "close":
             await query.message.delete()
-            if query.from_user.id in flink_user_data:
-                del flink_user_data[query.from_user.id]
+            if user_id in flink_user_data:
+                del flink_user_data[user_id]
             await query.answer(to_small_caps_with_html("Menu closed"))
     except Exception as e:
         logger.error(f"Error in flink_handle_back_buttons for user {user_id}: {e}")
