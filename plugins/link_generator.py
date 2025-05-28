@@ -809,7 +809,7 @@ async def flink_add_caption_callback(client: Client, query: CallbackQuery):
             parse_mode=ParseMode.HTML
         )
 
-@Bot.on_message(filters.private & filters.text & filters.reply & ~filters.regex(r"^(?i)CANCEL$") & ~filters.forwarded)
+@Bot.on_message(filters.private & filters.text & filters.reply & ~filters.regex(r"^CANCEL$", flags=re.IGNORECASE) & ~filters.forwarded)
 async def handle_caption_input(client: Client, message: Message):
     """Handle caption input for the flink command."""
     user_id = message.from_user.id
