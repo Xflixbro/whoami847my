@@ -61,23 +61,24 @@ flink_user_data: Dict[int, Dict] = {}
 # Filter for batch command input
 async def batch_state_filter(_, __, message: Message):
     """Filter to ensure messages are processed only when awaiting batch input."""
-    chat_id = message.chat.id
-    if chat_id not in batch_user_data:
-        logger.info(f"batch_state_filter: No batch data for chat {chat_id}")
+    user_id = message.from_user.id
+    if user_id not in batch_user_data:
+        logger.info(f"batch_state_filter: No batch data for user {user_id}")
         return False
-    state = batch_user_data[chat_id].get('state')
-    logger.info(f"batch_state_filter for chat {chat_id}: state={state}, message_text={message.text}")
+    state = batch_user_data[user_id].get('state')
+    logger.info(f"batch_state_filter for user {user_id}: state={state}, message_text={message.text}")
     return state in ['awaiting_first_message', 'awaiting_second_message'] and (message.forward_from_chat or re.match(r"^https?://t\.me/.*$", message.text))
 
 @Bot.on_message(filters.private & admin & filters.command('link'))
 async def link_menu(client: Client, message: Message):
     """Handle /link command to display a menu for link generation options."""
-    chat_id = message.from_user.id
-    logger.info(f"Link command triggered by user {chat_id}")
+    user_id = message.from_user.id
+    logger.info(f"Link command triggered by user {user_id}")
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
-    if chat_id not in admin_ids and chat_id != OWNER_ID:
+    logger.info(f"Admin check in link_menu for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
+    if user_id not in admin_ids and user_id != OWNER_ID:
         await message.reply_text(
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
@@ -112,17 +113,17 @@ async def link_menu(client: Client, message: Message):
     try:
         # Send the menu with a random image
         await client.send_photo(
-            chat_id=chat_id,
+            chat_id=user_id,
             photo=selected_image,
             caption=menu_text,
             reply_markup=buttons,
             parse_mode=ParseMode.HTML
         )
     except Exception as e:
-        logger.error(f"Failed to send link menu with photo for user {chat_id}: {e}")
+        logger.error(f"Failed to send link menu with photo for user {user_id}: {e}")
         # Fallback to text-only message
         await client.send_message(
-            chat_id=chat_id,
+            chat_id=user_id,
             text=menu_text,
             reply_markup=buttons,
             parse_mode=ParseMode.HTML,
@@ -132,27 +133,32 @@ async def link_menu(client: Client, message: Message):
 @Bot.on_callback_query(filters.regex(r"^link_"))
 async def link_callback(client: Client, callback: CallbackQuery):
     """Handle callback queries for the /link command menu."""
-    data = callback.data
     user_id = callback.from_user.id
+    data = callback.data
     logger.info(f"Link callback triggered by user {user_id} with data {data}")
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in link_callback for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await callback.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
         return
 
+    # Create a new message object with the correct user_id
+    message = callback.message
+    message.from_user = callback.from_user  # Ensure the message object has the correct user
+
     if data == "link_batch":
-        await batch(client, callback.message)
+        await batch(client, message)
         await callback.answer(to_small_caps_with_html("Batch link generation started"))
     elif data == "link_genlink":
-        await link_generator(client, callback.message)
+        await link_generator(client, message)
         await callback.answer(to_small_caps_with_html("Single link generation started"))
     elif data == "link_custom":
-        await custom_batch(client, callback.message)
+        await custom_batch(client, message)
         await callback.answer(to_small_caps_with_html("Custom batch link generation started"))
     elif data == "link_flink":
-        await flink_command(client, callback.message)
+        await flink_command(client, message)
         await callback.answer(to_small_caps_with_html("Formatted link generation started"))
     elif data == "link_close":
         await callback.message.delete()
@@ -161,12 +167,13 @@ async def link_callback(client: Client, callback: CallbackQuery):
 @Bot.on_message(filters.private & admin & filters.command('batch'))
 async def batch(client: Client, message: Message):
     """Handle /batch command to generate a link for a range of messages."""
-    chat_id = message.from_user.id
-    logger.info(f"Batch command triggered by user {chat_id}")
+    user_id = message.from_user.id
+    logger.info(f"Batch command triggered by user {user_id}")
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
-    if chat_id not in admin_ids and chat_id != OWNER_ID:
+    logger.info(f"Admin check in batch for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
+    if user_id not in admin_ids and user_id != OWNER_ID:
         await message.reply_text(
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
@@ -174,7 +181,7 @@ async def batch(client: Client, message: Message):
         return
 
     # Initialize batch user data
-    batch_user_data[chat_id] = {
+    batch_user_data[user_id] = {
         'state': 'initial',
         'first_message_id': None,
         'menu_message': None
@@ -197,7 +204,7 @@ async def batch(client: Client, message: Message):
         reply_markup=buttons,
         parse_mode=ParseMode.HTML
     )
-    batch_user_data[chat_id]['menu_message'] = msg
+    batch_user_data[user_id]['menu_message'] = msg
 
 @Bot.on_callback_query(filters.regex(r"^batch_start_process$"))
 async def batch_start_process_callback(client: Client, query: CallbackQuery):
@@ -207,6 +214,7 @@ async def batch_start_process_callback(client: Client, query: CallbackQuery):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in batch_start_process for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
         return
@@ -243,6 +251,7 @@ async def batch_handle_cancel_close(client: Client, query: CallbackQuery):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in batch_handle_cancel_close for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
         return
@@ -270,6 +279,7 @@ async def handle_batch_input(client: Client, message: Message):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in handle_batch_input for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await message.reply_text(
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
@@ -347,6 +357,7 @@ async def link_generator(client: Client, message: Message):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in link_generator for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await message.reply_text(
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
@@ -399,6 +410,7 @@ async def custom_batch(client: Client, message: Message):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in custom_batch for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await message.reply_text(
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
@@ -475,6 +487,7 @@ async def flink_command(client: Client, message: Message):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in flink_command for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await message.reply_text(
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
@@ -510,6 +523,7 @@ async def show_flink_main_menu(client: Client, message: Message, edit: bool = Fa
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in show_flink_main_menu for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await message.reply_text(
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
@@ -566,6 +580,7 @@ async def flink_set_format_callback(client: Client, query: CallbackQuery):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in flink_set_format for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
         return
@@ -613,6 +628,7 @@ async def flink_generate_final_output(client: Client, message: Message) -> None:
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in flink_generate_final_output for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await message.reply_text(
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
@@ -720,6 +736,7 @@ async def flink_edit_output_callback(client: Client, query: CallbackQuery):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in flink_edit_output for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
         return
@@ -766,6 +783,7 @@ async def flink_add_image_callback(client: Client, query: CallbackQuery):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in flink_add_image for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
         return
@@ -798,6 +816,7 @@ async def handle_image_input(client: Client, message: Message):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in handle_image_input for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await message.reply_text(
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
@@ -850,6 +869,7 @@ async def flink_add_caption_callback(client: Client, query: CallbackQuery):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in flink_add_caption for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
         return
@@ -891,6 +911,7 @@ async def handle_caption_input(client: Client, message: Message):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in handle_caption_input for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await message.reply_text(
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
@@ -939,6 +960,7 @@ async def flink_done_output_callback(client: Client, query: CallbackQuery):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in flink_done_output for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
         return
@@ -976,6 +998,7 @@ async def flink_refresh_callback(client: Client, query: CallbackQuery):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in flink_refresh for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
         return
@@ -999,6 +1022,7 @@ async def flink_handle_back_buttons(client: Client, query: CallbackQuery):
 
     # Verify admin access
     admin_ids = await db.get_all_admins() or []
+    logger.info(f"Admin check in flink_handle_back_buttons for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
     if user_id not in admin_ids and user_id != OWNER_ID:
         await query.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
         return
