@@ -1094,7 +1094,7 @@ async def flink_add_caption_callback(client: Client, query: CallbackQuery):
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Type your caption:</b></blockquote>\n\n") +
             "<blockquote><b>Example</b></blockquote>\n\n" +
             "<blockquote><code>ᴛɪᴛʟᴇ- BLACK CLOVER\n" +
-            "<b>Aᴜᴅɪᴏ TʀᴀᴄK- Hɪɴᴅɪ Dᴜʙʙᴇᴅ\n\n" +
+            "<b>Aᴜᴅɪᴏ Tʀᴀᴄᴋ- Hɪɴᴅɪ Dᴜʙʙᴇᴅ\n\n" +
             "<b>Qᴜᴀʟɪᴛʏ - 360ᴘ, 720P, 1080ᴘ\n\n" +
             "<b>Eᴘɪsᴏᴅᴇ - 01 & S1 Uᴘʟᴏᴀᴅᴇᴅ\n\n" +
             "<b>Aʟʟ Qᴜᴀʟɪᴛʏ - ( Hɪɴᴅɪ Dᴜʙʙᴇᴅ )\n" +
