@@ -48,7 +48,12 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         for ch_id in channels:
             try:
                 chat = await client.get_chat(ch_id)
-                link = await client.create_chat_invite_link(ch_id, creates_join_request=True) if chat.join_to_send_messages else (await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}")
+                try:
+                    # Try to create a join request link for private channels
+                    link = await client.create_chat_invite_link(ch_id, creates_join_request=True)
+                except Exception:
+                    # Fallback to regular invite link or username
+                    link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
                 settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code></b></blockquote>\n"
             except Exception as e:
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
@@ -274,19 +279,32 @@ async def handle_channel_input(client: Client, message: Message):
 
             added_channels = []
             for channel_id in channel_ids:
-                chat = await client.get_chat(channel_id)
-                if chat.type != ChatType.CHANNEL:
-                    await message.reply(f"<b>❌ Only channels are allowed for ID: <code>{channel_id}</code></b>")
-                    continue
+                try:
+                    chat = await client.get_chat(channel_id)
+                    if chat.type != ChatType.CHANNEL:
+                        await message.reply(f"<b>❌ Only channels are allowed for ID: <code>{channel_id}</code></b>")
+                        continue
 
-                member = await client.get_chat_member(chat.id, "me")
-                if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-                    await message.reply(f"<b>❌ Bot must be an admin in channel: <code>{channel_id}</code></b>")
-                    continue
+                    member = await client.get_chat_member(chat.id, "me")
+                    if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+                        await message.reply(f"<b>❌ Bot must be an admin in channel: <code>{channel_id}</code></b>")
+                        continue
 
-                link = await client.create_chat_invite_link(channel_id, creates_join_request=True) if chat.join_to_send_messages else (await client.export_chat_invite_link(channel_id) if not chat.username else f"https://t.me/{chat.username}")
-                await db.add_channel(channel_id)
-                added_channels.append((chat.title, link, channel_id))
+                    try:
+                        # Try to create a join request link
+                        link = await client.create_chat_invite_link(channel_id, creates_join_request=True)
+                    except Exception:
+                        # Fallback to regular invite link or username
+                        link = await client.export_chat_invite_link(channel_id) if not chat.username else f"https://t.me/{chat.username}"
+                    await db.add_channel(channel_id)
+                    added_channels.append((chat.title, link, channel_id))
+                except Exception as e:
+                    logger.error(f"Failed to process channel {channel_id}: {e}")
+                    await message.reply(
+                        f"<blockquote><b>❌ Failed to process channel:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
+                        parse_mode=ParseMode.HTML
+                    )
+                    continue
 
             if added_channels:
                 response_text = "<blockquote><b>✅ Force-sub Channels added successfully!</b></blockquote>\n\n"
@@ -377,8 +395,13 @@ async def toggle_channel_mode(client: Client, callback: CallbackQuery):
         await db.set_channel_mode(ch_id, new_mode)
         
         chat = await client.get_chat(ch_id)
+        try:
+            # Try to create a join request link
+            link = await client.create_chat_invite_link(ch_id, creates_join_request=True)
+        except Exception:
+            # Fallback to regular invite link or username
+            link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
         status = "🟢" if new_mode == "on" else "🔴"
-        link = await client.create_chat_invite_link(ch_id, creates_join_request=True) if chat.join_to_send_messages else (await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}")
         await callback.message.edit_text(
             f"<blockquote><b>✅ Mode toggled for channel:</b></blockquote>\n\n"
             f"<blockquote><b>Name:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
@@ -469,7 +492,12 @@ async def add_force_sub(client: Client, message: Message):
                 await temp.edit(f"<b>❌ Bot must be an admin in channel: <code>{channel_id}</code></b>")
                 continue
 
-            link = await client.create_chat_invite_link(channel_id, creates_join_request=True) if chat.join_to_send_messages else (await client.export_chat_invite_link(channel_id) if not chat.username else f"https://t.me/{chat.username}")
+            try:
+                # Try to create a join request link
+                link = await client.create_chat_invite_link(channel_id, creates_join_request=True)
+            except Exception:
+                # Fallback to regular invite link or username
+                link = await client.export_chat_invite_link(channel_id) if not chat.username else f"https://t.me/{chat.username}"
             await db.add_channel(channel_id)
             added_channels.append((chat.title, link, channel_id))
         except Exception as e:
@@ -541,7 +569,12 @@ async def list_force_sub_channels(client: Client, message: Message):
     for ch_id in channels:
         try:
             chat = await client.get_chat(ch_id)
-            link = await client.create_chat_invite_link(ch_id, creates_join_request=True) if chat.join_to_send_messages else (await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}")
+            try:
+                # Try to create a join request link
+                link = await client.create_chat_invite_link(ch_id, creates_join_request=True)
+            except Exception:
+                # Fallback to regular invite link or username
+                link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
             text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code></b></blockquote>\n"
         except Exception as e:
             logger.error(f"Failed to fetch chat {ch_id}: {e}")
@@ -572,7 +605,12 @@ async def check_force_sub(client: Client, message: Message):
             member = await client.get_chat_member(ch_id, user_id)
             if member.status not in [ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
                 chat = await client.get_chat(ch_id)
-                link = await client.create_chat_invite_link(ch_id, creates_join_request=True) if chat.join_to_send_messages else (await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}")
+                try:
+                    # Try to create a join request link
+                    link = await client.create_chat_invite_link(ch_id, creates_join_request=True)
+                except Exception:
+                    # Fallback to regular invite link or username
+                    link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
                 not_subscribed.append((ch_id, chat.title, link))
                 buttons.append([InlineKeyboardButton(f"Join {chat.title}", url=link)])
         except Exception as e:
@@ -612,7 +650,12 @@ async def check_fsub_callback(client: Client, callback: CallbackQuery):
             member = await client.get_chat_member(ch_id, user_id)
             if member.status not in [ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
                 chat = await client.get_chat(ch_id)
-                link = await client.create_chat_invite_link(ch_id, creates_join_request=True) if chat.join_to_send_messages else (await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}")
+                try:
+                    # Try to create a join request link
+                    link = await client.create_chat_invite_link(ch_id, creates_join_request=True)
+                except Exception:
+                    # Fallback to regular invite link or username
+                    link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
                 not_subscribed.append((ch_id, chat.title, link))
                 buttons.append([InlineKeyboardButton(f"Join {chat.title}", url=link)])
         except Exception as e:
