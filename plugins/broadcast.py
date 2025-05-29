@@ -298,7 +298,17 @@ Unsuccessful: <code>{unsuccessful}</code>"""
                 'chat_id': message.chat.id,
                 'message_id': message.id,
                 'text': message.text or message.caption,
-                'entities': message.entities or message.caption_entities,
+                'entities': [
+                    {
+                        'type': entity.type.value,
+                        'offset': entity.offset,
+                        'length': entity.length,
+                        'url': getattr(entity, 'url', None),
+                        'user': getattr(entity, 'user', None),
+                        'language': getattr(entity, 'language', None),
+                        'custom_emoji_id': getattr(entity, 'custom_emoji_id', None)
+                    } for entity in (message.entities or message.caption_entities or [])
+                ],
                 'media': None
             }
             if message.photo:
@@ -307,30 +317,36 @@ Unsuccessful: <code>{unsuccessful}</code>"""
                 message_data['media'] = {'type': 'video', 'file_id': message.video.file_id}
             # Add support for other media types if needed (e.g., document, audio)
 
-            await db.set_temp_data(chat_id, "broadcast_message", message_data)
-            await db.set_temp_state(chat_id, "awaiting_dbroadcast_duration")
-            await message.reply(
-                "<b>Give me the duration in seconds.</b>",
-                reply_markup=InlineKeyboardMarkup([
-                    [
-                        InlineKeyboardButton("Back", callback_data="cast_back"),
-                        InlineKeyboardButton("Close", callback_data="cast_close")
-                    ]
-                ])
-            )
+            try:
+                await db.set_temp_data(chat_id, "broadcast_message", message_data)
+                await db.set_temp_state(chat_id, "awaiting_dbroadcast_duration")
+                await message.reply(
+                    "Give me the duration in seconds.",  # Removed HTML tags to avoid EntityBoundsInvalid
+                    reply_markup=InlineKeyboardMarkup([
+                        [
+                            InlineKeyboardButton("Back", callback_data="cast_back"),
+                            InlineKeyboardButton("Close", callback_data="cast_close")
+                        ]
+                    ])
+                )
+            except Exception as e:
+                logger.error(f"Failed to store message data for chat {chat_id}: {str(e)}")
+                await message.reply("Error: Failed to process message. Please try again.")
+                await db.set_temp_state(chat_id, "")
+                await show_broadcast_settings(client, chat_id)
 
         elif state == "awaiting_dbroadcast_duration":
             try:
                 duration = int(message.text)
             except ValueError:
-                await message.reply("<b>Please use a valid duration in seconds.</b>")
+                await message.reply("Please use a valid duration in seconds.")
                 await db.set_temp_state(chat_id, "")
                 await show_broadcast_settings(client, chat_id)
                 return
 
             broadcast_msg_data = await db.get_temp_data(chat_id, "broadcast_message")
             if not broadcast_msg_data:
-                await message.reply("<b>Error: No message found to broadcast.</b>")
+                await message.reply("Error: No message found to broadcast.")
                 await db.set_temp_state(chat_id, "")
                 await show_broadcast_settings(client, chat_id)
                 return
@@ -353,20 +369,29 @@ Unsuccessful: <code>{unsuccessful}</code>"""
                                 chat_id=user_id,
                                 photo=broadcast_msg_data['media']['file_id'],
                                 caption=broadcast_msg_data.get('text'),
-                                caption_entities=broadcast_msg_data.get('entities')
+                                caption_entities=[
+                                    pyrogram.types.MessageEntity(**entity)
+                                    for entity in broadcast_msg_data.get('entities', [])
+                                ]
                             )
                         elif broadcast_msg_data['media']['type'] == 'video':
                             sent_msg = await client.send_video(
                                 chat_id=user_id,
                                 video=broadcast_msg_data['media']['file_id'],
                                 caption=broadcast_msg_data.get('text'),
-                                caption_entities=broadcast_msg_data.get('entities')
+                                caption_entities=[
+                                    pyrogram.types.MessageEntity(**entity)
+                                    for entity in broadcast_msg_data.get('entities', [])
+                                ]
                             )
                     else:
                         sent_msg = await client.send_message(
                             chat_id=user_id,
                             text=broadcast_msg_data.get('text'),
-                            entities=broadcast_msg_data.get('entities')
+                            entities=[
+                                pyrogram.types.MessageEntity(**entity)
+                                for entity in broadcast_msg_data.get('entities', [])
+                            ]
                         )
                     await asyncio.sleep(duration)
                     await sent_msg.delete()
@@ -383,20 +408,29 @@ Unsuccessful: <code>{unsuccessful}</code>"""
                                 chat_id=user_id,
                                 photo=broadcast_msg_data['media']['file_id'],
                                 caption=broadcast_msg_data.get('text'),
-                                caption_entities=broadcast_msg_data.get('entities')
+                                caption_entities=[
+                                    pyrogram.types.MessageEntity(**entity)
+                                    for entity in broadcast_msg_data.get('entities', [])
+                                ]
                             )
                         elif broadcast_msg_data['media']['type'] == 'video':
                             sent_msg = await client.send_video(
                                 chat_id=user_id,
                                 video=broadcast_msg_data['media']['file_id'],
                                 caption=broadcast_msg_data.get('text'),
-                                caption_entities=broadcast_msg_data.get('entities')
+                                caption_entities=[
+                                    pyrogram.types.MessageEntity(**entity)
+                                    for entity in broadcast_msg_data.get('entities', [])
+                                ]
                             )
                     else:
                         sent_msg = await client.send_message(
                             chat_id=user_id,
                             text=broadcast_msg_data.get('text'),
-                            entities=broadcast_msg_data.get('entities')
+                            entities=[
+                                pyrogram.types.MessageEntity(**entity)
+                                for entity in broadcast_msg_data.get('entities', [])
+                            ]
                         )
                     await asyncio.sleep(duration)
                     await sent_msg.delete()
@@ -432,8 +466,8 @@ Unsuccessful: <code>{unsuccessful}</code>"""
     except Exception as e:
         logger.error(f"Failed to process broadcast input: {str(e)}")
         await message.reply(
-            f"<blockquote><b>Failed to process broadcast:</b></blockquote>\n<i>{str(e)}</i>",
-            parse_mode=ParseMode.HTML
+            f"Failed to process broadcast: {str(e)}",
+            parse_mode=None  # Avoid EntityBoundsInvalid
         )
         await db.set_temp_state(chat_id, "")
         await show_broadcast_settings(client, chat_id)
@@ -560,7 +594,7 @@ async def delete_broadcast(client: Bot, message: Message):
         try:
             duration = int(message.command[1])  # Get the duration in seconds
         except (IndexError, ValueError):
-            await message.reply("<b>Please use a valid duration in seconds.</b> Usage: /dbroadcast {duration}")
+            await message.reply("Please use a valid duration in seconds. Usage: /dbroadcast {duration}")
             return
 
         query = await db.full_userbase()
