@@ -3,7 +3,7 @@
 #
 # This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
 # and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+# Please see <https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE>
 #
 # All rights reserved.
 #
@@ -13,16 +13,19 @@ import os
 import random
 import sys
 import time
+from typing import List, Dict, Any
 from datetime import datetime, timedelta
-from pyrogram import Client, filters, __version__
+from pyrogram import Client, filters
 from pyrogram.enums import ParseMode, ChatAction
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatInviteLink, ChatPrivileges
-from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant, PeerIdInvalid
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.errors.exceptions.bad_request_400 import PeerIdInvalid
 from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated
 from bot import Bot
 from config import *
 from helper_func import *
 from database.database import *
+
+logger = logging.getLogger(__name__)
 
 #=====================================================================================##
 
@@ -30,7 +33,6 @@ REPLY_ERROR = "<code>Please send a message to broadcast</code>"
 
 #=====================================================================================##
 
-# Function to show broadcast settings with buttons and message effects
 async def show_broadcast_settings(client: Client, chat_id: int, message_id: int = None):
     settings_text = "<b>Broadcast Settings:</b>\n\n"
     settings_text += "<blockquote><b>Available Broadcast Options:</b></blockquote>\n\n"
@@ -54,10 +56,7 @@ async def show_broadcast_settings(client: Client, chat_id: int, message_id: int 
         ]
     )
 
-    # Select random image and effect
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
-
     try:
         if message_id:
             await client.edit_message_text(
@@ -75,8 +74,7 @@ async def show_broadcast_settings(client: Client, chat_id: int, message_id: int 
                     photo=selected_image,
                     caption=settings_text,
                     reply_markup=buttons,
-                    parse_mode=ParseMode.HTML,
-                    message_effect_id=selected_effect
+                    parse_mode=ParseMode.HTML
                 )
             except PeerIdInvalid:
                 await client.send_message(
@@ -84,24 +82,20 @@ async def show_broadcast_settings(client: Client, chat_id: int, message_id: int 
                     text=settings_text,
                     reply_markup=buttons,
                     parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True,
-                    message_effect_id=selected_effect
+                    disable_web_page_preview=True
                 )
     except Exception as e:
-        logger.error(f"Failed to show broadcast settings: {str(e)}")
+        logger.error(f"Failed to show broadcast settings for chat {chat_id}: {str(e)}")
         await client.send_message(
             chat_id=chat_id,
-            text="<b>Error: Failed to show broadcast settings. Please try again.</b>",
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            text="Failed to show broadcast settings. Please try again.",
+            parse_mode=ParseMode.HTML
         )
 
-# Command to show broadcast settings
 @Bot.on_message(filters.command('cast') & filters.private & admin)
 async def cast_settings(client: Client, message: Message):
     await show_broadcast_settings(client, message.chat.id)
 
-# Callback handler for broadcast settings buttons
 @Bot.on_callback_query(filters.regex(r"^cast_"))
 async def cast_callback(client: Client, callback: CallbackQuery):
     data = callback.data
@@ -121,8 +115,7 @@ async def cast_callback(client: Client, callback: CallbackQuery):
                         InlineKeyboardButton("Close", callback_data="cast_close")
                     ]
                 ]),
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
+                parse_mode=ParseMode.HTML
             )
             await callback.answer("Please send a message to broadcast.")
 
@@ -138,8 +131,7 @@ async def cast_callback(client: Client, callback: CallbackQuery):
                         InlineKeyboardButton("Close", callback_data="cast_close")
                     ]
                 ]),
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
+                parse_mode=ParseMode.HTML
             )
             await callback.answer("Please send a message to broadcast and pin.")
 
@@ -155,8 +147,7 @@ async def cast_callback(client: Client, callback: CallbackQuery):
                         InlineKeyboardButton("Close", callback_data="cast_close")
                     ]
                 ]),
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True
+                parse_mode=ParseMode.HTML
             )
             await callback.answer("Please send a message to broadcast with auto-delete.")
 
@@ -175,15 +166,14 @@ async def cast_callback(client: Client, callback: CallbackQuery):
             await callback.answer("Back to settings!")
 
     except Exception as e:
-        logger.error(f"Failed to handle callback {data}: {str(e)}")
+        logger.error(f"Failed to handle callback {data} for chat {chat_id}: {str(e)}")
         await client.send_message(
             chat_id=chat_id,
-            text="<b>Error: Failed to process callback. Please try again.</b>",
+            text="Failed to process callback. Please try again.",
             parse_mode=ParseMode.HTML
         )
         await db.set_temp_state(chat_id, "")
 
-# Handle broadcast input
 @Bot.on_message(filters.private & admin & ~filters.command(["start", "link", "forcesub", "admin", "auto_delete", "fsettings", "premium_cmd", "broadcast_cmd", "cast", "pbroadcast", "dbroadcast"]))
 async def handle_broadcast_input(client: Client, message: Message):
     chat_id = message.chat.id
@@ -192,7 +182,6 @@ async def handle_broadcast_input(client: Client, message: Message):
     try:
         if state == "awaiting_broadcast_input":
             query = await db.full_userbase()
-            broadcast_msg = message
             total = 0
             successful = 0
             blocked = 0
@@ -202,16 +191,16 @@ async def handle_broadcast_input(client: Client, message: Message):
             pls_wait = await message.reply("<i>Broadcast processing...</i>")
             for user_id in query:
                 try:
-                    await client.get_users(user_id)  # Check if user is accessible
-                    await broadcast_msg.copy(user_id)
+                    await client.get_users(user_id)
+                    await message.copy(user_id)
                     successful += 1
                 except FloodWait as e:
-                    if e.x > 60:  # Limit wait time to 60 seconds
+                    if e.x > 60:
                         logger.warning(f"FloodWait too long for user {user_id}: {e.x} seconds")
                         unsuccessful += 1
                         continue
                     await asyncio.sleep(e.x)
-                    await broadcast_msg.copy(user_id)
+                    await message.copy(user_id)
                     successful += 1
                 except UserIsBlocked:
                     await db.del_user(user_id)
@@ -242,7 +231,6 @@ Unsuccessful: <code>{unsuccessful}</code>"""
 
         elif state == "awaiting_pbroadcast_input":
             query = await db.full_userbase()
-            broadcast_msg = message
             total = 0
             successful = 0
             blocked = 0
@@ -252,17 +240,17 @@ Unsuccessful: <code>{unsuccessful}</code>"""
             pls_wait = await message.reply("<i>Broadcast processing...</i>")
             for user_id in query:
                 try:
-                    await client.get_users(user_id)  # Check if user is accessible
-                    sent_msg = await broadcast_msg.copy(user_id)
+                    await client.get_users(user_id)
+                    sent_msg = await message.copy(user_id)
                     await client.pin_chat_message(chat_id=user_id, message_id=sent_msg.id, both_sides=True)
                     successful += 1
                 except FloodWait as e:
-                    if e.x > 60:  # Limit wait time to 60 seconds
+                    if e.x > 60:
                         logger.warning(f"FloodWait too long for user {user_id}: {e.x} seconds")
                         unsuccessful += 1
                         continue
                     await asyncio.sleep(e.x)
-                    sent_msg = await broadcast_msg.copy(user_id)
+                    sent_msg = await message.copy(user_id)
                     await client.pin_chat_message(chat_id=user_id, message_id=sent_msg.id, both_sides=True)
                     successful += 1
                 except UserIsBlocked:
@@ -293,14 +281,13 @@ Unsuccessful: <code>{unsuccessful}</code>"""
             await show_broadcast_settings(client, chat_id)
 
         elif state == "awaiting_dbroadcast_message":
-            # Serialize message data for storage
             message_data = {
                 'chat_id': message.chat.id,
                 'message_id': message.id,
                 'text': message.text or message.caption,
                 'entities': [
                     {
-                        'type': entity.type.value,
+                        'type': str(entity.type).split('.')[-1],  # Convert enum to string (e.g., 'MessageEntityBold')
                         'offset': entity.offset,
                         'length': entity.length,
                         'url': getattr(entity, 'url', None),
@@ -315,13 +302,12 @@ Unsuccessful: <code>{unsuccessful}</code>"""
                 message_data['media'] = {'type': 'photo', 'file_id': message.photo.file_id}
             elif message.video:
                 message_data['media'] = {'type': 'video', 'file_id': message.video.file_id}
-            # Add support for other media types if needed (e.g., document, audio)
 
             try:
                 await db.set_temp_data(chat_id, "broadcast_message", message_data)
                 await db.set_temp_state(chat_id, "awaiting_dbroadcast_duration")
                 await message.reply(
-                    "Give me the duration in seconds.",  # Removed HTML tags to avoid EntityBoundsInvalid
+                    "Give me the duration in seconds.",
                     reply_markup=InlineKeyboardMarkup([
                         [
                             InlineKeyboardButton("Back", callback_data="cast_back"),
@@ -331,7 +317,7 @@ Unsuccessful: <code>{unsuccessful}</code>"""
                 )
             except Exception as e:
                 logger.error(f"Failed to store message data for chat {chat_id}: {str(e)}")
-                await message.reply("Error: Failed to process message. Please try again.")
+                await message.reply(f"Error: Failed to process message: {str(e)}")
                 await db.set_temp_state(chat_id, "")
                 await show_broadcast_settings(client, chat_id)
 
@@ -361,76 +347,85 @@ Unsuccessful: <code>{unsuccessful}</code>"""
             pls_wait = await message.reply("<i>Broadcast with auto-delete processing...</i>")
             for user_id in query:
                 try:
-                    await client.get_users(user_id)  # Check if user is accessible
-                    # Reconstruct message
+                    await client.get_users(user_id)
+                    entities = [
+                        pyrogram.types.MessageEntity(
+                            type=getattr(pyrogram.enums.MessageEntityType, entity['type'].upper(), None),
+                            offset=entity['offset'],
+                            length=entity['length'],
+                            url=entity.get('url'),
+                            user=entity.get('user'),
+                            language=entity.get('language'),
+                            custom_emoji_id=entity.get('custom_emoji_id')
+                        )
+                        for entity in broadcast_msg_data.get('entities', [])
+                        if getattr(pyrogram.enums.MessageEntityType, entity['type'].upper(), None)
+                    ]
+
                     if broadcast_msg_data.get('media'):
                         if broadcast_msg_data['media']['type'] == 'photo':
                             sent_msg = await client.send_photo(
                                 chat_id=user_id,
                                 photo=broadcast_msg_data['media']['file_id'],
                                 caption=broadcast_msg_data.get('text'),
-                                caption_entities=[
-                                    pyrogram.types.MessageEntity(**entity)
-                                    for entity in broadcast_msg_data.get('entities', [])
-                                ]
+                                caption_entities=entities
                             )
                         elif broadcast_msg_data['media']['type'] == 'video':
                             sent_msg = await client.send_video(
                                 chat_id=user_id,
                                 video=broadcast_msg_data['media']['file_id'],
                                 caption=broadcast_msg_data.get('text'),
-                                caption_entities=[
-                                    pyrogram.types.MessageEntity(**entity)
-                                    for entity in broadcast_msg_data.get('entities', [])
-                                ]
+                                caption_entities=entities
                             )
                     else:
                         sent_msg = await client.send_message(
                             chat_id=user_id,
                             text=broadcast_msg_data.get('text'),
-                            entities=[
-                                pyrogram.types.MessageEntity(**entity)
-                                for entity in broadcast_msg_data.get('entities', [])
-                            ]
+                            entities=entities
                         )
                     await asyncio.sleep(duration)
                     await sent_msg.delete()
                     successful += 1
                 except FloodWait as e:
-                    if e.x > 60:  # Limit wait time to 60 seconds
+                    if e.x > 60:
                         logger.warning(f"FloodWait too long for user {user_id}: {e.x} seconds")
                         unsuccessful += 1
                         continue
                     await asyncio.sleep(e.x)
+                    entities = [
+                        pyrogram.types.MessageEntity(
+                            type=getattr(pyrogram.enums.MessageEntityType, entity['type'].upper(), None),
+                            offset=entity['offset'],
+                            length=entity['length'],
+                            url=entity.get('url'),
+                            user=entity.get('user'),
+                            language=entity.get('language'),
+                            custom_emoji_id=entity.get('custom_emoji_id')
+                        )
+                        for entity in broadcast_msg_data.get('entities', [])
+                        if getattr(pyrogram.enums.MessageEntityType, entity['type'].upper(), None)
+                    ]
+
                     if broadcast_msg_data.get('media'):
                         if broadcast_msg_data['media']['type'] == 'photo':
                             sent_msg = await client.send_photo(
                                 chat_id=user_id,
                                 photo=broadcast_msg_data['media']['file_id'],
                                 caption=broadcast_msg_data.get('text'),
-                                caption_entities=[
-                                    pyrogram.types.MessageEntity(**entity)
-                                    for entity in broadcast_msg_data.get('entities', [])
-                                ]
+                                caption_entities=entities
                             )
                         elif broadcast_msg_data['media']['type'] == 'video':
                             sent_msg = await client.send_video(
                                 chat_id=user_id,
                                 video=broadcast_msg_data['media']['file_id'],
                                 caption=broadcast_msg_data.get('text'),
-                                caption_entities=[
-                                    pyrogram.types.MessageEntity(**entity)
-                                    for entity in broadcast_msg_data.get('entities', [])
-                                ]
+                                caption_entities=entities
                             )
                     else:
                         sent_msg = await client.send_message(
                             chat_id=user_id,
                             text=broadcast_msg_data.get('text'),
-                            entities=[
-                                pyrogram.types.MessageEntity(**entity)
-                                for entity in broadcast_msg_data.get('entities', [])
-                            ]
+                            entities=entities
                         )
                     await asyncio.sleep(duration)
                     await sent_msg.delete()
@@ -464,11 +459,8 @@ Unsuccessful: <code>{unsuccessful}</code>"""
             await show_broadcast_settings(client, chat_id)
 
     except Exception as e:
-        logger.error(f"Failed to process broadcast input: {str(e)}")
-        await message.reply(
-            f"Failed to process broadcast: {str(e)}",
-            parse_mode=None  # Avoid EntityBoundsInvalid
-        )
+        logger.error(f"Failed to process broadcast input for chat {chat_id}: {str(e)}")
+        await message.reply(f"Failed to process broadcast: {str(e)}")
         await db.set_temp_state(chat_id, "")
         await show_broadcast_settings(client, chat_id)
 
@@ -486,12 +478,12 @@ async def send_pin_text(client: Bot, message: Message):
         pls_wait = await message.reply("<i>Broadcast processing...</i>")
         for user_id in query:
             try:
-                await client.get_users(user_id)  # Check if user is accessible
+                await client.get_users(user_id)
                 sent_msg = await broadcast_msg.copy(user_id)
                 await client.pin_chat_message(chat_id=user_id, message_id=sent_msg.id, both_sides=True)
                 successful += 1
             except FloodWait as e:
-                if e.x > 60:  # Limit wait time to 60 seconds
+                if e.x > 60:
                     logger.warning(f"FloodWait too long for user {user_id}: {e.x} seconds")
                     unsuccessful += 1
                     continue
@@ -529,8 +521,6 @@ Unsuccessful: <code>{unsuccessful}</code>"""
         await asyncio.sleep(8)
         await msg.delete()
 
-#=====================================================================================##
-
 @Bot.on_message(filters.private & filters.command('broadcast') & admin)
 async def send_text(client: Bot, message: Message):
     if message.reply_to_message:
@@ -545,11 +535,11 @@ async def send_text(client: Bot, message: Message):
         pls_wait = await message.reply("<i>Broadcast processing...</i>")
         for user_id in query:
             try:
-                await client.get_users(user_id)  # Check if user is accessible
+                await client.get_users(user_id)
                 await broadcast_msg.copy(user_id)
                 successful += 1
             except FloodWait as e:
-                if e.x > 60:  # Limit wait time to 60 seconds
+                if e.x > 60:
                     logger.warning(f"FloodWait too long for user {user_id}: {e.x} seconds")
                     unsuccessful += 1
                     continue
@@ -586,13 +576,11 @@ Unsuccessful: <code>{unsuccessful}</code>"""
         await asyncio.sleep(8)
         await msg.delete()
 
-#=====================================================================================##
-
 @Bot.on_message(filters.private & filters.command('dbroadcast') & admin)
 async def delete_broadcast(client: Bot, message: Message):
     if message.reply_to_message:
         try:
-            duration = int(message.command[1])  # Get the duration in seconds
+            duration = int(message.command[1])
         except (IndexError, ValueError):
             await message.reply("Please use a valid duration in seconds. Usage: /dbroadcast {duration}")
             return
@@ -608,13 +596,13 @@ async def delete_broadcast(client: Bot, message: Message):
         pls_wait = await message.reply("<i>Broadcast with auto-delete processing...</i>")
         for user_id in query:
             try:
-                await client.get_users(user_id)  # Check if user is accessible
+                await client.get_users(user_id)
                 sent_msg = await broadcast_msg.copy(user_id)
                 await asyncio.sleep(duration)
                 await sent_msg.delete()
                 successful += 1
             except FloodWait as e:
-                if e.x > 60:  # Limit wait time to 60 seconds
+                if e.x > 60:
                     logger.warning(f"FloodWait too long for user {user_id}: {e.x} seconds")
                     unsuccessful += 1
                     continue
@@ -658,7 +646,7 @@ Unsuccessful: <code>{unsuccessful}</code>"""
 #
 # This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
 # and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+# Please see <https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE>
 #
 # All rights reserved.
 #
