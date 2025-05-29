@@ -187,7 +187,7 @@ async def cast_callback(client: Client, callback: CallbackQuery):
         )
         await db.set_temp_state(chat_id, "")
 
-@Bot.on_message(filters.private & admin_only & filters.text & filters.create(dbroadcast_duration_filter), group=-1)
+@Bot.on_message(filters.private & admin & filters.text & filters.create(dbroadcast_duration_filter), group=-1)
 async def handle_dbroadcast_duration(client: Client, message: Message):
     chat_id = message.chat.id
     logger.info(f"Handling dbroadcast duration input for chat {chat_id}: message_text={message.text}")
@@ -380,7 +380,7 @@ Unsuccessful: <code>{unsuccessful}</code>"""
         await db.set_temp_state(chat_id, "")
         await show_broadcast_settings(client, chat_id)
 
-@Bot.on_message(filters.private & admin_only & ~filters.command(["start", "link", "forcesub", "admin", "auto_delete", "fsettings", "premium_cmd", "broadcast_cmd", "cast", "pbroadcast", "dbroadcast"]))
+@Bot.on_message(filters.private & admin & ~filters.command(["start", "link", "forcesub", "admin", "auto_delete", "fsettings", "premium_cmd", "broadcast_cmd", "cast", "pbroadcast", "dbroadcast"]))
 async def handle_broadcast_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
@@ -574,7 +574,7 @@ Unsuccessful: <code>{unsuccessful}</code>"""
         await db.set_temp_state(chat_id, "")
         await show_broadcast_settings(client, chat_id)
 
-@Bot.on_message(filters.private & filters.command('pbroadcast') & admin_only)
+@Bot.on_message(filters.private & filters.command('pbroadcast') & admin)
 async def send_pin_text(client: Client, message: Message):
     if message.reply_to_message:
         query = await db.full_userbase()
@@ -641,7 +641,7 @@ Unsuccessful: <code>{unsuccessful}</code>"""
         await asyncio.sleep(8)
         await msg.delete()
 
-@Bot.on_message(filters.private & filters.command('broadcast') & admin_only)
+@Bot.on_message(filters.private & filters.command('broadcast') & admin)
 async def send_text(client: Client, message: Message):
     if message.reply_to_message:
         query = await db.full_userbase()
@@ -705,7 +705,7 @@ Unsuccessful: <code>{unsuccessful}</code>"""
         await asyncio.sleep(8)
         await msg.delete()
 
-@Bot.on_message(filters.private & filters.command('dbroadcast') & admin_only)
+@Bot.on_message(filters.private & filters.command('dbroadcast') & admin)
 async def delete_broadcast(client: Client, message: Message):
     if message.reply_to_message:
         try:
