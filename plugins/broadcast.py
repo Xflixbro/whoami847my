@@ -17,8 +17,8 @@ from datetime import datetime, timedelta
 from pyrogram import Client, filters, __version__
 from pyrogram.enums import ParseMode, ChatAction
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatInviteLink, ChatPrivileges
-from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
-from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated, UserNotParticipant
+from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant, PeerIdInvalid
+from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated
 from bot import Bot
 from config import *
 from helper_func import *
@@ -26,7 +26,7 @@ from database.database import *
 
 #=====================================================================================##
 
-REPLY_ERROR = "<code>give me any telegram message without any spaces</code>"
+REPLY_ERROR = "<code>Please send a message to broadcast</code>"
 
 #=====================================================================================##
 
@@ -58,8 +58,8 @@ async def show_broadcast_settings(client: Client, chat_id: int, message_id: int 
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
     selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
 
-    if message_id:
-        try:
+    try:
+        if message_id:
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=message_id,
@@ -68,29 +68,33 @@ async def show_broadcast_settings(client: Client, chat_id: int, message_id: int 
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=True
             )
-        except Exception as e:
-            logger.error(f"Failed to edit broadcast settings message: {e}")
-    else:
-        try:
-            await client.send_photo(
-                chat_id=chat_id,
-                photo=selected_image,
-                caption=settings_text,
-                reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                message_effect_id=selected_effect
-            )
-        except Exception as e:
-            logger.error(f"Failed to send broadcast settings with photo: {e}")
-            # Fallback to text-only message
-            await client.send_message(
-                chat_id=chat_id,
-                text=settings_text,
-                reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True,
-                message_effect_id=selected_effect
-            )
+        else:
+            try:
+                await client.send_photo(
+                    chat_id=chat_id,
+                    photo=selected_image,
+                    caption=settings_text,
+                    reply_markup=buttons,
+                    parse_mode=ParseMode.HTML,
+                    message_effect_id=selected_effect
+                )
+            except PeerIdInvalid:
+                await client.send_message(
+                    chat_id=chat_id,
+                    text=settings_text,
+                    reply_markup=buttons,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    message_effect_id=selected_effect
+                )
+    except Exception as e:
+        logger.error(f"Failed to show broadcast settings: {e}")
+        await client.send_message(
+            chat_id=chat_id,
+            text="<b>Error: Failed to show broadcast settings. Please try again.</b>",
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
 
 # Command to show broadcast settings
 @Bot.on_message(filters.command('cast') & filters.private & admin)
@@ -104,73 +108,83 @@ async def cast_callback(client: Client, callback: CallbackQuery):
     chat_id = callback.message.chat.id
     message_id = callback.message.id
 
-    if data == "cast_broadcast":
-        await db.set_temp_state(chat_id, "awaiting_broadcast_input")
-        await client.edit_message_text(
+    try:
+        if data == "cast_broadcast":
+            await db.set_temp_state(chat_id, "awaiting_broadcast_input")
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=REPLY_ERROR,
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("Back", callback_data="cast_back"),
+                        InlineKeyboardButton("Close", callback_data="cast_close")
+                    ]
+                ]),
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+            await callback.answer("Please send a message to broadcast.")
+
+        elif data == "cast_pbroadcast":
+            await db.set_temp_state(chat_id, "awaiting_pbroadcast_input")
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=REPLY_ERROR,
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("Back", callback_data="cast_back"),
+                        InlineKeyboardButton("Close", callback_data="cast_close")
+                    ]
+                ]),
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+            await callback.answer("Please send a message to broadcast and pin.")
+
+        elif data == "cast_dbroadcast":
+            await db.set_temp_state(chat_id, "awaiting_dbroadcast_message")
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=REPLY_ERROR,
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("Back", callback_data="cast_back"),
+                        InlineKeyboardButton("Close", callback_data="cast_close")
+                    ]
+                ]),
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+            await callback.answer("Please send a message to broadcast with auto-delete.")
+
+        elif data == "cast_refresh":
+            await show_broadcast_settings(client, chat_id, message_id)
+            await callback.answer("Settings refreshed!")
+
+        elif data == "cast_close":
+            await db.set_temp_state(chat_id, "")
+            await callback.message.delete()
+            await callback.answer("Settings closed!")
+
+        elif data == "cast_back":
+            await db.set_temp_state(chat_id, "")
+            await show_broadcast_settings(client, chat_id, message_id)
+            await callback.answer("Back to settings!")
+
+    except Exception as e:
+        logger.error(f"Failed to handle callback {data}: {e}")
+        await client.send_message(
             chat_id=chat_id,
-            message_id=message_id,
-            text=REPLY_ERROR,
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("Back", callback_data="cast_back"),
-                    InlineKeyboardButton("Close", callback_data="cast_close")
-                ]
-            ]),
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            text="<b>Error: Failed to process callback. Please try again.</b>",
+            parse_mode=ParseMode.HTML
         )
-        await callback.answer("Please reply to a message to broadcast.")
-
-    elif data == "cast_pbroadcast":
-        await db.set_temp_state(chat_id, "awaiting_pbroadcast_input")
-        await client.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_id,
-            text=REPLY_ERROR,
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("Back", callback_data="cast_back"),
-                    InlineKeyboardButton("Close", callback_data="cast_close")
-                ]
-            ]),
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
-        )
-        await callback.answer("Please reply to a message to broadcast and pin.")
-
-    elif data == "cast_dbroadcast":
-        await db.set_temp_state(chat_id, "awaiting_dbroadcast_message")
-        await client.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_id,
-            text=REPLY_ERROR,
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("Back", callback_data="cast_back"),
-                    InlineKeyboardButton("Close", callback_data="cast_close")
-                ]
-            ]),
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
-        )
-        await callback.answer("Please reply to a message to broadcast with auto-delete.")
-
-    elif data == "cast_refresh":
-        await show_broadcast_settings(client, chat_id, message_id)
-        await callback.answer("Settings refreshed!")
-
-    elif data == "cast_close":
         await db.set_temp_state(chat_id, "")
-        await callback.message.delete()
-        await callback.answer("Settings closed!")
-
-    elif data == "cast_back":
-        await db.set_temp_state(chat_id, "")
-        await show_broadcast_settings(client, chat_id, message_id)
-        await callback.answer("Back to settings!")
 
 # Handle broadcast input
-@Bot.on_message(filters.private & filters.reply & admin)
+@Bot.on_message(filters.private & admin)
 async def handle_broadcast_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
@@ -178,7 +192,7 @@ async def handle_broadcast_input(client: Client, message: Message):
     try:
         if state == "awaiting_broadcast_input":
             query = await db.full_userbase()
-            broadcast_msg = message.reply_to_message
+            broadcast_msg = message
             total = 0
             successful = 0
             blocked = 0
@@ -186,23 +200,28 @@ async def handle_broadcast_input(client: Client, message: Message):
             unsuccessful = 0
 
             pls_wait = await message.reply("<i>Broadcast processing...</i>")
-            for chat_id in query:
+            for user_id in query:
                 try:
-                    await broadcast_msg.copy(chat_id)
+                    await client.get_users(user_id)  # Check if user is accessible
+                    await broadcast_msg.copy(user_id)
                     successful += 1
                 except FloodWait as e:
                     await asyncio.sleep(e.x)
-                    await broadcast_msg.copy(chat_id)
+                    await broadcast_msg.copy(user_id)
                     successful += 1
                 except UserIsBlocked:
-                    await db.del_user(chat_id)
+                    await db.del_user(user_id)
                     blocked += 1
                 except InputUserDeactivated:
-                    await db.del_user(chat_id)
+                    await db.del_user(user_id)
                     deleted += 1
-                except:
+                except PeerIdInvalid:
+                    await db.del_user(user_id)
                     unsuccessful += 1
-                    pass
+                    logger.warning(f"Removed invalid user ID {user_id} from database due to PeerIdInvalid")
+                except Exception as e:
+                    unsuccessful += 1
+                    logger.error(f"Failed to send message to {user_id}: {e}")
                 total += 1
 
             status = f"""<b><u>Broadcast completed</u></b>
@@ -219,7 +238,7 @@ Unsuccessful: <code>{unsuccessful}</code>"""
 
         elif state == "awaiting_pbroadcast_input":
             query = await db.full_userbase()
-            broadcast_msg = message.reply_to_message
+            broadcast_msg = message
             total = 0
             successful = 0
             blocked = 0
@@ -227,25 +246,30 @@ Unsuccessful: <code>{unsuccessful}</code>"""
             unsuccessful = 0
 
             pls_wait = await message.reply("<i>Broadcast processing...</i>")
-            for chat_id in query:
+            for user_id in query:
                 try:
-                    sent_msg = await broadcast_msg.copy(chat_id)
-                    await client.pin_chat_message(chat_id=chat_id, message_id=sent_msg.id, both_sides=True)
+                    await client.get_users(user_id)  # Check if user is accessible
+                    sent_msg = await broadcast_msg.copy(user_id)
+                    await client.pin_chat_message(chat_id=user_id, message_id=sent_msg.id, both_sides=True)
                     successful += 1
                 except FloodWait as e:
                     await asyncio.sleep(e.x)
-                    sent_msg = await broadcast_msg.copy(chat_id)
-                    await client.pin_chat_message(chat_id=chat_id, message_id=sent_msg.id, both_sides=True)
+                    sent_msg = await broadcast_msg.copy(user_id)
+                    await client.pin_chat_message(chat_id=user_id, message_id=sent_msg.id, both_sides=True)
                     successful += 1
                 except UserIsBlocked:
-                    await db.del_user(chat_id)
+                    await db.del_user(user_id)
                     blocked += 1
                 except InputUserDeactivated:
-                    await db.del_user(chat_id)
+                    await db.del_user(user_id)
                     deleted += 1
-                except Exception as e:
-                    print(f"Failed to send or pin message to {chat_id}: {e}")
+                except PeerIdInvalid:
+                    await db.del_user(user_id)
                     unsuccessful += 1
+                    logger.warning(f"Removed invalid user ID {user_id} from database due to PeerIdInvalid")
+                except Exception as e:
+                    unsuccessful += 1
+                    logger.error(f"Failed to send or pin message to {user_id}: {e}")
                 total += 1
 
             status = f"""<b><u>Broadcast completed</u></b>
@@ -262,6 +286,7 @@ Unsuccessful: <code>{unsuccessful}</code>"""
 
         elif state == "awaiting_dbroadcast_message":
             await db.set_temp_state(chat_id, "awaiting_dbroadcast_duration")
+            await db.set_temp_data(chat_id, "broadcast_message", message)
             await message.reply(
                 "<b>Give me the duration in seconds.</b>",
                 reply_markup=InlineKeyboardMarkup([
@@ -271,8 +296,6 @@ Unsuccessful: <code>{unsuccessful}</code>"""
                     ]
                 ])
             )
-            # Store the replied message temporarily
-            await db.set_temp_data(chat_id, "broadcast_message", message.reply_to_message)
 
         elif state == "awaiting_dbroadcast_duration":
             try:
@@ -298,27 +321,32 @@ Unsuccessful: <code>{unsuccessful}</code>"""
             unsuccessful = 0
 
             pls_wait = await message.reply("<i>Broadcast with auto-delete processing...</i>")
-            for chat_id in query:
+            for user_id in query:
                 try:
-                    sent_msg = await broadcast_msg.copy(chat_id)
+                    await client.get_users(user_id)  # Check if user is accessible
+                    sent_msg = await broadcast_msg.copy(user_id)
                     await asyncio.sleep(duration)
                     await sent_msg.delete()
                     successful += 1
                 except FloodWait as e:
                     await asyncio.sleep(e.x)
-                    sent_msg = await broadcast_msg.copy(chat_id)
+                    sent_msg = await broadcast_msg.copy(user_id)
                     await asyncio.sleep(duration)
                     await sent_msg.delete()
                     successful += 1
                 except UserIsBlocked:
-                    await db.del_user(chat_id)
+                    await db.del_user(user_id)
                     blocked += 1
                 except InputUserDeactivated:
-                    await db.del_user(chat_id)
+                    await db.del_user(user_id)
                     deleted += 1
-                except:
+                except PeerIdInvalid:
+                    await db.del_user(user_id)
                     unsuccessful += 1
-                    pass
+                    logger.warning(f"Removed invalid user ID {user_id} from database due to PeerIdInvalid")
+                except Exception as e:
+                    unsuccessful += 1
+                    logger.error(f"Failed to send or delete message to {user_id}: {e}")
                 total += 1
 
             status = f"""<b><u>Broadcast with auto-delete completed</u></b>
@@ -355,25 +383,30 @@ async def send_pin_text(client: Bot, message: Message):
         unsuccessful = 0
 
         pls_wait = await message.reply("<i>Broadcast processing...</i>")
-        for chat_id in query:
+        for user_id in query:
             try:
-                sent_msg = await broadcast_msg.copy(chat_id)
-                await client.pin_chat_message(chat_id=chat_id, message_id=sent_msg.id, both_sides=True)
+                await client.get_users(user_id)  # Check if user is accessible
+                sent_msg = await broadcast_msg.copy(user_id)
+                await client.pin_chat_message(chat_id=user_id, message_id=sent_msg.id, both_sides=True)
                 successful += 1
             except FloodWait as e:
                 await asyncio.sleep(e.x)
-                sent_msg = await broadcast_msg.copy(chat_id)
-                await client.pin_chat_message(chat_id=chat_id, message_id=sent_msg.id, both_sides=True)
+                sent_msg = await broadcast_msg.copy(user_id)
+                await client.pin_chat_message(chat_id=user_id, message_id=sent_msg.id, both_sides=True)
                 successful += 1
             except UserIsBlocked:
-                await db.del_user(chat_id)
+                await db.del_user(user_id)
                 blocked += 1
             except InputUserDeactivated:
-                await db.del_user(chat_id)
+                await db.del_user(user_id)
                 deleted += 1
-            except Exception as e:
-                print(f"Failed to send or pin message to {chat_id}: {e}")
+            except PeerIdInvalid:
+                await db.del_user(user_id)
                 unsuccessful += 1
+                logger.warning(f"Removed invalid user ID {user_id} from database due to PeerIdInvalid")
+            except Exception as e:
+                unsuccessful += 1
+                logger.error(f"Failed to send or pin message to {user_id}: {e}")
             total += 1
 
         status = f"""<b><u>Broadcast completed</u></b>
@@ -384,7 +417,7 @@ Blocked Users: <code>{blocked}</code>
 Deleted Accounts: <code>{deleted}</code>
 Unsuccessful: <code>{unsuccessful}</code>"""
 
-        return await pls_wait.edit(status)
+        await pls_wait.edit(status)
 
     else:
         msg = await message.reply(REPLY_ERROR)
@@ -405,23 +438,28 @@ async def send_text(client: Bot, message: Message):
         unsuccessful = 0
 
         pls_wait = await message.reply("<i>Broadcast processing...</i>")
-        for chat_id in query:
+        for user_id in query:
             try:
-                await broadcast_msg.copy(chat_id)
+                await client.get_users(user_id)  # Check if user is accessible
+                await broadcast_msg.copy(user_id)
                 successful += 1
             except FloodWait as e:
                 await asyncio.sleep(e.x)
-                await broadcast_msg.copy(chat_id)
+                await broadcast_msg.copy(user_id)
                 successful += 1
             except UserIsBlocked:
-                await db.del_user(chat_id)
+                await db.del_user(user_id)
                 blocked += 1
             except InputUserDeactivated:
-                await db.del_user(chat_id)
+                await db.del_user(user_id)
                 deleted += 1
-            except:
+            except PeerIdInvalid:
+                await db.del_user(user_id)
                 unsuccessful += 1
-                pass
+                logger.warning(f"Removed invalid user ID {user_id} from database due to PeerIdInvalid")
+            except Exception as e:
+                unsuccessful += 1
+                logger.error(f"Failed to send message to {user_id}: {e}")
             total += 1
 
         status = f"""<b><u>Broadcast completed</u></b>
@@ -432,7 +470,7 @@ Blocked Users: <code>{blocked}</code>
 Deleted Accounts: <code>{deleted}</code>
 Unsuccessful: <code>{unsuccessful}</code>"""
 
-        return await pls_wait.edit(status)
+        await pls_wait.edit(status)
 
     else:
         msg = await message.reply(REPLY_ERROR)
@@ -459,27 +497,32 @@ async def delete_broadcast(client: Bot, message: Message):
         unsuccessful = 0
 
         pls_wait = await message.reply("<i>Broadcast with auto-delete processing...</i>")
-        for chat_id in query:
+        for user_id in query:
             try:
-                sent_msg = await broadcast_msg.copy(chat_id)
+                await client.get_users(user_id)  # Check if user is accessible
+                sent_msg = await broadcast_msg.copy(user_id)
                 await asyncio.sleep(duration)
                 await sent_msg.delete()
                 successful += 1
             except FloodWait as e:
                 await asyncio.sleep(e.x)
-                sent_msg = await broadcast_msg.copy(chat_id)
+                sent_msg = await broadcast_msg.copy(user_id)
                 await asyncio.sleep(duration)
                 await sent_msg.delete()
                 successful += 1
             except UserIsBlocked:
-                await db.del_user(chat_id)
+                await db.del_user(user_id)
                 blocked += 1
             except InputUserDeactivated:
-                await db.del_user(chat_id)
+                await db.del_user(user_id)
                 deleted += 1
-            except:
+            except PeerIdInvalid:
+                await db.del_user(user_id)
                 unsuccessful += 1
-                pass
+                logger.warning(f"Removed invalid user ID {user_id} from database due to PeerIdInvalid")
+            except Exception as e:
+                unsuccessful += 1
+                logger.error(f"Failed to send or delete message to {user_id}: {e}")
             total += 1
 
         status = f"""<b><u>Broadcast with auto-delete completed</u></b>
@@ -490,7 +533,7 @@ Blocked Users: <code>{blocked}</code>
 Deleted Accounts: <code>{deleted}</code>
 Unsuccessful: <code>{unsuccessful}</code>"""
 
-        return await pls_wait.edit(status)
+        await pls_wait.edit(status)
 
     else:
         msg = await message.reply("Please reply to a message to broadcast it with auto-delete.")
