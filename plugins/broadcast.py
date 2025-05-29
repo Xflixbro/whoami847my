@@ -178,6 +178,7 @@ async def cast_callback(client: Client, callback: CallbackQuery):
 async def handle_broadcast_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
+    logger.info(f"Handling broadcast input for chat {chat_id} with state {state}")
 
     try:
         if state == "awaiting_broadcast_input":
@@ -287,7 +288,7 @@ Unsuccessful: <code>{unsuccessful}</code>"""
                 'text': message.text or message.caption,
                 'entities': [
                     {
-                        'type': str(entity.type).split('.')[-1],  # Convert enum to string (e.g., 'MessageEntityBold')
+                        'type': str(entity.type).split('.')[-1],  # Convert enum to string
                         'offset': entity.offset,
                         'length': entity.length,
                         'url': getattr(entity, 'url', None),
@@ -322,9 +323,12 @@ Unsuccessful: <code>{unsuccessful}</code>"""
                 await show_broadcast_settings(client, chat_id)
 
         elif state == "awaiting_dbroadcast_duration":
+            logger.info(f"Received duration input for chat {chat_id}: {message.text}")
             try:
                 duration = int(message.text)
+                logger.info(f"Parsed duration: {duration} seconds")
             except ValueError:
+                logger.error(f"Invalid duration input for chat {chat_id}: {message.text}")
                 await message.reply("Please use a valid duration in seconds.")
                 await db.set_temp_state(chat_id, "")
                 await show_broadcast_settings(client, chat_id)
@@ -332,11 +336,13 @@ Unsuccessful: <code>{unsuccessful}</code>"""
 
             broadcast_msg_data = await db.get_temp_data(chat_id, "broadcast_message")
             if not broadcast_msg_data:
+                logger.error(f"No broadcast message found for chat {chat_id}")
                 await message.reply("Error: No message found to broadcast.")
                 await db.set_temp_state(chat_id, "")
                 await show_broadcast_settings(client, chat_id)
                 return
 
+            logger.info(f"Broadcast message data for chat {chat_id}: {broadcast_msg_data}")
             query = await db.full_userbase()
             total = 0
             successful = 0
@@ -347,20 +353,28 @@ Unsuccessful: <code>{unsuccessful}</code>"""
             pls_wait = await message.reply("<i>Broadcast with auto-delete processing...</i>")
             for user_id in query:
                 try:
+                    logger.info(f"Attempting to broadcast to user {user_id}")
                     await client.get_users(user_id)
-                    entities = [
-                        pyrogram.types.MessageEntity(
-                            type=getattr(pyrogram.enums.MessageEntityType, entity['type'].upper(), None),
-                            offset=entity['offset'],
-                            length=entity['length'],
-                            url=entity.get('url'),
-                            user=entity.get('user'),
-                            language=entity.get('language'),
-                            custom_emoji_id=entity.get('custom_emoji_id')
-                        )
-                        for entity in broadcast_msg_data.get('entities', [])
-                        if getattr(pyrogram.enums.MessageEntityType, entity['type'].upper(), None)
-                    ]
+                    # Simplified entity reconstruction
+                    entities = []
+                    for entity in broadcast_msg_data.get('entities', []):
+                        try:
+                            entity_type = getattr(pyrogram.enums.MessageEntityType, entity['type'].upper(), None)
+                            if entity_type:
+                                entities.append(
+                                    pyrogram.types.MessageEntity(
+                                        type=entity_type,
+                                        offset=entity['offset'],
+                                        length=entity['length'],
+                                        url=entity.get('url'),
+                                        user=entity.get('user'),
+                                        language=entity.get('language'),
+                                        custom_emoji_id=entity.get('custom_emoji_id')
+                                    )
+                                )
+                        except Exception as e:
+                            logger.warning(f"Failed to process entity {entity['type']} for user {user_id}: {str(e)}")
+                            continue
 
                     if broadcast_msg_data.get('media'):
                         if broadcast_msg_data['media']['type'] == 'photo':
@@ -383,8 +397,10 @@ Unsuccessful: <code>{unsuccessful}</code>"""
                             text=broadcast_msg_data.get('text'),
                             entities=entities
                         )
+                    logger.info(f"Sent message to user {user_id}, waiting {duration} seconds before deletion")
                     await asyncio.sleep(duration)
                     await sent_msg.delete()
+                    logger.info(f"Deleted message for user {user_id}")
                     successful += 1
                 except FloodWait as e:
                     if e.x > 60:
@@ -392,19 +408,25 @@ Unsuccessful: <code>{unsuccessful}</code>"""
                         unsuccessful += 1
                         continue
                     await asyncio.sleep(e.x)
-                    entities = [
-                        pyrogram.types.MessageEntity(
-                            type=getattr(pyrogram.enums.MessageEntityType, entity['type'].upper(), None),
-                            offset=entity['offset'],
-                            length=entity['length'],
-                            url=entity.get('url'),
-                            user=entity.get('user'),
-                            language=entity.get('language'),
-                            custom_emoji_id=entity.get('custom_emoji_id')
-                        )
-                        for entity in broadcast_msg_data.get('entities', [])
-                        if getattr(pyrogram.enums.MessageEntityType, entity['type'].upper(), None)
-                    ]
+                    entities = []
+                    for entity in broadcast_msg_data.get('entities', []):
+                        try:
+                            entity_type = getattr(pyrogram.enums.MessageEntityType, entity['type'].upper(), None)
+                            if entity_type:
+                                entities.append(
+                                    pyrogram.types.MessageEntity(
+                                        type=entity_type,
+                                        offset=entity['offset'],
+                                        length=entity['length'],
+                                        url=entity.get('url'),
+                                        user=entity.get('user'),
+                                        language=entity.get('language'),
+                                        custom_emoji_id=entity.get('custom_emoji_id')
+                                    )
+                                )
+                        except Exception as e:
+                            logger.warning(f"Failed to process entity {entity['type']} for user {user_id}: {str(e)}")
+                            continue
 
                     if broadcast_msg_data.get('media'):
                         if broadcast_msg_data['media']['type'] == 'photo':
@@ -433,9 +455,11 @@ Unsuccessful: <code>{unsuccessful}</code>"""
                 except UserIsBlocked:
                     await db.del_user(user_id)
                     blocked += 1
+                    logger.info(f"User {user_id} blocked, removed from database")
                 except InputUserDeactivated:
                     await db.del_user(user_id)
                     deleted += 1
+                    logger.info(f"User {user_id} deactivated, removed from database")
                 except PeerIdInvalid:
                     await db.del_user(user_id)
                     unsuccessful += 1
@@ -541,8 +565,8 @@ async def send_text(client: Bot, message: Message):
             except FloodWait as e:
                 if e.x > 60:
                     logger.warning(f"FloodWait too long for user {user_id}: {e.x} seconds")
-                    unsuccessful += 1
-                    continue
+                unsuccessful += 1
+                continue
                 await asyncio.sleep(e.x)
                 await broadcast_msg.copy(user_id)
                 successful += 1
