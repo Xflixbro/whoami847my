@@ -28,6 +28,13 @@ from database.database import *
 
 REPLY_ERROR = "<code>Please send a message to broadcast</code>"
 
+# Custom filter for broadcast states
+async def broadcast_state_filter(_, __, message):
+    if not message.chat.type == "private":
+        return False
+    state = await db.get_temp_state(message.chat.id)
+    return state in ["awaiting_broadcast_input", "awaiting_pbroadcast_input", "awaiting_dbroadcast_message", "awaiting_dbroadcast_duration"]
+
 #=====================================================================================##
 
 # Function to show broadcast settings with buttons and message effects
@@ -184,7 +191,7 @@ async def cast_callback(client: Client, callback: CallbackQuery):
         await db.set_temp_state(chat_id, "")
 
 # Handle broadcast input
-@Bot.on_message(filters.private & admin)
+@Bot.on_message(filters.private & admin & filters.create(broadcast_state_filter))
 async def handle_broadcast_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
