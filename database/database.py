@@ -142,6 +142,23 @@ class Mehedi:
         data = await self.temp_state_data.find_one({'_id': chat_id})
         return data.get('state', '') if data else ''
 
+    async def set_temp_data(self, chat_id: int, key: str, value):
+        existing = await self.temp_state_data.find_one({'_id': chat_id})
+        if existing:
+            await self.temp_state_data.update_one(
+                {'_id': chat_id},
+                {'$set': {f'temp_data.{key}': value}}
+            )
+        else:
+            await self.temp_state_data.insert_one(
+                {'_id': chat_id, 'state': '', 'temp_data': {key: value}}
+            )
+        logger.info(f"Set temp data {key} for chat {chat_id}")
+
+    async def get_temp_data(self, chat_id: int, key: str):
+        data = await self.temp_state_data.find_one({'_id': chat_id})
+        return data.get('temp_data', {}).get(key, None) if data else None
+
     async def channel_exist(self, channel_id: int):
         found = await self.fsub_data.find_one({'_id': channel_id})
         return bool(found)
