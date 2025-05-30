@@ -35,9 +35,11 @@ MESSAGE_EFFECT_IDS = [
     5046589136895476101,  # 💩
 ]
 
-# Function to show force-sub settings with channels list, buttons, image, and message effects
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
     """Show the force-sub settings menu with channel list and controls."""
+    # Sync channels to ensure only valid channels are shown
+    await db.sync_channels(client)
+    
     settings_text = "<b>›› Request Fsub Settings:</b>\n\n"
     channels = await db.show_channels()
     
@@ -48,16 +50,12 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         for ch_id in channels:
             try:
                 chat = await client.get_chat(ch_id)
-                try:
-                    # Try to create a join request link for private channels
-                    link = await client.create_chat_invite_link(ch_id, creates_join_request=True)
-                except Exception:
-                    # Fallback to regular invite link or username
-                    link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
+                link = await get_channel_link(client, ch_id, await db.get_channel_mode(ch_id))
                 settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code></b></blockquote>\n"
             except Exception as e:
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
                 settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
+                await db.rem_channel(ch_id)  # Remove invalid channel
 
     buttons = InlineKeyboardMarkup(
         [
@@ -75,7 +73,6 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         ]
     )
 
-    # Select random image and effect
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
     selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
 
@@ -105,7 +102,6 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
             logger.info(f"Sent photo message with image {selected_image} and effect {selected_effect}")
         except Exception as e:
             logger.error(f"Failed to send photo message with image {selected_image}: {e}")
-            # Fallback to text-only message
             try:
                 await client.send_message(
                     chat_id=chat_id,
@@ -118,7 +114,6 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 logger.info(f"Sent text-only message with effect {selected_effect} as fallback")
             except Exception as e:
                 logger.error(f"Failed to send text-only message with effect {selected_effect}: {e}")
-                # Final fallback without effect
                 await client.send_message(
                     chat_id=chat_id,
                     text=settings_text,
@@ -127,6 +122,21 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                     disable_web_page_preview=True
                 )
                 logger.info("Sent text-only message without effect as final fallback")
+
+async def get_channel_link(client: Client, ch_id: int, mode: str):
+    """Generate appropriate link based on channel mode and privacy."""
+    try:
+        chat = await client.get_chat(ch_id)
+        if chat.type != ChatType.CHANNEL:
+            return None
+        if mode == "on" and not chat.username:  # Private channel with force-sub on
+            return await client.create_chat_invite_link(ch_id, creates_join_request=True)
+        else:  # Public or force-sub off
+            return await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
+    except Exception as e:
+        logger.error(f"Failed to generate link for channel {ch_id}: {e}")
+        await db.rem_channel(ch_id)  # Remove invalid channel
+        return None
 
 @Bot.on_message(filters.command('forcesub') & filters.private & admin)
 async def force_sub_settings(client: Client, message: Message):
@@ -181,6 +191,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
 
     elif data == "fsub_toggle_mode":
         temp = await callback.message.reply("<b><i>Wait a sec...</i></b>", quote=True)
+        await db.sync_channels(client)  # Sync channels before showing
         channels = await db.show_channels()
 
         if not channels:
@@ -199,6 +210,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
             except Exception as e:
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
                 buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
+                await db.rem_channel(ch_id)
 
         buttons.append([InlineKeyboardButton("Close ✖️", callback_data="close")])
 
@@ -228,7 +240,6 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
         await show_force_sub_settings(client, chat_id, message_id)
         await callback.answer("Action cancelled!")
 
-# Modified filter to avoid conflict with link_generator.py
 async def fsub_state_filter(_, __, message: Message):
     """Filter to ensure messages are processed only for force-sub related states."""
     chat_id = message.chat.id
@@ -240,7 +251,6 @@ async def fsub_state_filter(_, __, message: Message):
     if not message.text:
         logger.info(f"No message text provided in chat {chat_id}")
         return False
-    # Allow multiple channel IDs or 'all' for remove
     if state == "awaiting_add_channel_input":
         inputs = message.text.split()
         is_valid_input = all((text.startswith("-") and text[1:].isdigit()) for text in inputs)
@@ -290,20 +300,12 @@ async def handle_channel_input(client: Client, message: Message):
                         await message.reply(f"<b>❌ Bot must be an admin in channel: <code>{channel_id}</code></b>")
                         continue
 
-                    try:
-                        # Try to create a join request link
-                        link = await client.create_chat_invite_link(channel_id, creates_join_request=True)
-                    except Exception:
-                        # Fallback to regular invite link or username
-                        link = await client.export_chat_invite_link(channel_id) if not chat.username else f"https://t.me/{chat.username}"
+                    link = await get_channel_link(client, channel_id, "on")  # Default to 'on' mode
                     await db.add_channel(channel_id)
                     added_channels.append((chat.title, link, channel_id))
                 except Exception as e:
-                    logger.error(f"Failed to process channel {channel_id}: {e}")
-                    await message.reply(
-                        f"<blockquote><b>❌ Failed to process channel:</b></blockquote>\n<code>{channel_id}</code>\n\n<i>{e}</i>",
-                        parse_mode=ParseMode.HTML
-                    )
+                    logger.error(f"Failed to add channel {channel_id}: {e}")
+                    await message.reply(f"<b>❌ Failed to add channel: <code>{channel_id}</code></b>\n<i>{e}</i>")
                     continue
 
             if added_channels:
@@ -357,6 +359,7 @@ async def handle_channel_input(client: Client, message: Message):
 async def change_force_sub_mode(client: Client, message: Message):
     """Handle /fsub_mode command to toggle force-sub mode for channels."""
     temp = await message.reply("<b><i>Wait a sec...</i></b>", quote=True)
+    await db.sync_channels(client)  # Sync channels before showing
     channels = await db.show_channels()
 
     if not channels:
@@ -374,6 +377,7 @@ async def change_force_sub_mode(client: Client, message: Message):
         except Exception as e:
             logger.error(f"Failed to fetch chat {ch_id}: {e}")
             buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
+            await db.rem_channel(ch_id)
 
     buttons.append([InlineKeyboardButton("Close ✖️", callback_data="close")])
 
@@ -395,12 +399,7 @@ async def toggle_channel_mode(client: Client, callback: CallbackQuery):
         await db.set_channel_mode(ch_id, new_mode)
         
         chat = await client.get_chat(ch_id)
-        try:
-            # Try to create a join request link
-            link = await client.create_chat_invite_link(ch_id, creates_join_request=True)
-        except Exception:
-            # Fallback to regular invite link or username
-            link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
+        link = await get_channel_link(client, ch_id, new_mode)
         status = "🟢" if new_mode == "on" else "🔴"
         await callback.message.edit_text(
             f"<blockquote><b>✅ Mode toggled for channel:</b></blockquote>\n\n"
@@ -492,12 +491,7 @@ async def add_force_sub(client: Client, message: Message):
                 await temp.edit(f"<b>❌ Bot must be an admin in channel: <code>{channel_id}</code></b>")
                 continue
 
-            try:
-                # Try to create a join request link
-                link = await client.create_chat_invite_link(channel_id, creates_join_request=True)
-            except Exception:
-                # Fallback to regular invite link or username
-                link = await client.export_chat_invite_link(channel_id) if not chat.username else f"https://t.me/{chat.username}"
+            link = await get_channel_link(client, channel_id, "on")  # Default to 'on' mode
             await db.add_channel(channel_id)
             added_channels.append((chat.title, link, channel_id))
         except Exception as e:
@@ -559,6 +553,7 @@ async def del_force_sub_channel(client: Client, message: Message):
 async def list_force_sub_channels(client: Client, message: Message):
     """Handle /listchnl command to list all force-sub channels."""
     temp = await message.reply("<b><i>Fetching channels...</i></b>", quote=True)
+    await db.sync_channels(client)  # Sync channels before listing
     channels = await db.show_channels()
 
     if not channels:
@@ -569,16 +564,12 @@ async def list_force_sub_channels(client: Client, message: Message):
     for ch_id in channels:
         try:
             chat = await client.get_chat(ch_id)
-            try:
-                # Try to create a join request link
-                link = await client.create_chat_invite_link(ch_id, creates_join_request=True)
-            except Exception:
-                # Fallback to regular invite link or username
-                link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
+            link = await get_channel_link(client, ch_id, await db.get_channel_mode(ch_id))
             text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code></b></blockquote>\n"
         except Exception as e:
             logger.error(f"Failed to fetch chat {ch_id}: {e}")
             text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
+            await db.rem_channel(ch_id)
 
     buttons = [[InlineKeyboardButton("Close", callback_data="close")]]
     await temp.edit(
@@ -592,6 +583,7 @@ async def list_force_sub_channels(client: Client, message: Message):
 async def check_force_sub(client: Client, message: Message):
     """Handle /checkfsub command to verify user's force-sub channel membership."""
     user_id = message.from_user.id
+    await db.sync_channels(client)  # Sync channels before checking
     channels = await db.show_channels()
     if not channels:
         await message.reply("<blockquote><b>✅ No force-sub channels configured.</b></blockquote>")
@@ -605,16 +597,12 @@ async def check_force_sub(client: Client, message: Message):
             member = await client.get_chat_member(ch_id, user_id)
             if member.status not in [ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
                 chat = await client.get_chat(ch_id)
-                try:
-                    # Try to create a join request link
-                    link = await client.create_chat_invite_link(ch_id, creates_join_request=True)
-                except Exception:
-                    # Fallback to regular invite link or username
-                    link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
+                link = await get_channel_link(client, ch_id, await db.get_channel_mode(ch_id))
                 not_subscribed.append((ch_id, chat.title, link))
                 buttons.append([InlineKeyboardButton(f"Join {chat.title}", url=link)])
         except Exception as e:
             logger.error(f"Error checking membership for user {user_id} in channel {ch_id}: {e}")
+            await db.rem_channel(ch_id)
             continue
 
     if not_subscribed:
@@ -636,6 +624,7 @@ async def check_force_sub(client: Client, message: Message):
 async def check_fsub_callback(client: Client, callback: CallbackQuery):
     """Handle callback query to recheck force-subscription status."""
     user_id = callback.from_user.id
+    await db.sync_channels(client)  # Sync channels before checking
     channels = await db.show_channels()
     if not channels:
         await callback.message.edit_text("<blockquote><b>✅ No force-sub channels configured.</b></blockquote>")
@@ -650,16 +639,12 @@ async def check_fsub_callback(client: Client, callback: CallbackQuery):
             member = await client.get_chat_member(ch_id, user_id)
             if member.status not in [ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
                 chat = await client.get_chat(ch_id)
-                try:
-                    # Try to create a join request link
-                    link = await client.create_chat_invite_link(ch_id, creates_join_request=True)
-                except Exception:
-                    # Fallback to regular invite link or username
-                    link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
+                link = await get_channel_link(client, ch_id, await db.get_channel_mode(ch_id))
                 not_subscribed.append((ch_id, chat.title, link))
                 buttons.append([InlineKeyboardButton(f"Join {chat.title}", url=link)])
         except Exception as e:
             logger.error(f"Error checking membership for user {user_id} in channel {ch_id}: {e}")
+            await db.rem_channel(ch_id)
             continue
 
     if not_subscribed:
