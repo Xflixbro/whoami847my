@@ -9,7 +9,8 @@
 
 import motor.motor_asyncio
 import logging
-import os  # Added import for os
+import os
+from os import environ, getenv
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -141,14 +142,41 @@ class Mehedi:
         data = await self.temp_state_data.find_one({'_id': chat_id})
         return data.get('state', '') if data else ''
 
+    async def set_temp_data(self, chat_id: int, key: str, value):
+        existing = await self.temp_state_data.find_one({'_id': chat_id})
+        if existing:
+            await self.temp_state_data.update_one(
+                {'_id': chat_id},
+                {'$set': {f'data.{key}': value}}
+            )
+        else:
+            await self.temp_state_data.insert_one({
+                '_id': chat_id,
+                'state': '',
+                'data': {key: value}
+            })
+        logger.info(f"Set temp data for chat {chat_id}: {key} = {value}")
+
+    async def get_temp_data(self, chat_id: int, key: str):
+        data = await self.temp_state_data.find_one({'_id': chat_id})
+        if data and 'data' in data and key in data['data']:
+            return data['data'][key]
+        return None
+
     async def channel_exist(self, channel_id: int):
         found = await self.fsub_data.find_one({'_id': channel_id})
         return bool(found)
 
-    async def add_channel(self, channel_id: int):
+    async def add_channel(self, channel_id: int, title: str, link: str, link_type: str = "normal"):
         if not await self.channel_exist(channel_id):
-            await self.fsub_data.insert_one({'_id': channel_id, 'mode': 'off'})
-            logger.info(f"Added channel {channel_id} to force-sub list")
+            await self.fsub_data.insert_one({
+                '_id': channel_id,
+                'mode': 'off',
+                'title': title,
+                'invite_link': link,
+                'link_type': link_type
+            })
+            logger.info(f"Added channel {channel_id} ({title}) with link type {link_type}")
             return
 
     async def rem_channel(self, channel_id: int):
@@ -161,36 +189,26 @@ class Mehedi:
         channel_docs = await self.fsub_data.find().to_list(length=None)
         return [doc['_id'] for doc in channel_docs]
 
+    async def get_channel_info(self, channel_id: int):
+        data = await self.fsub_data.find_one({'_id': channel_id})
+        return data if data else None
+
     async def get_channel_mode(self, channel_id: int):
         data = await self.fsub_data.find_one({'_id': channel_id})
         return data.get("mode", "off") if data else "off"
 
-    async def set_channel_mode(self, channel_id: int, mode: str):
+    async def set_channel_mode(self, channel_id: int, mode: str, link: str = None, link_type: str = None):
+        update_data = {'mode': mode}
+        if link:
+            update_data['invite_link'] = link
+        if link_type:
+            update_data['link_type'] = link_type
         await self.fsub_data.update_one(
             {'_id': channel_id},
-            {'$set': {'mode': mode}},
+            {'$set': update_data},
             upsert=True
         )
-        logger.info(f"Set channel {channel_id} mode to {mode}")
-
-    async def sync_channels(self, client: 'pyrogram.Client'):
-        """Sync channels in database with bot's admin status."""
-        channel_docs = await self.fsub_data.find().to_list(length=None)
-        valid_channels = []
-        for doc in channel_docs:
-            ch_id = doc['_id']
-            try:
-                member = await client.get_chat_member(ch_id, "me")
-                if member.status in ['administrator', 'owner']:
-                    valid_channels.append(ch_id)
-                else:
-                    await self.rem_channel(ch_id)
-                    logger.warning(f"Removed channel {ch_id} from force-sub list: Bot is not an admin")
-            except Exception as e:
-                await self.rem_channel(ch_id)
-                logger.error(f"Failed to verify channel {ch_id}: {e}")
-        logger.info(f"Synced channels: {valid_channels}")
-        return valid_channels
+        logger.info(f"Set channel {channel_id} mode to {mode}, link_type to {link_type}")
 
     async def req_user(self, channel_id: int, user_id: int):
         try:
@@ -267,12 +285,10 @@ class Mehedi:
         return result[0]["total"] if result else 0
 
     async def get_settings(self):
-        """Retrieve current settings from the database."""
         data = await self.settings_data.find_one({'_id': 'bot_settings'})
         return data.get('settings', default_settings) if data else default_settings
 
     async def update_setting(self, setting_name, value):
-        """Update a specific setting in the database."""
         current_settings = await self.get_settings()
         current_settings[setting_name] = value
         await self.settings_data.update_one(
@@ -282,15 +298,4 @@ class Mehedi:
         )
         logger.info(f"Updated setting {setting_name} to {value}")
 
-# Initialize db with environment variables directly
 db = Mehedi(os.environ.get("DATABASE_URL", ""), os.environ.get("DATABASE_NAME", "animelord"))
-
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-#
