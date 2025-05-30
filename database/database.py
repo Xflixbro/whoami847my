@@ -9,7 +9,7 @@
 
 import motor.motor_asyncio
 import logging
-from os import environ
+import os  # Added import for os
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
