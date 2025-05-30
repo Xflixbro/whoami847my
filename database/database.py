@@ -173,7 +173,7 @@ class Mehedi:
                 '_id': channel_id,
                 'mode': 'off',
                 'title': title,
-                'invite_link': link,
+                'invite_link': str(link),  # Convert to string to avoid serialization issue
                 'link_type': link_type
             })
             logger.info(f"Added channel {channel_id} ({title}) with link type {link_type}")
@@ -200,7 +200,7 @@ class Mehedi:
     async def set_channel_mode(self, channel_id: int, mode: str, link: str = None, link_type: str = None):
         update_data = {'mode': mode}
         if link:
-            update_data['invite_link'] = link
+            update_data['invite_link'] = str(link)  # Convert to string to avoid serialization issue
         if link_type:
             update_data['link_type'] = link_type
         await self.fsub_data.update_one(
