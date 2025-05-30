@@ -9,7 +9,6 @@
 #
 
 import asyncio
-import os
 import random
 import logging
 from urllib.parse import quote
@@ -514,7 +513,7 @@ async def list_force_sub_channels(client: Client, message: Message):
             await temp.edit("<blockquote><b>❌ No force-sub channels found.</b></blockquote>")
             return
 
-        text = "<blockquote><b>⚡ Force-sub Channels:</b></blockquote>\n\n"
+        text = "<blockquote><b>🔥 Force-sub Channels:</b></blockquote>\n\n"
         for ch_id in channels:
             channel_info = await db.get_channel_info(ch_id)
             if channel_info:
@@ -535,7 +534,7 @@ async def list_force_sub_channels(client: Client, message: Message):
         )
     except Exception as e:
         logger.error(f"Failed to list channels: {e}")
-        await temp.edit("<blockquote><b>❌ Failed to fetch channels:</b></blockquote>")
+        await temp.edit("<blockquote><b>❌ Failed to fetch channels.</b></blockquote>")
 
 @Bot.on_message(filters.command('checkfsub') & filters.private)
 async def check_force_sub(client: Client, message: Message):
@@ -627,4 +626,4 @@ async def close_callback(client: Client, callback: CallbackQuery):
         await callback.answer()
     except Exception as e:
         logger.error(f"Error closing message: {e}")
-        await callback.answer("Failed to close", show_alert=True)
+        await callback.answer("Failed to close", show_alert=False)
