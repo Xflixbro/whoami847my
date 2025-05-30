@@ -13,7 +13,7 @@ from os import environ, getenv
 import logging
 from logging.handlers import RotatingFileHandler
 from pyrogram import filters
-# Updated import
+from database.database import db # Updated import
 
 # MehediYT69
 # --------------------------------------------
