@@ -9,8 +9,7 @@
 
 import motor.motor_asyncio
 import logging
-import os
-from os import environ, getenv
+from os import environ
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -46,7 +45,7 @@ class Mehedi:
         self.fsub_data = self.db['fsub']
         self.rqst_fsub_data = self.db['request_forcesub']
         self.rqst_fsub_Channel_data = self.db['request_forcesub_channel']
-        self.settings_data = self.db['settings_data']  # New collection for settings
+        self.settings_data = self.db['settings_data']
 
     async def present_user(self, user_id: int):
         found = await self.user_data.find_one({'_id': user_id})
@@ -142,29 +141,6 @@ class Mehedi:
         data = await self.temp_state_data.find_one({'_id': chat_id})
         return data.get('state', '') if data else ''
 
-    async def set_temp_data(self, chat_id: int, key: str, value):
-        """Set temporary data for a chat in the database."""
-        existing = await self.temp_state_data.find_one({'_id': chat_id})
-        if existing:
-            await self.temp_state_data.update_one(
-                {'_id': chat_id},
-                {'$set': {f'data.{key}': value}}
-            )
-        else:
-            await self.temp_state_data.insert_one({
-                '_id': chat_id,
-                'state': '',
-                'data': {key: value}
-            })
-        logger.info(f"Set temp data for chat {chat_id}: {key} = {value}")
-
-    async def get_temp_data(self, chat_id: int, key: str):
-        """Get temporary data for a chat from the database."""
-        data = await self.temp_state_data.find_one({'_id': chat_id})
-        if data and 'data' in data and key in data['data']:
-            return data['data'][key]
-        return None
-
     async def channel_exist(self, channel_id: int):
         found = await self.fsub_data.find_one({'_id': channel_id})
         return bool(found)
@@ -196,6 +172,25 @@ class Mehedi:
             upsert=True
         )
         logger.info(f"Set channel {channel_id} mode to {mode}")
+
+    async def sync_channels(self, client: 'pyrogram.Client'):
+        """Sync channels in database with bot's admin status."""
+        channel_docs = await self.fsub_data.find().to_list(length=None)
+        valid_channels = []
+        for doc in channel_docs:
+            ch_id = doc['_id']
+            try:
+                member = await client.get_chat_member(ch_id, "me")
+                if member.status in ['administrator', 'owner']:
+                    valid_channels.append(ch_id)
+                else:
+                    await self.rem_channel(ch_id)
+                    logger.warning(f"Removed channel {ch_id} from force-sub list: Bot is not an admin")
+            except Exception as e:
+                await self.rem_channel(ch_id)
+                logger.error(f"Failed to verify channel {ch_id}: {e}")
+        logger.info(f"Synced channels: {valid_channels}")
+        return valid_channels
 
     async def req_user(self, channel_id: int, user_id: int):
         try:
