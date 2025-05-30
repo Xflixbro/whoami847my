@@ -14,6 +14,7 @@ import random
 import sys
 import time
 import logging
+from urllib.parse import quote
 from pyrogram import Client, filters, __version__
 from pyrogram.enums import ParseMode, ChatAction, ChatMemberStatus, ChatType
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatMemberUpdated, ChatPermissions
@@ -23,15 +24,6 @@ from database.database import *
 from config import OWNER_ID
 
 logger = logging.getLogger(__name__)
-
-MESSAGE_EFFECT_IDS = [
-    5104841245755180586,  # 🔥
-    5107584321108051014,  # 👍
-    5044134455711629726,  # ❤️
-    5046509860389126442,  # 🎉
-    5104858069142078462,  # 👎
-    5046589136895476101,  # 💩
-]
 
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
     """Show the force-sub settings menu with channel list and controls."""
@@ -46,7 +38,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
             channel_info = await db.get_channel_info(ch_id)
             if channel_info:
                 title = channel_info.get('title', f"Channel {ch_id}")
-                link = channel_info.get('invite_link', '')
+                link = quote(channel_info.get('invite_link', ''))
                 settings_text += f"<blockquote><b><a href='{link}'>{title}</a> - <code>{ch_id}</code></b></blockquote>\n"
             else:
                 settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
@@ -68,7 +60,6 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
     )
 
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
 
     if message_id:
         try:
@@ -90,10 +81,9 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 photo=selected_image,
                 caption=settings_text,
                 reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                message_effect_id=selected_effect
+                parse_mode=ParseMode.HTML
             )
-            logger.info(f"Sent photo message with image {selected_image} and effect {selected_effect}")
+            logger.info(f"Sent photo message with image {selected_image}")
         except Exception as e:
             logger.error(f"Failed to send photo message with image {selected_image}: {e}")
             await client.send_message(
@@ -101,10 +91,9 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 text=settings_text,
                 reply_markup=buttons,
                 parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True,
-                message_effect_id=selected_effect
+                disable_web_page_preview=True
             )
-            logger.info(f"Sent text-only message with effect {selected_effect} as fallback")
+            logger.info("Sent text-only message as fallback")
 
 @Bot.on_message(filters.command('forcesub') & filters.private & admin)
 async def force_sub_settings(client: Client, message: Message):
@@ -180,6 +169,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
         await temp.edit(
             "<blockquote><b>⚡ Select a channel to toggle force-sub mode:</b></blockquote>",
             reply_markup=InlineKeyboardMarkup(buttons),
+            parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
         )
         await callback.answer()
@@ -250,8 +240,8 @@ async def handle_channel_input(client: Client, message: Message):
 
                     link_type = "join_request" if not chat.username else "normal"
                     link = await client.create_chat_invite_link(chat.id, creates_join_request=(link_type == "join_request")) if not chat.username else f"https://t.me/{chat.username}"
-                    await db.add_channel(channel_id, chat.title, link, link_type)
-                    added_channels.append((channel_id, chat.title, link))
+                    await db.add_channel(channel_id, chat.title, link.invite_link if hasattr(link, 'invite_link') else link, link_type)
+                    added_channels.append((channel_id, chat.title, link.invite_link if hasattr(link, 'invite_link') else link))
 
                 except Exception as e:
                     logger.error(f"Failed to add channel {channel_id}: {e}")
@@ -261,7 +251,7 @@ async def handle_channel_input(client: Client, message: Message):
             if added_channels:
                 response_text += "<blockquote><b>✅ Channels added successfully:</b></blockquote>\n"
                 for ch_id, title, link in added_channels:
-                    response_text += f"<blockquote><b><a href='{link}'>{title}</a> - <code>{ch_id}</code></b></blockquote>\n"
+                    response_text += f"<blockquote><b><a href='{quote(link)}'>{title}</a> - <code>{ch_id}</code></b></blockquote>\n"
             if failed_channels:
                 response_text += "<blockquote><b>❌ Failed to add channels:</b></blockquote>\n"
                 for ch_id, reason in failed_channels:
@@ -331,6 +321,7 @@ async def change_force_sub_mode(client: Client, message: Message):
     await temp.edit(
         "<blockquote><b>⚡ Select a channel to toggle force-sub mode:</b></blockquote>",
         reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode=ParseMode.HTML,
         disable_web_page_preview=True
     )
 
@@ -364,12 +355,12 @@ async def toggle_channel_mode(client: Client, callback: CallbackQuery):
         link_type = "join_request" if new_mode == "on" and not chat.username else "normal"
         link = await client.create_chat_invite_link(ch_id, creates_join_request=(link_type == "join_request")) if not chat.username else f"https://t.me/{chat.username}"
         
-        await db.set_channel_mode(ch_id, new_mode, link, link_type)
+        await db.set_channel_mode(ch_id, new_mode, link.invite_link if hasattr(link, 'invite_link') else link, link_type)
         
         status = "🟢" if new_mode == "on" else "🔴"
         await callback.message.edit_text(
             f"<blockquote><b>✅ Mode toggled for channel:</b></blockquote>\n\n"
-            f"<blockquote><b>Name:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+            f"<blockquote><b>Name:</b> <a href='{quote(link.invite_link if hasattr(link, 'invite_link') else link)}'>{chat.title}</a></blockquote>\n"
             f"<blockquote><b>ID:</b> <code>{ch_id}</code></blockquote>\n"
             f"<blockquote><b>Mode:</b> {status} {'Enabled' if new_mode == 'on' else 'Disabled'}</blockquote>",
             reply_markup=InlineKeyboardMarkup([
@@ -450,8 +441,8 @@ async def add_force_sub(client: Client, message: Message):
 
                 link_type = "join_request" if not chat.username else "normal"
                 link = await client.create_chat_invite_link(chat.id, creates_join_request=(link_type == "join_request")) if not chat.username else f"https://t.me/{chat.username}"
-                await db.add_channel(channel_id, chat.title, link, link_type)
-                added_channels.append((channel_id, chat.title, link))
+                await db.add_channel(channel_id, chat.title, link.invite_link if hasattr(link, 'invite_link') else link, link_type)
+                added_channels.append((channel_id, chat.title, link.invite_link if hasattr(link, 'invite_link') else link))
 
             except Exception as e:
                 logger.error(f"Failed to add channel {channel_id}: {e}")
@@ -461,7 +452,7 @@ async def add_force_sub(client: Client, message: Message):
         if added_channels:
             response_text += "<blockquote><b>✅ Channels added successfully:</b></blockquote>\n"
             for ch_id, title, link in added_channels:
-                response_text += f"<blockquote><b><a href='{link}'>{title}</a> - <code>{ch_id}</code></b></blockquote>\n"
+                response_text += f"<blockquote><b><a href='{quote(link)}'>{title}</a> - <code>{ch_id}</code></b></blockquote>\n"
         if failed_channels:
             response_text += "<blockquote><b>❌ Failed to add channels:</b></blockquote>\n"
             for ch_id, reason in failed_channels:
@@ -529,7 +520,7 @@ async def list_force_sub_channels(client: Client, message: Message):
         channel_info = await db.get_channel_info(ch_id)
         if channel_info:
             title = channel_info.get('title', f"Channel {ch_id}")
-            link = channel_info.get('invite_link', '')
+            link = quote(channel_info.get('invite_link', ''))
             text += f"<blockquote><b><a href='{link}'>{title}</a> - <code>{ch_id}</code></b></blockquote>\n"
         else:
             text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
@@ -560,7 +551,7 @@ async def check_force_sub(client: Client, message: Message):
                 channel_info = await db.get_channel_info(ch_id)
                 if channel_info:
                     title = channel_info.get('title', f"Channel {ch_id}")
-                    link = channel_info.get('invite_link', '')
+                    link = quote(channel_info.get('invite_link', ''))
                     not_subscribed.append((ch_id, title, link))
                     buttons.append([InlineKeyboardButton(f"Join {title}", url=link)])
         except Exception as e:
@@ -601,7 +592,7 @@ async def check_fsub_callback(client: Client, callback: CallbackQuery):
                 channel_info = await db.get_channel_info(ch_id)
                 if channel_info:
                     title = channel_info.get('title', f"Channel {ch_id}")
-                    link = channel_info.get('invite_link', '')
+                    link = quote(channel_info.get('invite_link', ''))
                     not_subscribed.append((ch_id, title, link))
                     buttons.append([InlineKeyboardButton(f"Join {title}", url=link)])
         except Exception as e:
