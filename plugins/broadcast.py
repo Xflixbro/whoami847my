@@ -380,7 +380,7 @@ Unsuccessful: <code>{unsuccessful}</code>"""
         await db.set_temp_state(chat_id, "")
         await show_broadcast_settings(client, chat_id)
 
-@Bot.on_message(filters.private & admin & ~filters.command(["start", "link", "forcesub", "admin", "auto_delete", "fsettings", "premium_cmd", "broadcast_cmd", "cast", "pbroadcast", "dbroadcast"]))
+@Bot.on_message(filters.private & admin & ~filters.command(["start", "link", "fsub_mode", "forcesub", "admin", "auto_delete", "fsettings", "premium_cmd", "broadcast_cmd", "cast", "pbroadcast", "dbroadcast"]))
 async def handle_broadcast_input(client: Client, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
