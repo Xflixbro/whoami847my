@@ -140,37 +140,27 @@ async def get_messages(client, message_ids):
     return messages
 
 async def get_message_id(client, message):
-    try:
-        if message.forward_from_chat:
-            if message.forward_from_chat.id == client.db_channel.id:
-                return message.forward_from_message_id
-            else:
-                logger.error(f"Forwarded message not from db channel: {message.forward_from_chat.id}")
-                return 0
-        elif message.forward_sender_name:
-            logger.error("Message has forward sender name, not supported")
-            return 0
-        elif message.text:
-            pattern = r"https://t\.me/(?:c/)?([0-9a-zA-Z_-]+)/(\d+)"
-            matches = re.match(pattern, message.text)
-            if not matches:
-                logger.error(f"Invalid link format: {message.text}")
-                return 0
-            channel_id, msg_id = matches.groups()
-            if channel_id.startswith("-100"):
-                channel_id = channel_id[4:]  # Remove -100 prefix
-            if channel_id.isdigit() and f"-100{channel_id}" == str(client.db_channel.id):
-                return int(msg_id)
-            elif channel_id == client.db_channel.username.lstrip('@'):
-                return int(msg_id)
-            else:
-                logger.error(f"Channel ID {channel_id} does not match db channel {client.db_channel.id}")
-                return 0
+    if message.forward_from_chat:
+        if message.forward_from_chat.id == client.db_channel.id:
+            return message.forward_from_message_id
         else:
-            logger.error("Message has no valid content for link generation")
             return 0
-    except Exception as e:
-        logger.error(f"Error in get_message_id: {e}")
+    elif message.forward_sender_name:
+        return 0
+    elif message.text:
+        pattern = r"https://t.me/(?:c/)?(.*)/(\d+)"
+        matches = re.match(pattern,message.text)
+        if not matches:
+            return 0
+        channel_id = matches.group(1)
+        msg_id = int(matches.group(2))
+        if channel_id.isdigit():
+            if f"-100{channel_id}" == str(client.db_channel.id):
+                return msg_id
+        else:
+            if channel_id == client.db_channel.username:
+                return msg_id
+    else:
         return 0
 
 def get_readable_time(seconds: int) -> str:
