@@ -154,7 +154,7 @@ async def cast_callback(client: Client, query: CallbackQuery):
     user_id = query.from_user.id
     logger.info(f"Cast callback triggered by user {user_id} with action {action}")
 
-    if not await admin_check(client, query.message):
+    if not await check_admin(client, query.message):  # Changed from admin_check to check_admin
         await query.answer("You are not authorized!", show_alert=True)
         return
 
@@ -203,7 +203,7 @@ async def cast_cancel(client: Client, query: CallbackQuery):
     user_id = query.from_user.id
     logger.info(f"Cast cancel triggered by user {user_id}")
 
-    if not await admin_check(client, query.message):
+    if not await check_admin(client, query.message):  # Changed from admin_check to check_admin
         await query.answer("You are not authorized!", show_alert=True)
         return
 
@@ -231,7 +231,7 @@ async def handle_broadcast_input(client: Client, message: Message):
     state = await db.get_temp_state(chat_id)
     logger.info(f"Handling broadcast input for user {user_id}, state: {state}")
 
-    if not await admin_check(client, message):
+    if not await check_admin(client, message):  # Changed from admin_check to check_admin
         await message.reply_text("<b>You are not authorized!</b>", parse_mode=ParseMode.HTML)
         return
 
@@ -345,7 +345,7 @@ async def handle_dbroadcast_duration(client: Client, message: Message):
     duration = int(message.text)
     logger.info(f"Handling dbroadcast duration input for user {user_id}: {duration} minutes")
 
-    if not await admin_check(client, message):
+    if not await check_admin(client, message):  # Changed from admin_check to check_admin
         await message.reply_text("<b>You are not authorized!</b>", parse_mode=ParseMode.HTML)
         return
 
