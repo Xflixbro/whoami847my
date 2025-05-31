@@ -221,6 +221,7 @@ class Mehedi:
                 '_id': int(channel_id),
                 'user_ids': int(user_id)
             })
+            logger.debug(f"Checked user {user_id} in request list for channel {channel_id}: Found={bool(found)}")
             return bool(found)
         except Exception as e:
             logger.error(f"Failed to check user {user_id} in request list for channel {channel_id}: {e}")
