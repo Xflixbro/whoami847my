@@ -74,7 +74,7 @@ async def is_sub(client, user_id, channel_id):
     try:
         member = await client.get_chat_member(channel_id, user_id)
         status = member.status
-        #print(f"[SUB] User {user_id} in {channel_id} with status {status}")
+        logger.debug(f"[SUB] User {user_id} in {channel_id} with status {status}")
         return status in {
             ChatMemberStatus.OWNER,
             ChatMemberStatus.ADMINISTRATOR,
@@ -83,15 +83,16 @@ async def is_sub(client, user_id, channel_id):
 
     except UserNotParticipant:
         mode = await db.get_channel_mode(channel_id)
+        logger.debug(f"[NOT SUB] User {user_id} not in {channel_id}, mode={mode}")
         if mode == "on":
             exists = await db.req_user_exist(channel_id, user_id)
-            #print(f"[REQ] User {user_id} join request for {channel_id}: {exists}")
+            logger.debug(f"[REQ] User {user_id} join request for {channel_id}: {exists}")
             return exists
-        #print(f"[NOT SUB] User {user_id} not in {channel_id} and mode != on")
+        logger.debug(f"[NOT SUB] User {user_id} not in {channel_id} and mode != on")
         return False
 
     except Exception as e:
-        print(f"[!] Eʀʀᴏʀ ɪɴ ɪꜱ_ꜱᴜʙ(): {e}")
+        logger.error(f"[!] Eʀʀᴏʀ ɪɴ ɪꜱ_ꜱᴜʙ(): {e}")
         return False
 
 #
