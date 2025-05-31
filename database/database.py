@@ -3,10 +3,9 @@
 #
 # This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
 # and is released under the MIT License.
-# Please see <https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE>
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
 # All rights reserved.
-#
 
 import motor.motor_asyncio
 import logging
@@ -142,11 +141,6 @@ class Mehedi:
     async def get_temp_state(self, chat_id: int):
         data = await self.temp_state_data.find_one({'_id': chat_id})
         return data.get('state', '') if data else ''
-
-    async def clear_temp_state(self, chat_id: int):
-        """Clear temporary state for a chat in the database."""
-        await self.temp_state_data.delete_one({'_id': chat_id})
-        logger.info(f"Cleared temp state for chat {chat_id}")
 
     async def set_temp_data(self, chat_id: int, key: str, value):
         """Set temporary data for a chat in the database."""
@@ -302,7 +296,7 @@ db = Mehedi(os.environ.get("DATABASE_URL", ""), os.environ.get("DATABASE_NAME", 
 #
 # This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
 # and is released under the MIT License.
-# Please see <https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE>
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
 # All rights reserved.
 #
