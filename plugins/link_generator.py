@@ -3,7 +3,7 @@
 #
 # This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
 # and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+# Please see <https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE>
 #
 # All rights reserved.
 #
@@ -58,6 +58,20 @@ batch_user_data = {}
 
 # Store user data for flink command
 flink_user_data: Dict[int, Dict] = {}
+
+# Custom filter to exclude broadcast states
+async def exclude_broadcast_states_filter(_, __, message: Message):
+    broadcast_states = [
+        "awaiting_broadcast_input",
+        "awaiting_pbroadcast_input",
+        "awaiting_dbroadcast_message",
+        "awaiting_dbroadcast_duration"
+    ]
+    chat_id = message.chat.id
+    state = await db.get_temp_state(chat_id)
+    is_valid = state not in broadcast_states
+    logger.info(f"exclude_broadcast_states_filter for chat {chat_id}: state={state}, is_valid={is_valid}")
+    return is_valid
 
 # Filter for batch command input
 async def batch_state_filter(_, __, message: Message):
@@ -264,14 +278,14 @@ async def batch_handle_cancel_close(client: Client, query: CallbackQuery):
             to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Process cancelled.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
         )
-        await query.answer(to_small_caps_with_html(" ligne cancelled"))
+        await query.answer(to_small_caps_with_html("Process cancelled"))
     elif action == "close":
         if user_id in batch_user_data:
             del batch_user_data[user_id]
         await query.message.delete()
         await query.answer(to_small_caps_with_html("Menu closed"))
 
-@Bot.on_message(filters.private & admin & filters.create(batch_state_filter))
+@Bot.on_message(filters.private & admin & filters.create(batch_state_filter) & filters.create(exclude_broadcast_states_filter))
 async def handle_batch_input(client: Client, message: Message):
     """Handle input for batch command based on state."""
     user_id = message.from_user.id
@@ -587,7 +601,7 @@ async def flink_set_format_callback(client: Client, query: CallbackQuery):
         logger.error(to_small_caps_with_html(f"error in flink_set_format_callback: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while setting format.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
-@Bot.on_message(filters.private & filters.text & filters.regex(r"^[a-zA-Z0-9]+\s*=\s*\d+(,\s*[a-zA-Z0-9]+\s*=\s*\d+)*$"))
+@Bot.on_message(filters.private & filters.text & filters.regex(r"^[a-zA-Z0-9]+\s*=\s*\d+(,\s*[a-zA-Z0-9]+\s*=\s*\d+)*$") & filters.create(exclude_broadcast_states_filter))
 async def handle_format_input(client: Client, message: Message):
     """Handle format input for flink command."""
     logger.info(to_small_caps_with_html(f"format input received from user {message.from_user.id}"))
@@ -655,7 +669,7 @@ async def flink_start_process_callback(client: Client, query: CallbackQuery):
         logger.error(to_small_caps_with_html(f"error in flink_start_process_callback: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while starting process.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
-@Bot.on_message(filters.private & (filters.forwarded | filters.regex(r"^https?://t\.me/.*$")))
+@Bot.on_message(filters.private & (filters.forwarded | filters.regex(r"^https?://t\.me/.*$")) & filters.create(exclude_broadcast_states_filter))
 async def handle_db_post_input(client: Client, message: Message):
     """Handle db channel post input for flink command."""
     logger.info(to_small_caps_with_html(f"db post input received from user {message.from_user.id}"))
@@ -904,7 +918,7 @@ async def flink_add_image_callback(client: Client, query: CallbackQuery):
         logger.error(to_small_caps_with_html(f"error in flink_add_image_callback: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>❌ An error occurred while adding image.</blockquote></b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
-@Bot.on_message(filters.private & filters.photo & filters.reply)
+@Bot.on_message(filters.private & filters.photo & filters.reply & filters.create(exclude_broadcast_states_filter))
 async def handle_image_input(client: Client, message: Message):
     """Handle image input for flink output."""
     logger.info(to_small_caps_with_html(f"image input received from user {message.from_user.id}"))
@@ -978,7 +992,7 @@ async def flink_add_caption_callback(client: Client, query: CallbackQuery):
         logger.error(to_small_caps_with_html(f"error in flink_add_caption_callback: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while adding caption.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
-@Bot.on_message(filters.private & filters.text & filters.reply & ~filters.regex(r"^CANCEL$") & ~filters.forwarded)
+@Bot.on_message(filters.private & filters.text & filters.reply & ~filters.regex(r"^CANCEL$") & ~filters.forwarded & filters.create(exclude_broadcast_states_filter))
 async def handle_caption_input(client: Client, message: Message):
     """Handle caption input for flink command."""
     logger.info(to_small_caps_with_html(f"caption input received from user {message.from_user.id}, text: {message.text}"))
@@ -1146,7 +1160,7 @@ async def flink_handle_back_buttons(client: Client, query: CallbackQuery):
 #
 # This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
 # and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+# Please see <https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE>
 #
 # All rights reserved.
 #
