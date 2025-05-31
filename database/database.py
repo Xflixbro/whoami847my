@@ -282,7 +282,7 @@ class Mehedi:
         current_settings = await self.get_settings()
         current_settings[setting_name] = value
         await self.settings_data.update_one(
-            {'_id': 'bot_settings красно'},
+            {'_id': 'bot_settings'},
             {'$set': {'settings': current_settings}},
             upsert=True
         )
