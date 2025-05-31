@@ -49,6 +49,14 @@ async def dbroadcast_duration_filter(_, __, message: Message):
     logger.info(f"Checking dbroadcast_duration_filter for chat {chat_id}: state={state}, message_text={message.text}, is_valid={is_valid}")
     return is_valid
 
+# Custom filter to exclude command messages
+async def not_command_filter(_, __, message: Message):
+    if not message.text:
+        return True
+    is_not_command = not message.text.startswith('/')
+    logger.info(f"Checking not_command_filter for chat {message.chat.id}: text={message.text}, is_not_command={is_not_command}")
+    return is_not_command
+
 async def reset_broadcast_mode(client: Client, chat_id: int):
     """Reset broadcast mode after timeout."""
     global broadcast_active, broadcast_active_timestamp
@@ -214,7 +222,7 @@ async def cast_cancel(client: Client, query: CallbackQuery):
             parse_mode=ParseMode.HTML
         )
 
-@Bot.on_message(filters.private & filters.create(broadcast_active_filter) & ~filters.command, group=-2)
+@Bot.on_message(filters.private & filters.create(broadcast_active_filter) & filters.create(not_command_filter), group=-2)
 async def handle_broadcast_input(client: Client, message: Message):
     """Handle input for broadcast, pbroadcast, and dbroadcast messages."""
     global broadcast_active
