@@ -98,7 +98,6 @@ async def show_broadcast_settings(client: Client, chat_id: int, message_id: int 
         ]
     )
 
-    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
     try:
         if message_id:
             await client.edit_message_text(
@@ -111,25 +110,14 @@ async def show_broadcast_settings(client: Client, chat_id: int, message_id: int 
             )
             logger.info(f"Edited broadcast settings for chat {chat_id}")
         else:
-            try:
-                await client.send_photo(
-                    chat_id=chat_id,
-                    photo=selected_image,
-                    caption=settings_text,
-                    reply_markup=buttons,
-                    parse_mode=ParseMode.HTML
-                )
-                logger.info(f"Sent broadcast settings with photo for chat {chat_id}")
-            except Exception as e:
-                logger.warning(f"Failed to send photo for chat {chat_id}: {str(e)}")
-                await client.send_message(
-                    chat_id=chat_id,
-                    text=settings_text,
-                    reply_markup=buttons,
-                    parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True
-                )
-                logger.info(f"Sent broadcast settings as text for chat {chat_id}")
+            await client.send_message(
+                chat_id=chat_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+            logger.info(f"Sent broadcast settings as text for chat {chat_id}")
     except Exception as e:
         logger.error(f"Failed to show broadcast settings for chat {chat_id}: {str(e)}")
         await client.send_message(
@@ -156,7 +144,12 @@ async def cast_callback(client: Client, query: CallbackQuery):
     user_id = query.from_user.id
     logger.info(f"Cast callback triggered by user {user_id} with action {action}")
 
-    if not await check_admin(None, client, query.message):  # Pass None as filter
+    # Log admin check details
+    is_owner = user_id == OWNER_ID
+    is_admin = await db.admin_exist(user_id)
+    logger.info(f"Admin check for user {user_id}: is_owner={is_owner}, is_admin={is_admin}")
+
+    if not (is_owner or is_admin):
         await query.answer("You are not authorized!", show_alert=True)
         return
 
@@ -205,7 +198,12 @@ async def cast_cancel(client: Client, query: CallbackQuery):
     user_id = query.from_user.id
     logger.info(f"Cast cancel triggered by user {user_id}")
 
-    if not await check_admin(None, client, query.message):  # Pass None as filter
+    # Log admin check details
+    is_owner = user_id == OWNER_ID
+    is_admin = await db.admin_exist(user_id)
+    logger.info(f"Admin check for user {user_id}: is_owner={is_owner}, is_admin={is_admin}")
+
+    if not (is_owner or is_admin):
         await query.answer("You are not authorized!", show_alert=True)
         return
 
@@ -233,13 +231,20 @@ async def handle_broadcast_input(client: Client, message: Message):
     state = await db.get_temp_state(chat_id)
     logger.info(f"Handling broadcast input for user {user_id}, state: {state}")
 
-    if not await check_admin(None, client, message):  # Pass None as filter
+    # Log admin check details
+    is_owner = user_id == OWNER_ID
+    is_admin = await db.admin_exist(user_id)
+    logger.info(f"Admin check for user {user_id}: is_owner={is_owner}, is_admin={is_admin}")
+
+    if not (is_owner or is_admin):
         await message.reply_text("<b>You are not authorized!</b>", parse_mode=ParseMode.HTML)
         return
 
     if state not in ["awaiting_broadcast_input", "awaiting_pbroadcast_input", "awaiting_dbroadcast_message"]:
         logger.info(f"Invalid state {state} for broadcast input from user {user_id}")
-        await db.clear_temp_state(chat_id)  # Clear invalid state
+        await db.clear_temp_state(chat_id)
+        await message.reply_text("<b>Invalid state. Broadcast process cancelled.</b>", parse_mode=ParseMode.HTML)
+        broadcast_active = False
         return
 
     if not (message.text or message.media):
@@ -348,7 +353,12 @@ async def handle_dbroadcast_duration(client: Client, message: Message):
     duration = int(message.text)
     logger.info(f"Handling dbroadcast duration input for user {user_id}: {duration} minutes")
 
-    if not await check_admin(None, client, message):  # Pass None as filter
+    # Log admin check details
+    is_owner = user_id == OWNER_ID
+    is_admin = await db.admin_exist(user_id)
+    logger.info(f"Admin check for user {user_id}: is_owner={is_owner}, is_admin={is_admin}")
+
+    if not (is_owner or is_admin):
         await message.reply_text("<b>You are not authorized!</b>", parse_mode=ParseMode.HTML)
         return
 
