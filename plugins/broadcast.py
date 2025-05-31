@@ -142,6 +142,8 @@ async def show_broadcast_settings(client: Client, chat_id: int, message_id: int 
 async def cast(client: Client, message: Message):
     """Handle /cast command to display broadcast settings."""
     logger.info(f"Cast command triggered by user {message.from_user.id}")
+    # Clear any stale temp state
+    await db.clear_temp_state(message.chat.id)
     await show_broadcast_settings(client, message.chat.id)
     await message.delete()
 
@@ -154,7 +156,7 @@ async def cast_callback(client: Client, query: CallbackQuery):
     user_id = query.from_user.id
     logger.info(f"Cast callback triggered by user {user_id} with action {action}")
 
-    if not await check_admin(client, query.message):  # Changed from admin_check to check_admin
+    if not await check_admin(None, client, query.message):  # Pass None as filter
         await query.answer("You are not authorized!", show_alert=True)
         return
 
@@ -203,7 +205,7 @@ async def cast_cancel(client: Client, query: CallbackQuery):
     user_id = query.from_user.id
     logger.info(f"Cast cancel triggered by user {user_id}")
 
-    if not await check_admin(client, query.message):  # Changed from admin_check to check_admin
+    if not await check_admin(None, client, query.message):  # Pass None as filter
         await query.answer("You are not authorized!", show_alert=True)
         return
 
@@ -231,12 +233,13 @@ async def handle_broadcast_input(client: Client, message: Message):
     state = await db.get_temp_state(chat_id)
     logger.info(f"Handling broadcast input for user {user_id}, state: {state}")
 
-    if not await check_admin(client, message):  # Changed from admin_check to check_admin
+    if not await check_admin(None, client, message):  # Pass None as filter
         await message.reply_text("<b>You are not authorized!</b>", parse_mode=ParseMode.HTML)
         return
 
     if state not in ["awaiting_broadcast_input", "awaiting_pbroadcast_input", "awaiting_dbroadcast_message"]:
         logger.info(f"Invalid state {state} for broadcast input from user {user_id}")
+        await db.clear_temp_state(chat_id)  # Clear invalid state
         return
 
     if not (message.text or message.media):
@@ -345,7 +348,7 @@ async def handle_dbroadcast_duration(client: Client, message: Message):
     duration = int(message.text)
     logger.info(f"Handling dbroadcast duration input for user {user_id}: {duration} minutes")
 
-    if not await check_admin(client, message):  # Changed from admin_check to check_admin
+    if not await check_admin(None, client, message):  # Pass None as filter
         await message.reply_text("<b>You are not authorized!</b>", parse_mode=ParseMode.HTML)
         return
 
