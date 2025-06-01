@@ -307,9 +307,9 @@ async def handle_batch_input(client: Client, message: Message):
         # Verify admin access
         admin_ids = await db.get_all_admins() or []
         logger.info(f"Admin check in handle_batch_input for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
-        if user_id not in admin_ids and user_id not in != OWNER_ID:
+        if user_id not in admin_ids and user_id != OWNER_ID:
             await message.reply_text(
-                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b> "<b>\n<b>❖ You are not authorized!</b>\n<b>" "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❖ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
                 parse_mode=ParseMode.HTML
             )
             return
@@ -318,9 +318,7 @@ async def handle_batch_input(client: Client, message: Message):
             f_msg_id = await get_message_id(client, message)
             if not f_msg_id:
                 await message.reply(
-                    to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-                    "<b>\n\n<blockquote><b>❖ Error: This forwarded post is not from my db channel or this link is invalid.</b></blockquote>\n",
-                    "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+                    to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>❖ Error: This forwarded post is not from my db channel or this link is invalid.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
                     quote=True,
                     parse_mode=ParseMode.HTML
                 )
@@ -329,10 +327,7 @@ async def handle_batch_input(client: Client, message: Message):
             batch_user_data[user_id]['first_message_id'] = f_msg_id
             batch_user_data[user_id]['state'] = 'awaiting_second_message'
             await message.reply(
-                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n",
-                "<blockquote><b>Forward the last message from db channel (with quotes).</b></blockquote>\n",
-                "<blockquote><b>Or send the db channel post link</b></blockquote>",
-                "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<blockquote><b>Forward the last message from db channel (with quotes).</b></blockquote>\n<blockquote><b>Or send the db channel post link</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
                 parse_mode=ParseMode.HTML
             )
 
@@ -340,18 +335,15 @@ async def handle_batch_input(client: Client, message: Message):
             s_msg_id = await get_message_id(client, message)
             if not s_msg_id:
                 await message.reply(
-                    to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-                    "<b>\n\n<b>❖ Error: This forwarded post is not from my db channel or this link is invalid</b>\n\n</b>",
-                    "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+                    to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>❖ Error: This forwarded post is not from my db channel or this link is invalid</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
                     quote=True,
                     parse_mode=ParseMode.HTML
                 )
                 return
 
             f_msg_id = batch_user_data[user_id]['first_message_id']
-            string = f"get{f_msg_id-}{f_msg_id * abs(client.db_channel.id)}-{s_msg_id * s_msg_idabs(client.db_channel.id)}"
-            
- string = await base64_stringencode(string)
+            string = f"get{f_msg_id}-{f_msg_id * abs(client.db_channel.id)}-{s_msg_id * abs(client.db_channel.id)}"
+            base64_string = await encode(string)
             link = f"https://t.me/{client.username}?start={base64_string}"
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
 
@@ -370,9 +362,7 @@ async def handle_batch_input(client: Client, message: Message):
         logger.error(f"Timeout error in handle_batch_input for user {user_id} in state {state}")
         await message.reply(
             to_small_caps_with_html(
-                "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-                "<b>\n\n<b>❅ Timeout: No response received.</b>\n<b>",
-                "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+                "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>❅ Timeout: No response received.</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
             parse_mode=ParseMode.HTML
         )
         if user_id in batch_user_data:
@@ -393,14 +383,12 @@ async def link_generator(client: Client, message: Message):
 
     try:
         # Verify admin access
-        admin_ids = await db.get_all_admins() or [] as admin_ids
-        logger.info(f"Admin {check in link_generator} for user {user_id}: {Admins=admin_ids}, OWNER_ID={OWNER_ID}")
+        admin_ids = await db.get_all_admins() or []
+        logger.info(f"Admin check in link_generator for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
         if user_id not in admin_ids and user_id != OWNER_ID:
             await message.reply(
-                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-                "<b>\n\n<b>❅ You are not authorized!</b>\n</b>\n<b>",
-                "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
-                parse_mode= ParseMode.HTML
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>❅ You are not authorized!</b>\n</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
             )
             return
 
@@ -408,42 +396,38 @@ async def link_generator(client: Client, message: Message):
             try:
                 channel_message = await client.ask(
                     message.from_user.id,
-                    to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-                    "<b>\n\n<blockquote><b>Forward message from the db channel (with quotes).</b></blockquote>",
-                    "<b>\n\n\n</blockquote><b>Or send the db channel post link</b></blockquote>\n",
-                    "<b>\n\n</b>"),
+                    to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>Forward message from the db channel (with quotes).</b></blockquote>\n\n</blockquote><b>Or send the db channel post link</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
                     filters=(filters.forwarded | (filters.text & ~filters.forwarded)),
                     timeout=60,
-                    parse_mode=ParseMode. FalseHTML
+                    parse_mode=ParseMode.HTML
                 )
             except TimeoutError:
                 await message.reply(
-                    f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❅ Timeout: No response waiting received.for {message_id}</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-                    parse_mode=HTML
+                    f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❅ Timeout: No response received.</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
+                    parse_mode=ParseMode.HTML
                 )
                 return
-            )
-            msg_id = await get_message_id(client, channel_message.idmessage)
+
+            msg_id = await get_message_id(client, channel_message)
             if msg_id:
                 break
             else:
                 await channel_message.reply(
-                    f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❖ Error: This forwarded post is not from my db channel or link is invalid</b> valid\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━</b>",
+                    f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❖ Error: This forwarded post is not from my db channel or link is invalid</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
                     quote=True,
                     parse_mode=ParseMode.HTML
                 )
                 continue
-            )
 
-        base64_string = await encode(f"get_{msg_id * -abs(msg_idclient.db_channel.id)}")
-            link = f"https://t.me/{client.username}?start={base64_string}"
-            reply_markup = InlineKeyboardButtonMarkup([[InlineKeyboardButton("🔗 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
-            await message.reply(
-                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n\n<blockquote><b>Here is your link:</b> </blockquote>\n\n{link}\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-                quote=True,
-                reply_markup=reply_markup,
-                parse_mode=ParseMode.HTML
-            )
+        base64_string = await encode(f"get_{msg_id * -abs(client.db_channel.id)}")
+        link = f"https://t.me/{client.username}?start={base64_string}"
+        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
+        await message.reply(
+            f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>Here is your link:</b></blockquote>\n\n{link}\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
+            quote=True,
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.HTML
+        )
 
     except Exception as e:
         logger.error(f"Error in link_generator for user {user_id}: {e}")
@@ -451,30 +435,26 @@ async def link_generator(client: Client, message: Message):
         parse_mode=ParseMode.HTML
         )
 
-@Bot.on_message(filters.command('custom_batch') & admin)
+@Bot.on_message(filters.private & admin & filters.command('custom_batch'))
 async def custom_batch(client: Client, message: Message):
     """Handle /custom_batch command to collect and generate a batch link."""
     user_id = message.from_user.id
     try:
         # Verify admin access
-        admin_ids = await db.get_all_admins() or [] as admin_ids
-        logger.info(f"Admin check in custom_batch for user {user_id}: {Admins=admin_ids}, OWNER_ID={admin_ids}")
+        admin_ids = await db.get_all_admins() or []
+        logger.info(f"Admin check in custom_batch for user {user_id}: Admins={admin_ids}, OWNER_ID={OWNER_ID}")
         if user_id not in admin_ids and user_id != OWNER_ID:
             await message.reply(
                 f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❌ You are not authorized!</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
                 parse_mode=ParseMode.HTML
             )
             return
-        )
 
         collected = []
-        STOP_KEYBOARD = {'keyboard': [['stop']]}}, 'resize_keyboard': True}
+        STOP_KEYBOARD = ReplyKeyboardMarkup([['stop']], resize_keyboard=True)
 
         await message.reply_text(
-            f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-            f"<b>\n\n<blockquote><b>Send all messages you want to include in batch.</b></blockquote>",
-            f"<br>\n\n</b><blockquote><b>Press Stop when you're done.</b></blockquote>\n",
-            f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
+            f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>Send all messages you want to include in batch.</b></blockquote>\n\n</b><blockquote><b>Press Stop when you're done.</b></blockquote>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
             reply_markup=STOP_KEYBOARD,
             parse_mode=ParseMode.HTML
         )
@@ -483,7 +463,7 @@ async def custom_batch(client: Client, message: Message):
             try:
                 user_msg = await client.ask(
                     user_id,
-                    text=f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n\n<blockquote><b>Waiting for files...</b></br>\n\n\n</blockquote><b>Press Stop to finish</b> </blockquote>\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>",
+                    text=f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>Waiting for files...</b></blockquote>\n\n</b><blockquote><b>Press Stop to finish</b></blockquote>\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>",
                     timeout=60,
                     parse_mode=ParseMode.HTML
                 )
@@ -492,23 +472,21 @@ async def custom_batch(client: Client, message: Message):
 
             if user_msg.text == "stop":
                 break
-            )
 
             try:
                 sent = await client.copy_message(client.db_channel.id, user_id, user_msg.id)
-                collected.append(sent.message_id)
+                collected.append(sent.id)
             except Exception as e:
-                message.reply(
+                await message.reply(
                     f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❖ Failed to store message: {e}</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
                     parse_mode=ParseMode.HTML
                 )
                 logger.error(f"Error storing message in custom_batch for user {user_id}: {e}")
                 continue
-            )
 
         await message.reply(
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>✅ Batch collection complete</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-            reply_markup={'remove_keyboard': True}},
+            reply_markup=ReplyKeyboardRemove(),
             parse_mode=ParseMode.HTML
         )
 
@@ -518,7 +496,6 @@ async def custom_batch(client: Client, message: Message):
                 parse_mode=ParseMode.HTML
             )
             return
-        )
 
         start_id = collected[0] * abs(client.db_channel.id)
         end_id = collected[-1] * abs(client.db_channel.id)
@@ -526,7 +503,7 @@ async def custom_batch(client: Client, message: Message):
         base64_string = await encode(string)
         link = f"https://t.me/{client.username}?start={base64_string}"
 
-        reply_markup = {'inline_keyboard': [[{'text': "🔗 Share URL", 'url': f'https://telegram.me/share/url?url={link}'}]]}}
+        reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔗 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
         await message.reply(
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>Here is your custom batch link:</b></blockquote>\n\n{link}\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
             reply_markup=reply_markup,
@@ -549,7 +526,6 @@ async def flink_command(client: Client, message: Message):
         if message.from_user.id not in admin_ids and message.from_user.id != OWNER_ID:
             await message.reply(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❅ You are not authorized!</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
             return
-        )
 
         flink_user_data[message.from_user.id] = {
             'format': None,
@@ -576,25 +552,25 @@ async def show_flink_main_menu(client: Client, message: Message, edit: bool = Fa
         
         buttons = [
             [
-                {'text': "• Set Format •", 'callback_data': "flink_set_format"},
-                {'text': "• Start Process •", 'callback_data': "flink_start_process"}
+                InlineKeyboardButton("• Set Format •", callback_data="flink_set_format"),
+                InlineKeyboardButton("• Start Process •", callback_data="flink_start_process")
             ],
             [
-                {'text': "• Refresh •", 'callback_data': "flink_refresh"},
-                {'text': "• Close •", 'callback_data': "flink_close"}
+                InlineKeyboardButton("• Refresh •", callback_data="flink_refresh"),
+                InlineKeyboardButton("• Close •", callback_data="flink_close")
             ]
         ]
         
         if edit:
             await message.edit(
                 text=text,
-                reply_markup={'inline_keyboard': buttons},
+                reply_markup=InlineKeyboardMarkup(buttons),
                 parse_mode=ParseMode.HTML
             )
         else:
             msg = await message.reply(
                 text=text,
-                reply_markup={'inline_keyboard': buttons},
+                reply_markup=InlineKeyboardMarkup(buttons),
                 parse_mode=ParseMode.HTML
             )
             flink_user_data[message.from_user.id]['menu_message'] = msg
@@ -611,12 +587,11 @@ async def flink_set_format_callback(client: Client, query: CallbackQuery):
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
             await query.answer("You are not authorized!", show_alert=True)
             return
-        )
 
         flink_user_data[query.from_user.id]['awaiting_format'] = True
         await query.message.edit(
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>Please send your format in this pattern:</b></blockquote>\n\n<b>Example</b>:\n\n<code>360p = 2, 720p = 2, 1080p = 2, 4k = 2, HDRIP = 2</code>\n\n<b>Meaning</b>:\n- 360p = 2 → 2 video files for 360p quality\n- If stickers/gifs follow, they will be included in the link\n- Only these qualities will be created\n\n<b>Send the format in the next message (no need to reply)</b>\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-            reply_markup={'inline_keyboard': [[{'text': "🔙 Back", 'callback_data': "flink_back_to_menu"}]]}},
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="flink_back_to_menu")]]),
             parse_mode=ParseMode.HTML
         )
         await query.answer("Enter format")
@@ -633,7 +608,6 @@ async def handle_format_input(client: Client, message: Message):
         if message.from_user.id not in admin_ids and message.from_user.id != OWNER_ID:
             await message.reply(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❅ You are not authorized!</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
             return
-        )
 
         user_id = message.from_user.id
         if user_id in flink_user_data and flink_user_data[user_id].get('awaiting_format'):
@@ -657,17 +631,15 @@ async def flink_start_process_callback(client: Client, query: CallbackQuery):
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
             await query.answer("You are not authorized!", show_alert=True)
             return
-        )
 
         if not flink_user_data[query.from_user.id]['format']:
             await query.answer("❅ Please set format first!", show_alert=True)
             return
-        )
 
         flink_user_data[query.from_user.id]['awaiting_db_post'] = True
         await query.message.edit(
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>Send the first post link from db channel:</b></blockquote>\n\n<b>Forward a message from the db channel or send its direct link (e.g., <code>t.me/channel/123</code>)</b>\n\n<b>Ensure files are in sequence without gaps</b>\n\n<b>Send the link or forwarded message in the next message (no need to reply)</b>\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-            reply_markup={'inline_keyboard': [[{'text': "✖️ Cancel", 'callback_data': "flink_cancel_process"}]]}},
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("✖️ Cancel", callback_data="flink_cancel_process")]]),
             parse_mode=ParseMode.HTML
         )
         await query.answer("Send db channel post")
@@ -684,14 +656,12 @@ async def handle_db_post_input(client: Client, message: Message):
         if message.from_user.id not in admin_ids and message.from_user.id != OWNER_ID:
             await message.reply(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❅ You are not authorized!</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
             return
-        )
 
         user_id = message.from_user.id
         msg_id = await get_message_id(client, message)
         if not msg_id:
             await message.reply(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>❅ Invalid db channel post! Ensure it's a valid forwarded message or link from the db channel</b></blockquote>\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
             return
-        )
 
         format_str = flink_user_data[user_id]['format']
         format_parts = [part.strip() for part in format_str.split(",")]
@@ -704,7 +674,6 @@ async def handle_db_post_input(client: Client, message: Message):
             if not match:
                 await message.reply(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❅ Invalid format part: <code>{part}</code></b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
                 return
-            )
             quality, count = match.groups()
             quality = quality.strip().upper()
             count = int(count.strip())
@@ -730,7 +699,6 @@ async def handle_db_post_input(client: Client, message: Message):
                 logger.error(f"not enough valid media files for {quality}: found {len(valid_ids)}, required {count}")
                 await message.reply(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>❅ Not enough valid media files for {quality}. Found {len(valid_ids)} files, but {count} required</b></blockquote>\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
                 return
-            )
 
             start_id = valid_ids[0]
             end_id = valid_ids[count - 1]
@@ -774,7 +742,6 @@ async def flink_generate_final_output(client: Client, message: Message):
             logger.error("no links generated in flink_user_data")
             await message.reply(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❅ No links generated. Please check the input and try again</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
             return
-        )
 
         buttons = []
         quality_list = list(links.keys())
@@ -782,47 +749,47 @@ async def flink_generate_final_output(client: Client, message: Message):
         
         if num_qualities == 2:
             buttons.append([
-                {'text': f"🦋 {quality_list[0]} 🦋", 'url': await create_link(client, links[quality_list[0]])},
-                {'text': f"🦋 {quality_list[1]} 🦋", 'url': await create_link(client, links[quality_list[1]])}
+                InlineKeyboardButton(f"🦋 {quality_list[0]} 🦋", url=await create_link(client, links[quality_list[0]])),
+                InlineKeyboardButton(f"🦋 {quality_list[1]} 🦋", url=await create_link(client, links[quality_list[1]]))
             ])
         elif num_qualities == 3:
             buttons.append([
-                {'text': f"🦋 {quality_list[0]} 🦋", 'url': await create_link(client, links[quality_list[0]])},
-                {'text': f"🦋 {quality_list[1]} 🦋", 'url': await create_link(client, links[quality_list[1]])}
+                InlineKeyboardButton(f"🦋 {quality_list[0]} 🦋", url=await create_link(client, links[quality_list[0]])),
+                InlineKeyboardButton(f"🦋 {quality_list[1]} 🦋", url=await create_link(client, links[quality_list[1]]))
             ])
             buttons.append([
-                {'text': f"🦋 {quality_list[2]} 🦋", 'url': await create_link(client, links[quality_list[2]])}
+                InlineKeyboardButton(f"🦋 {quality_list[2]} 🦋", url=await create_link(client, links[quality_list[2]]))
             ])
         elif num_qualities == 4:
             buttons.append([
-                {'text': f"🦋 {quality_list[0]} 🦋", 'url': await create_link(client, links[quality_list[0]])},
-                {'text': f"🦋 {quality_list[1]} 🦋", 'url': await create_link(client, links[quality_list[1]])}
+                InlineKeyboardButton(f"🦋 {quality_list[0]} 🦋", url=await create_link(client, links[quality_list[0]])),
+                InlineKeyboardButton(f"🦋 {quality_list[1]} 🦋", url=await create_link(client, links[quality_list[1]]))
             ])
             buttons.append([
-                {'text': f"🦋 {quality_list[2]} 🦋", 'url': await create_link(client, links[quality_list[2]])},
-                {'text': f"🦋 {quality_list[3]} 🦋", 'url': await create_link(client, links[quality_list[3]])}
+                InlineKeyboardButton(f"🦋 {quality_list[2]} 🦋", url=await create_link(client, links[quality_list[2]])),
+                InlineKeyboardButton(f"🦋 {quality_list[3]} 🦋", url=await create_link(client, links[quality_list[3]]))
             ])
         elif num_qualities == 5:
             buttons.append([
-                {'text': f"🦋 {quality_list[0]} 🦋", 'url': await create_link(client, links[quality_list[0]])},
-                {'text': f"🦋 {quality_list[1]} 🦋", 'url': await create_link(client, links[quality_list[1]])}
+                InlineKeyboardButton(f"🦋 {quality_list[0]} 🦋", url=await create_link(client, links[quality_list[0]])),
+                InlineKeyboardButton(f"🦋 {quality_list[1]} 🦋", url=await create_link(client, links[quality_list[1]]))
             ])
             buttons.append([
-                {'text': f"🦋 {quality_list[2]} 🦋", 'url': await create_link(client, links[quality_list[2]])},
-                {'text': f"🦋 {quality_list[3]} 🦋", 'url': await create_link(client, links[quality_list[3]])}
+                InlineKeyboardButton(f"🦋 {quality_list[2]} 🦋", url=await create_link(client, links[quality_list[2]])),
+                InlineKeyboardButton(f"🦋 {quality_list[3]} 🦋", url=await create_link(client, links[quality_list[3]]))
             ])
             buttons.append([
-                {'text': f"🦋 {quality_list[4]} 🦋", 'url': await create_link(client, links[quality_list[4]])}
+                InlineKeyboardButton(f"🦋 {quality_list[4]} 🦋", url=await create_link(client, links[quality_list[4]]))
             ])
         else:
             for quality in quality_list:
                 buttons.append([
-                    {'text': f"🦋 {quality} 🦋", 'url': await create_link(client, links[quality])}
+                    InlineKeyboardButton(f"🦋 {quality} 🦋", url=await create_link(client, links[quality]))
                 ])
         
         buttons.append([
-            {'text': "◈ Edit ◈", 'callback_data': "flink_edit_output"},
-            {'text': "✅ Done", 'callback_data': "flink_done_output"}
+            InlineKeyboardButton("◈ Edit ◈", callback_data="flink_edit_output"),
+            InlineKeyboardButton("✅ Done", callback_data="flink_done_output")
         ])
         
         edit_data = flink_user_data[user_id].get('edit_data', {})
@@ -832,13 +799,13 @@ async def flink_generate_final_output(client: Client, message: Message):
             output_msg = await message.reply_photo(
                 photo=edit_data['image'],
                 caption=caption,
-                reply_markup={'inline_keyboard': buttons},
+                reply_markup=InlineKeyboardMarkup(buttons),
                 parse_mode=ParseMode.HTML
             )
         else:
             output_msg = await message.reply(
                 text=caption if caption else f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>Here are your download buttons:</b></blockquote>\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-                reply_markup={'inline_keyboard': buttons},
+                reply_markup=InlineKeyboardMarkup(buttons),
                 parse_mode=ParseMode.HTML
             )
         
@@ -864,19 +831,18 @@ async def flink_edit_output_callback(client: Client, query: CallbackQuery):
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
             await query.answer("You are not authorized!", show_alert=True)
             return
-        )
 
         await query.message.edit(
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>Add optional elements to the output:</b>\n\nSend an image or type a caption separately\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
-            reply_markup={'inline_keyboard': [
+            reply_markup=InlineKeyboardMarkup([
                 [
-                    {'text': "◈ Image ◈", 'callback_data': "flink_add_image"},
-                    {'text': "◈ Caption ◈", 'callback_data': "flink_add_caption"}
+                    InlineKeyboardButton("◈ Image ◈", callback_data="flink_add_image"),
+                    InlineKeyboardButton("◈ Caption ◈", callback_data="flink_add_caption")
                 ],
                 [
-                    {'text': "✔️ Finish setup 🦋", 'callback_data': "flink_done_output"}
+                    InlineKeyboardButton("✔️ Finish setup 🦋", callback_data="flink_done_output")
                 ]
-            ]},
+            ]),
             parse_mode=ParseMode.HTML
         )
         await query.answer()
@@ -893,7 +859,6 @@ async def flink_add_image_callback(client: Client, query: CallbackQuery):
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
             await query.answer("You are not authorized!", show_alert=True)
             return
-        )
 
         await query.message.edit(
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>Send the image:</b></blockquote>\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
@@ -913,7 +878,6 @@ async def handle_image_input(client: Client, message: Message):
         if message.from_user.id not in admin_ids and message.from_user.id != OWNER_ID:
             await message.reply(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❅ You are not authorized!</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
             return
-        )
 
         user_id = message.from_user.id
         if user_id not in flink_user_data:
@@ -935,7 +899,6 @@ async def handle_image_input(client: Client, message: Message):
             logger.info(f"image input ignored for user {user_id} - not a reply to image prompt")
             await message.reply(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❅ Please reply to the image prompt with a valid image</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
             return
-        )
 
         flink_user_data[user_id]['edit_data']['image'] = message.photo.file_id
         await message.reply(
@@ -956,7 +919,6 @@ async def flink_add_caption_callback(client: Client, query: CallbackQuery):
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
             await query.answer("You are not authorized!", show_alert=True)
             return
-        )
 
         user_id = query.from_user.id
         flink_user_data[user_id]['awaiting_caption'] = True
@@ -990,20 +952,17 @@ async def handle_caption_input(client: Client, message: Message):
         if message.from_user.id not in admin_ids and message.from_user.id != OWNER_ID:
             await message.reply(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❅ You are not authorized!</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
             return
-        )
 
         user_id = message.from_user.id
         if user_id not in flink_user_data or not flink_user_data[user_id].get('awaiting_caption'):
             await message.reply(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❅ No active caption prompt found. Please use the 'Add Caption' option first</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
             return
-        )
 
         caption_prompt_msg = flink_user_data[user_id].get('caption_prompt_message')
         if not caption_prompt_msg or not message.reply_to_message or message.reply_to_message.id != caption_prompt_msg.id:
             logger.info(f"caption input ignored for user {message.from_user.id} - not a reply to caption prompt")
             await message.reply(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❅ Please reply to the caption prompt message with your caption</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
             return
-        )
 
         if 'edit_data' not in flink_user_data[user_id]:
             flink_user_data[user_id]['edit_data'] = {}
@@ -1024,13 +983,11 @@ async def flink_done_output_callback(client: Client, query: CallbackQuery):
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
             await query.answer("You are not authorized!", show_alert=True)
             return
-        )
 
         user_id = query.from_user.id
         if user_id not in flink_user_data or 'links' not in flink_user_data[user_id]:
             await query.message.edit(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<blockquote><b>❅ No links found. Please start the process again using /flink</b></blockquote>\n\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
             return
-        )
 
         links = flink_user_data[user_id]['links']
         edit_data = flink_user_data[user_id].get('edit_data', {})
@@ -1042,55 +999,55 @@ async def flink_done_output_callback(client: Client, query: CallbackQuery):
         
         if num_qualities == 2:
             buttons.append([
-                {'text': f"🦋 {quality_list[0]} 🦋", 'url': await create_link(client, links[quality_list[0]])},
-                {'text': f"🦋 {quality_list[1]} 🦋", 'url': await create_link(client, links[quality_list[1]])}
+                InlineKeyboardButton(f"🦋 {quality_list[0]} 🦋", url=await create_link(client, links[quality_list[0]])),
+                InlineKeyboardButton(f"🦋 {quality_list[1]} 🦋", url=await create_link(client, links[quality_list[1]]))
             ])
         elif num_qualities == 3:
             buttons.append([
-                {'text': f"🦋 {quality_list[0]} 🦋", 'url': await create_link(client, links[quality_list[0]])},
-                {'text': f"🦋 {quality_list[1]} 🦋", 'url': await create_link(client, links[quality_list[1]])}
+                InlineKeyboardButton(f"🦋 {quality_list[0]} 🦋", url=await create_link(client, links[quality_list[0]])),
+                InlineKeyboardButton(f"🦋 {quality_list[1]} 🦋", url=await create_link(client, links[quality_list[1]]))
             ])
             buttons.append([
-                {'text': f"🦋 {quality_list[2]} 🦋", 'url': await create_link(client, links[quality_list[2]])}
+                InlineKeyboardButton(f"🦋 {quality_list[2]} 🦋", url=await create_link(client, links[quality_list[2]]))
             ])
         elif num_qualities == 4:
             buttons.append([
-                {'text': f"🦋 {quality_list[0]} 🦋", 'url': await create_link(client, links[quality_list[0]])},
-                {'text': f"🦋 {quality_list[1]} 🦋", 'url': await create_link(client, links[quality_list[1]])}
+                InlineKeyboardButton(f"🦋 {quality_list[0]} 🦋", url=await create_link(client, links[quality_list[0]])),
+                InlineKeyboardButton(f"🦋 {quality_list[1]} 🦋", url=await create_link(client, links[quality_list[1]]))
             ])
             buttons.append([
-                {'text': f"🦋 {quality_list[2]} 🦋", 'url': await create_link(client, links[quality_list[2]])},
-                {'text': f"🦋 {quality_list[3]} 🦋", 'url': await create_link(client, links[quality_list[3]])}
+                InlineKeyboardButton(f"🦋 {quality_list[2]} 🦋", url=await create_link(client, links[quality_list[2]])),
+                InlineKeyboardButton(f"🦋 {quality_list[3]} 🦋", url=await create_link(client, links[quality_list[3]]))
             ])
         elif num_qualities == 5:
             buttons.append([
-                {'text': f"🦋 {quality_list[0]} 🦋", 'url': await create_link(client, links[quality_list[0]])},
-                {'text': f"🦋 {quality_list[1]} 🦋", 'url': await create_link(client, links[quality_list[1]])}
+                InlineKeyboardButton(f"🦋 {quality_list[0]} 🦋", url=await create_link(client, links[quality_list[0]])),
+                InlineKeyboardButton(f"🦋 {quality_list[1]} 🦋", url=await create_link(client, links[quality_list[1]]))
             ])
             buttons.append([
-                {'text': f"🦋 {quality_list[2]} 🦋", 'url': await create_link(client, links[quality_list[2]])},
-                {'text': f"🦋 {quality_list[3]} 🦋", 'url': await create_link(client, links[quality_list[3]])}
+                InlineKeyboardButton(f"🦋 {quality_list[2]} 🦋", url=await create_link(client, links[quality_list[2]])),
+                InlineKeyboardButton(f"🦋 {quality_list[3]} 🦋", url=await create_link(client, links[quality_list[3]]))
             ])
             buttons.append([
-                {'text': f"🦋 {quality_list[4]} 🦋", 'url': await create_link(client, links[quality_list[4]])}
+                InlineKeyboardButton(f"🦋 {quality_list[4]} 🦋", url=await create_link(client, links[quality_list[4]]))
             ])
         else:
             for quality in quality_list:
                 buttons.append([
-                    {'text': f"🦋 {quality} 🦋", 'url': await create_link(client, links[quality])}
+                    InlineKeyboardButton(f"🦋 {quality} 🦋", url=await create_link(client, links[quality]))
                 ])
         
         if edit_data.get('image'):
             await query.message.reply_photo(
                 photo=edit_data['image'],
                 caption=caption,
-                reply_markup={'inline_keyboard': buttons},
+                reply_markup=InlineKeyboardMarkup(buttons),
                 parse_mode=ParseMode.HTML
             )
         else:
             await query.message.reply(
                 text=caption,
-                reply_markup={'inline_keyboard': buttons},
+                reply_markup=InlineKeyboardMarkup(buttons),
                 parse_mode=ParseMode.HTML
             )
         
@@ -1110,7 +1067,6 @@ async def flink_refresh_callback(client: Client, query: CallbackQuery):
         if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
             await query.answer("You are not authorized!", show_alert=True)
             return
-        )
 
         await show_flink_main_menu(client, query.message, edit=True)
         await query.answer("Format status refreshed")
@@ -1121,20 +1077,19 @@ async def flink_refresh_callback(client: Client, query: CallbackQuery):
 @Bot.on_callback_query(filters.regex('flink_(back_to_menu|cancel_process|back_to_output|close)'))
 async def flink_handle_back_buttons(client: Client, query: CallbackQuery):
     """Handle back, cancel, and close actions for flink command."""
+    action = query.data.split('_')[1]
     logger.info(f"flink back/cancel/close callback triggered by user {query.from_user.id} with action {action}")
     try:
-        action = query.data.split('_')[1]
         admin_ids = await db.get_all_admins() or []
-        try:
- if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
-            return await query.answer("You are not authorized user!", show_alert=True)
-        )
+        if query.from_user.id not in admin_ids and query.from_user.id != OWNER_ID:
+            await query.answer("You are not authorized!", show_alert=True)
+            return
 
         if action == "back_to_menu":
             await show_flink_main_menu(client, query.message)
             await query.answer("Back to menu")
         elif action == "cancel_process":
-            await query.message.edit(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>Process cancelled</b><b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode="HTML")
+            await query.message.edit(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>Process cancelled</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
             if query.from_user.id in flink_user_data:
                 del flink_user_data[query.from_user.id]
             await query.answer("Process cancelled")
@@ -1143,19 +1098,19 @@ async def flink_handle_back_buttons(client: Client, query: CallbackQuery):
             await query.answer("Back to output")
         elif action == "close":
             await query.message.delete()
-            if query.from_user_id == flink_user_data:
+            if query.from_user.id in flink_user_data:
                 del flink_user_data[query.from_user.id]
             await query.answer("Done")
     except Exception as e:
- logger.error(f"error in flink_handle_back_buttons: {e}")
-    await query.message.edit(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>❅ An error occurred while processing action</b>\n</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode="HTML")
+        logger.error(f"error in flink_handle_back_buttons: {e}")
+        await query.message.edit(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>❅ An error occurred while processing action</b>\n\n</b><b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>", parse_mode=ParseMode.HTML)
 
 #
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots/>.Bots
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
 #
-# This file is part of < https://github.com/AnimeLord-Bots/>.Bots/FileStore > project
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
 # and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FilStore/>.Bots/FilStore/blob/master/LICENSE >
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
-# All rights reserved
+# All rights reserved.
 #
