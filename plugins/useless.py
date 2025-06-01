@@ -91,8 +91,7 @@ async def get_users(client: Bot, message: Message):
                     InlineKeyboardButton("• Bᴀᴄᴋ •", callback_data="user_back"),
                     InlineKeyboardButton("• Cʟᴏꜱᴇ •", callback_data="user_close")
                 ]
-            ]),
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            ])
         )
     except Exception as e:
         logger.error(f"Failed to edit message with image: {e}")
@@ -103,8 +102,7 @@ async def get_users(client: Bot, message: Message):
                     InlineKeyboardButton("• Bᴀᴄᴋ •", callback_data="user_back"),
                     InlineKeyboardButton("• Cʟᴏꜱᴇ •", callback_data="user_close")
                 ]
-            ]),
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            ])
         )
 
 # AUTO-DELETE SETTINGS
@@ -146,8 +144,7 @@ async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int =
                 chat_id=chat_id,
                 message_id=message_id,
                 media=InputMediaPhoto(media=selected_image, caption=settings_text),
-                reply_markup=keyboard,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                reply_markup=keyboard
             )
         except Exception as e:
             logger.error(f"Failed to edit message with image: {e}")
@@ -156,8 +153,7 @@ async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int =
                 message_id=message_id,
                 text=settings_text,
                 reply_markup=keyboard,
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                parse_mode=ParseMode.HTML
             )
     else:
         try:
