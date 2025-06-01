@@ -1,477 +1,342 @@
 #
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+# Copyright (C) 2025 by AnimeLord-Bots@Github, <https://github.com/AnimeLord-Bots>.
 #
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# This file is part of <https://github.com/AnimeLord-Bots/FileStore> project,
 # and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+# Please see <https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE>
 #
 # All rights reserved.
 #
 
-import asyncio
-import os
-import random
-import sys
-import time
-import logging
-from datetime import datetime, timedelta
-from pyrogram import Client, filters, __version__
-from pyrogram.enums import ParseMode, ChatAction
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatInviteLink, ChatPrivileges
-from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
-from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated, UserNotParticipant
+from pyrogram import Client, filters
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.enums import ParseMode
 from bot import Bot
-from config import *
-from helper_func import *
-from database.database import *
+from database.database import db
+import logging
+from config import OWNER_ID
+from asyncio import TimeoutError
+import re
+import asyncio
 
-# Set up logging for this module
+# Logging setup
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-#=====================================================================================##
+# Small caps conversion dictionary
+SMALL_CAPS = {
+    'a': 'ᴀ', 'b': 'ʙ', 'c': 'ᴄ', 'd': 'ᴅ', 'e': 'ᴇ', 'f': 'ꜰ', 'g': 'ɢ', 'h': 'ʜ',
+    'i': 'ɪ', 'j': 'ᴊ', 'k': 'ᴋ', 'l': 'ʟ', 'm': 'ᴍ', 'n': 'ɴ', 'o': 'ᴏ', 'p': 'ᴘ',
+    'q': 'Q', 'r': 'ʀ', 's': 'ꜱ', 't': 'ᴛ', 'u': 'ᴜ', 'v': 'ᴠ', 'w': 'ᴡ', 'x': 'x',
+    'y': 'ʏ', 'z': 'ᴢ'
+}
 
-REPLY_ERROR = "<code>Uꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ ᴀꜱ ᴀ ʀᴇᴘʟʏ ᴛᴏ ᴀɴʏ ᴛᴇʟᴇɢʀᴀᴍ ᴍᴇꜱꜱᴀɢᴇ ᴡɪᴛʜᴏᴜᴛ ᴀɴʏ ꜱᴘᴀᴄᴇꜱ.</code>"
+def to_small_caps_with_html(text: str) -> str:
+    """Convert text to small caps font style while preserving HTML tags."""
+    result = ""
+    i = 0
+    while i < len(text):
+        if text[i] == '<':
+            j = i + 1
+            while j < len(text) and text[j] != '>':
+                j += 1
+            if j < len(text):
+                result += text[i:j+1]
+                i = j + 1
+            else:
+                result += text[i]
+                i += 1
+        else:
+            result += SMALL_CAPS.get(text[i].lower(), text[i])
+            i += 1
+    return result
 
-# Custom filter for cast input
-async def cast_input_filter(_, __, message: Message):
-    chat_id = message.chat.id
-    state = await db.get_temp_state(chat_id)
-    logger.info(f"Checking cast_input_filter for chat {chat_id}: state={state}")
-    return state in ["awaiting_broadcast_input", "awaiting_pin_input", "awaiting_delete_message"]
+# Store user data for broadcast and delete states
+cast_user_data = {}
 
-# Custom filter for delete duration input
-async def delete_duration_filter(_, __, message: Message):
-    chat_id = message.chat.id
-    state = await db.get_temp_state(chat_id)
-    logger.info(f"Checking delete_duration_filter for chat {chat_id}: state={state}")
-    return state == "awaiting_delete_duration" and message.text and message.text.isdigit()
+# Filter for cast input
+async def cast_input_filter(_: None, __: None, message: Message) -> bool:
+    """Filter to ensure messages are processed when awaiting cast input."""
+    user_id = message.from_user.id
+    if user_id not in cast_user_data:
+        logger.info(f"cast_input_filter: No cast data for user {user_id}")
+        return False
+    state = cast_user_data[user_id].get('state', '')
+    is_valid = state == 'awaiting_cast_message'
+    logger.info(f"cast_input_filter for user {user_id}: state={state}, message_text={message.text or 'None'}, is_valid={is_valid}")
+    return is_valid
 
-#=====================================================================================##
+# Filter for delete duration input
+async def delete_duration_filter(_: None, __: None, message: Message) -> bool:
+    """Filter to ensure messages are processed when awaiting delete duration."""
+    user_id = message.from_user.id
+    if user_id not in cast_user_data:
+        logger.info(f"delete_duration_filter: No cast data for user {user_id}")
+        return False
+    state = cast_user_data[user_id].get('state', '')
+    is_valid = state == 'awaiting_delete_duration' and re.match(r"^\d+$", message.text or "")
+    logger.info(f"delete_duration_filter for user {user_id}: state={state}, message_text={message.text or 'None'}, is_valid={is_valid}")
+    return is_valid
 
-@Bot.on_message(filters.private & filters.command('cast') & admin)
-async def cast_settings(client: Bot, message: Message):
-    """Show cast settings with broadcast options."""
-    # Reset state to avoid conflicts
-    await db.set_temp_state(message.chat.id, "")
-    logger.info(f"Reset state for chat {message.chat.id} before showing cast settings")
+@Bot.on_message(filters.private & filters.command('cast') & filters.user(OWNER_ID))
+async def cast_command(client: Client, message: Message):
+    """Handle /cast command to start a broadcast."""
+    user_id = message.from_user.id
+    logger.info(f"Received /cast command from user {user_id}")
 
-    settings_text = "<b>›› Cᴀꜱᴛ Sᴇᴛᴛɪɴɢꜱ:</b>\n\n" \
-                    "<blockquote><b>⚡ Sᴇʟᴇᴄᴛ ᴀ ʙʀᴏᴀᴅᴄᴀꜱᴛ ᴏᴘᴛɪᴏɴ:</b></blockquote>\n\n" \
-                    "<b>📢 Bʀᴏᴀᴅᴄᴀꜱᴛ:</b> Sᴇɴᴅ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ᴀʟʟ ᴜꜱᴇʀꜱ.\n" \
-                    "<b>📌 Pɪɴ:</b> Sᴇɴᴅ ᴀɴᴅ ᴘɪɴ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ɪɴ ᴀʟʟ ᴜꜱᴇʀ ᴄʜᴀᴛꜱ.\n" \
-                    "<b>🗑 Dᴇʟᴇᴛᴇ:</b> Sᴇɴᴅ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴀꜰᴛᴇʀ ᴀ ꜱᴘᴇᴄɪꜰɪᴇᴅ ᴅᴜʀᴀᴛɪᴏɴ."
+    cast_user_data[user_id] = {
+        'state': 'awaiting_cast_message',
+        'menu_message': None,
+        'broadcast_message': None,
+        'delete_duration': None
+    }
 
-    buttons = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("📢 Bʀᴏᴀᴅᴄᴀꜱᴛ", callback_data="cast_broadcast")],
-            [
-                InlineKeyboardButton("📌 Pɪɴ", callback_data="cast_pin"),
-                InlineKeyboardButton("🗑 Dᴇdelete", callback_data="cast_delete")
-            ],
-            [InlineKeyboardButton("• Cʟᴏꜱᴇ •", callback_data="cast_close")]
-        ]
+    text = to_small_caps_with_html(
+        "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+        "<blockquote><b>Please send the message you want to broadcast.</b></blockquote>\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"
     )
-
-    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
-
-    try:
-        await client.send_photo(
-            chat_id=message.chat.id,
-            photo=selected_image,
-            caption=settings_text,
-            reply_markup=buttons,
-            parse_mode=ParseMode.HTML,
-            message_effect_id=selected_effect
-        )
-        logger.info(f"Sent cast settings with image {selected_image} for chat {message.chat.id}")
-    except Exception as e:
-        logger.error(f"Failed to send photo for cast settings: {e}")
-        await client.send_message(
-            chat_id=message.chat.id,
-            text=settings_text,
-            reply_markup=buttons,
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True,
-            message_effect_id=selected_effect
-        )
-        logger.info(f"Sent text-only cast settings as fallback for chat {message.chat.id}")
-
-#=====================================================================================##
-
-@Bot.on_callback_query(filters.regex(r"^cast_"))
-async def cast_callback(client: Bot, callback: CallbackQuery):
-    """Handle callback queries for cast settings."""
-    data = callback.data
-    chat_id = callback.message.chat.id
-    message_id = callback.message.id
-    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
-
-    logger.info(f"Received cast callback query with data: {data} in chat {chat_id}")
-
-    if data == "cast_broadcast":
-        await db.set_temp_state(chat_id, "awaiting_broadcast_input")
-        await client.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_id,
-            text="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʀᴏᴀᴅᴄᴀꜱᴛ (ᴛᴇxᴛ, ɪᴍᴀɢᴇ, ᴏʀ ᴀɴʏ ᴍᴇᴅɪᴀ).</b></blockquote>",
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("• Cᴀɴᴄᴇʟ •", callback_data="cast_cancel")
-                ]
-            ]),
-            parse_mode=ParseMode.HTML
-        )
-        await callback.answer("Pʟᴇᴀꜱᴇ ꜱᴇɴᴅ ᴛʜᴇ ʙʀᴏᴀᴅᴄᴀꜱᴛ ᴍᴇꜱꜱᴀɢᴇ.")
-
-    elif data == "cast_pin":
-        await db.set_temp_state(chat_id, "awaiting_pin_input")
-        await client.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_id,
-            text="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʀᴏᴀᴅᴄᴀꜱᴛ ᴀɴᴅ ᴘɪɴ (ᴛᴇxᴛ, ɪᴍᴀɢᴇ, ᴏʀ ᴀɴʏ ᴍᴇᴅɪᴀ).</b></blockquote>",
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("• Cᴀɴᴄᴇʟ •", callback_data="cast_cancel")
-                ]
-            ]),
-            parse_mode=ParseMode.HTML
-        )
-        await callback.answer("Pʟᴇᴀꜱᴇ ꜱᴇɴᴅ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ᴘɪɴ.")
-
-    elif data == "cast_delete":
-        await db.set_temp_state(chat_id, "awaiting_delete_duration")
-        await client.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_id,
-            text="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ (ᴇ.ɢ., '300' ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ).</b></blockquote>",
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("• Cᴀɴᴄᴇʟ •", callback_data="cast_cancel")
-                ]
-            ]),
-            parse_mode=ParseMode.HTML
-        )
-        await callback.answer("Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ.")
-
-    elif data == "cast_close":
-        await db.set_temp_state(chat_id, "")
-        await callback.message.delete()
-        await callback.answer("Cᴀꜱᴛ ꜱᴇᴛᴛɪɴɢꜱ ᴄʟᴏꜱᴇᴅ!")
-
-    elif data == "cast_cancel":
-        await db.set_temp_state(chat_id, "")
-        await cast_settings(client, callback.message)
-        await callback.answer("Aᴄᴛɪᴏɴ ᴄᴀɴᴄᴇʟʟᴇᴅ!")
-
-#=====================================================================================##
-
-@Bot.on_message(filters.private & admin & filters.create(delete_duration_filter))
-async def handle_delete_duration(client: Bot, message: Message):
-    """Handle the duration input for delete broadcast."""
-    chat_id = message.chat.id
-    try:
-        duration = int(message.text)
-        if duration <= 0:
-            raise ValueError("Duration must be positive")
-    except ValueError:
-        await message.reply("<b>❌ Iɴᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ. Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ ᴏꜰ ꜱᴇᴄᴏɴᴅꜱ.</b>")
-        return
-
-    # Store duration in temp data
-    await db.set_temp_data(chat_id, "delete_duration", duration)
-    await db.set_temp_state(chat_id, "awaiting_delete_message")
-
-    await message.reply(
-        "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ (ᴛᴇxᴛ, ɪᴍᴀɢᴇ, ᴏʀ ᴀɴʯ ᴍᴇᴅɪᴀ).</b></blockquote>",
-        reply_markup=InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("• Cᴀɴᴄᴇʟ •", callback_data="cast_cancel")
-            ]
-        ]),
+    msg = await message.reply(
+        text=text,
         parse_mode=ParseMode.HTML
     )
-    logger.info(f"Stored duration {duration} for chat {chat_id} and set state to awaiting_delete_message")
+    cast_user_data[user_id]['menu_message'] = msg
 
-#=====================================================================================##
+@Bot.on_message(filters.create(cast_input_filter))
+async def handle_cast_input(client: Client, message: Message):
+    """Handle the message to be broadcasted."""
+    user_id = message.from_user.id
+    logger.info(f"Handling cast input for user {user_id}")
 
-@Bot.on_message(filters.private & admin & filters.create(cast_input_filter), group=3)
-async def handle_cast_input(client: Bot, message: Message):
-    """Handle the broadcast message input from the user."""
-    chat_id = message.chat.id
-    state = await db.get_temp_state(chat_id)
-    logger.info(f"Handling cast input for state: {state} in chat {chat_id}")
-
-    query = await db.full_userbase()
-    banned_users = await db.get_ban_users()
-    valid_users = [uid for uid in query if uid not in banned_users]
-    total = len(valid_users)
-    successful = 0
-    blocked = 0
-    deleted = 0
-    unsuccessful = 0
-
-    pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴘʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
-
-    if state == "awaiting_broadcast_input":
-        for user_id in valid_users:
-            try:
-                await message.copy(user_id)
-                successful += 1
-            except FloodWait as e:
-                await asyncio.sleep(e.x)
-                await message.copy(user_id)
-                successful += 1
-            except UserIsBlocked:
-                await db.del_user(user_id)
-                blocked += 1
-            except InputUserDeactivated:
-                await db.del_user(user_id)
-                deleted += 1
-            except Exception as e:
-                logger.error(f"Failed to broadcast to {user_id}: {e}")
-                unsuccessful += 1
-            await asyncio.sleep(0.1)
-
-        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴘʟᴇᴛᴇᴅ</u></b>
-
-Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
-Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
-Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
-Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
-
-    elif state == "awaiting_pin_input":
-        for user_id in valid_users:
-            try:
-                sent_msg = await message.copy(user_id)
-                await client.pin_chat_message(chat_id=user_id, message_id=sent_msg.id, both_sides=True)
-                successful += 1
-            except FloodWait as e:
-                await asyncio.sleep(e.x)
-                sent_msg = await message.copy(user_id)
-                await client.pin_chat_message(chat_id=user_id, message_id=sent_msg.id, both_sides=True)
-                successful += 1
-            except UserIsBlocked:
-                await db.del_user(user_id)
-                blocked += 1
-            except InputUserDeactivated:
-                await db.del_user(user_id)
-                deleted += 1
-            except Exception as e:
-                logger.error(f"Failed to pin broadcast to {user_id}: {e}")
-                unsuccessful += 1
-            await asyncio.sleep(0.1)
-
-        status = f"""<b><u>Pɪɴ Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴘʟᴇᴛᴇᴅ</u></b>
-
-Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
-Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
-Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
-Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
-
-    elif state == "awaiting_delete_message":
-        duration = await db.get_temp_data(chat_id, "delete_duration") or 300  # Default 5 minutes
-        for user_id in valid_users:
-            try:
-                sent_msg = await message.copy(user_id)
-                await asyncio.sleep(duration)
-                await sent_msg.delete()
-                successful += 1
-            except FloodWait as e:
-                await asyncio.sleep(e.x)
-                sent_msg = await message.copy(user_id)
-                await asyncio.sleep(duration)
-                await sent_msg.delete()
-                successful += 1
-            except UserIsBlocked:
-                await db.del_user(user_id)
-                blocked += 1
-            except InputUserDeactivated:
-                await db.del_user(user_id)
-                deleted += 1
-            except Exception as e:
-                logger.error(f"Failed to delete broadcast to {user_id}: {e}")
-                unsuccessful += 1
-            await asyncio.sleep(0.1)
-
-        status = f"""<b><u>Aᴜᴛᴏ-Dᴇʟᴇᴛᴇ Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
-
-Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
-Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
-Bʟᴏᴄᴋᴇᴴ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
-Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>
-Dᴜʀᴀᴛɪᴏɴ: <code>{get_readable_time(duration)}</code>"""
-
-    await pls_wait.edit(status, parse_mode=ParseMode.HTML)
-    await db.set_temp_state(chat_id, "")
-    logger.info(f"Cleared state for chat {chat_id} after broadcast")
-
-#=====================================================================================##
-
-@Bot.on_message(filters.private & filters.command('pbroadcast') & admin)
-async def send_pin_text(client: Bot, message: Message):
-    if message.reply_to_message:
-        query = await db.full_userbase()
-        broadcast_msg = message.reply_to_message
-        total = 0
-        successful = 0
-        blocked = 0
-        deleted = 0
-        unsuccessful = 0
-
-        pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴘʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
-        for chat_id in query:
-            try:
-                sent_msg = await broadcast_msg.copy(chat_id)
-                await client.pin_chat_message(chat_id=chat_id, message_id=sent_msg.id, both_sides=True)
-                successful += 1
-            except FloodWait as e:
-                await asyncio.sleep(e.x)
-                sent_msg = await broadcast_msg.copy(chat_id)
-                await client.pin_chat_message(chat_id=chat_id, message_id=sent_msg.id, both_sides=True)
-                successful += 1
-            except UserIsBlocked:
-                await db.del_user(chat_id)
-                blocked += 1
-            except InputUserDeactivated:
-                await db.del_user(chat_id)
-                deleted += 1
-            except Exception as e:
-                logger.error(f"Failed to send or pin message to {chat_id}: {e}")
-                unsuccessful += 1
-            total += 1
-
-        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴄᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
-
-Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
-Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
-Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʟᴇᴛᴇᴴ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
-Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
-
-        return await pls_wait.edit(status)
-
-    else:
-        msg = await message.reply("Rᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʜʀᴏᴀᴅᴄᴀꜱᴛ ᴀɴᴅ ᴘɪɴ ɪᴛ.")
-        await asyncio.sleep(8)
-        await msg.delete()
-
-#=====================================================================================##
-
-@Bot.on_message(filters.private & filters.command('broadcast') & admin)
-async def send_text(client: Bot, message: Message):
-    if message.reply_to_message:
-        query = await db.full_userbase()
-        broadcast_msg = message.reply_to_message
-        total = 0
-        successful = 0
-        blocked = 0
-        deleted = 0
-        unsuccessful = 0
-
-        pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴪʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
-        for chat_id in query:
-            try:
-                await broadcast_msg.copy(chat_id)
-                successful += 1
-            except FloodWait as e:
-                await asyncio.sleep(e.x)
-                await broadcast_msg.copy(chat_id)
-                successful += 1
-            except UserIsBlocked:
-                await db.del_user(chat_id)
-                blocked += 1
-            except InputUserDeactivated:
-                await db.del_user(chat_id)
-                deleted += 1
-            except:
-                unsuccessful += 1
-                pass
-            total += 1
-
-        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴄᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
-
-Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
-Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
-Bʟᴏᴄᴋᴇᴴ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʟᴇᴛᴇᴴ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
-Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
-
-        return await pls_wait.edit(status)
-
-    else:
-        msg = await message.reply(REPLY_ERROR)
-        await asyncio.sleep(8)
-        await msg.delete()
-
-#=====================================================================================##
-
-@Bot.on_message(filters.private & filters.command('dbroadcast') & admin)
-async def delete_broadcast(client: Bot, message: Message):
-    if message.reply_to_message:
-        try:
-            duration = int(message.command[1])  # Get the duration in seconds
-        except (IndexError, ValueError):
-            await message.reply("<b>Pʟᴇᴀꜱᴇ ᴜꜱᴇ ᴀ ᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b> Uꜱᴀɢᴇ: /dbroadcast {duration}")
+    try:
+        if user_id != OWNER_ID:
+            await message.reply_text(
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❖ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
+            )
             return
 
-        query = await db.full_userbase()
-        broadcast_msg = message.reply_to_message
-        total = 0
-        successful = 0
-        blocked = 0
-        deleted = 0
-        unsuccessful = 0
+        # Store the message to broadcast
+        cast_user_data[user_id]['broadcast_message'] = message
+        cast_user_data[user_id]['state'] = 'awaiting_cast_confirmation'
 
-        pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴪʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
-        for chat_id in query:
+        # Create buttons for confirmation
+        buttons = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("• Send Now •", callback_data="cast_send"),
+                InlineKeyboardButton("• Delete After •", callback_data="cast_delete")
+            ],
+            [
+                InlineKeyboardButton("• Cancel •", callback_data="cast_cancel")
+            ]
+        ])
+
+        await message.reply(
+            to_small_caps_with_html(
+                "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+                "<blockquote><b>Confirm the broadcast message.</b></blockquote>\n"
+                "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"
+            ),
+            reply_markup=buttons,
+            parse_mode=ParseMode.HTML
+        )
+
+        # Delete the menu message
+        if cast_user_data[user_id]['menu_message']:
+            await cast_user_data[user_id]['menu_message'].delete()
+
+    except Exception as e:
+        logger.error(f"Error in handle_cast_input for user {user_id}: {e}")
+        await message.reply(
+            to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❖ Error: {str(e)}</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        if user_id in cast_user_data:
+            del cast_user_data[user_id]
+
+@Bot.on_callback_query(filters.regex(r"^cast_"))
+async def cast_callback(client: Client, callback: CallbackQuery):
+    """Handle callback queries for cast command."""
+    user_id = callback.from_user.id
+    data = callback.data
+    logger.info(f"Received cast callback query with data: {data} in chat {user_id}")
+
+    try:
+        if user_id != OWNER_ID:
+            await callback.answer(to_small_caps_with_html("You are not authorized!"), show_alert=True)
+            return
+
+        if data == "cast_send":
+            if user_id not in cast_user_data or 'broadcast_message' not in cast_user_data[user_id]:
+                await callback.answer(to_small_caps_with_html("No message to broadcast!"), show_alert=True)
+                return
+
+            # Perform the broadcast
+            broadcast_message = cast_user_data[user_id]['broadcast_message']
+            users = await db.get_all_users()  # Assuming db.get_all_users() retrieves user IDs
+            success_count = 0
+            failed_count = 0
+
+            for user in users:
+                try:
+                    await broadcast_message.copy(chat_id=user['id'])
+                    success_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to send broadcast to user {user['id']}: {e}")
+                    failed_count += 1
+
+            await callback.message.edit_text(
+                to_small_caps_with_html(
+                    f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+                    f"<blockquote><b>Broadcast completed!</b></blockquote>\n"
+                    f"<b>Success: {success_count} users</b>\n"
+                    f"<b>Failed: {failed_count} users</b>\n"
+                    f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"
+                ),
+                parse_mode=ParseMode.HTML
+            )
+            if user_id in cast_user_data:
+                del cast_user_data[user_id]
+            await callback.answer(to_small_caps_with_html("Broadcast sent!"))
+
+        elif data == "cast_delete":
+            cast_user_data[user_id]['state'] = 'awaiting_delete_duration'
+            await db.set_temp_state(user_id, 'awaiting_delete_duration')  # Store state in database
+            await callback.message.edit_text(
+                to_small_caps_with_html(
+                    "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+                    "<blockquote><b>Please send the duration (in minutes) after which the broadcast message should be deleted.</b></blockquote>\n"
+                    "<b>Example: 20</b>\n"
+                    "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"
+                ),
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("• Cancel •", callback_data="cast_cancel")]
+                ]),
+                parse_mode=ParseMode.HTML
+            )
+            await callback.answer(to_small_caps_with_html("Enter duration in minutes"))
+
+        elif data == "cast_cancel":
+            if user_id in cast_user_data:
+                await db.clear_temp_state(user_id)
+                del cast_user_data[user_id]
+            await callback.message.edit_text(
+                to_small_caps_with_html(
+                    "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+                    "<b>❌ Broadcast cancelled!</b>\n"
+                    "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"
+                ),
+                parse_mode=ParseMode.HTML
+            )
+            await callback.answer(to_small_caps_with_html("Broadcast cancelled"))
+
+    except Exception as e:
+        logger.error(f"Error in cast_callback for user {user_id}: {e}")
+        await callback.message.edit_text(
+            to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❖ Error: {str(e)}</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        if user_id in cast_user_data:
+            await db.clear_temp_state(user_id)
+            del cast_user_data[user_id]
+
+@Bot.on_message(filters.create(delete_duration_filter))
+async def handle_delete_duration_input(client: Client, message: Message):
+    """Handle the duration input for deleting broadcast messages."""
+    user_id = message.from_user.id
+    logger.info(f"Handling delete duration input for user {user_id}, input: {message.text}")
+
+    try:
+        if user_id != OWNER_ID:
+            await message.reply_text(
+                to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❖ You are not authorized!</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+                parse_mode=ParseMode.HTML
+            )
+            return
+
+        duration = int(message.text)
+        if duration <= 0:
+            await message.reply(
+                to_small_caps_with_html(
+                    "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+                    "<blockquote><b>Please send a valid duration (greater than 0).</b></blockquote>\n"
+                    "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"
+                ),
+                parse_mode=ParseMode.HTML
+            )
+            return
+
+        # Store the duration
+        cast_user_data[user_id]['delete_duration'] = duration
+        cast_user_data[user_id]['state'] = 'awaiting_cast_confirmation'
+
+        # Perform the broadcast with delete option
+        broadcast_message = cast_user_data[user_id]['broadcast_message']
+        users = await db.get_all_users()
+        success_count = 0
+        failed_count = 0
+        message_ids = []
+
+        for user in users:
             try:
-                sent_msg = await broadcast_msg.copy(chat_id)
-                await asyncio.sleep(duration)
-                await sent_msg.delete()
-                successful += 1
-            except FloodWait as e:
-                await asyncio.sleep(e.x)
-                sent_msg = await broadcast_msg.copy(chat_id)
-                await asyncio.sleep(duration)
-                await sent_msg.delete()
-                successful += 1
-            except UserIsBlocked:
-                await db.del_user(chat_id)
-                blocked += 1
-            except InputUserDeactivated:
-                await db.del_user(chat_id)
-                deleted += 1
-            except:
-                unsuccessful += 1
-                pass
-            total += 1
+                sent_message = await broadcast_message.copy(chat_id=user['id'])
+                message_ids.append((user['id'], sent_message.id))
+                success_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send broadcast to user {user['id']}: {e}")
+                failed_count += 1
 
-        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴄᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
+        # Send confirmation
+        await message.reply(
+            to_small_caps_with_html(
+                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+                f"<blockquote><b>Broadcast completed with auto-delete after {duration} minutes!</b></blockquote>\n"
+                f"<b>Success: {success_count} users</b>\n"
+                f"<b>Failed: {failed_count} users</b>\n"
+                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"
+            ),
+            parse_mode=ParseMode.HTML
+        )
 
-Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
-Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
-Bʟᴏᴄᴋᴇᴴ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʟᴇᴛᴇᴴ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
-Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
+        # Schedule deletion
+        await asyncio.sleep(duration * 60)  # Convert minutes to seconds
+        for chat_id, msg_id in message_ids:
+            try:
+                await client.delete_messages(chat_id=chat_id, message_ids=msg_id)
+                logger.info(f"Deleted message {msg_id} in chat {chat_id}")
+            except Exception as e:
+                logger.error(f"Failed to delete message {msg_id} in chat {chat_id}: {e}")
 
-        return await pls_wait.edit(status)
+        # Clean up user data
+        if user_id in cast_user_data:
+            await db.clear_temp_state(user_id)
+            del cast_user_data[user_id]
 
-    else:
-        msg = await message.reply("Pʟᴇᴀꜱᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʀᴏᴀᴅᴄᴀꜱᴛ ɪᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ.")
-        await asyncio.sleep(8)
-        await msg.delete()
+    except ValueError:
+        await message.reply(
+            to_small_caps_with_html(
+                "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n"
+                "<blockquote><b>Please send a valid number for duration.</b></blockquote>\n"
+                "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"
+            ),
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        logger.error(f"Error in handle_delete_duration_input for user {user_id}: {e}")
+        await message.reply(
+            to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>\n<b>❖ Error: {str(e)}</b>\n<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>"),
+            parse_mode=ParseMode.HTML
+        )
+        if user_id in cast_user_data:
+            await db.clear_temp_state(user_id)
+            del cast_user_data[user_id]
 
 #
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+# Copyright (C) 2025 by AnimeLord-Bots@Github, <https://github.com/AnimeLord-Bots>.
 #
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# This file is part of <https://github.com/AnimeLord-Bots/FileStore> project,
 # and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+# Please see <https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE>
 #
 # All rights reserved.
 #
