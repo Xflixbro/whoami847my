@@ -70,6 +70,16 @@ async def batch_state_filter(_, __, message: Message):
     logger.info(f"batch_state_filter for user {user_id}: state={state}, message_text={message.text}")
     return state in ['awaiting_first_message', 'awaiting_second_message'] and (message.forward_from_chat or re.match(r"^https?://t\.me/.*$", message.text))
 
+# Filter for flink db post input
+async def flink_db_post_filter(_, __, message: Message):
+    user_id = message.from_user.id
+    if user_id not in flink_user_data:
+        logger.info(f"flink_db_post_filter: No flink data for user {user_id}")
+        return False
+    state = flink_user_data[user_id].get('awaiting_db_post')
+    logger.info(f"flink_db_post_filter for user {user_id}: awaiting_db_post={state}, message_text={message.text}")
+    return state and (message.forward_from_chat or re.match(r"^https?://t\.me/.*$", message.text))
+
 @Bot.on_message(filters.private & admin & filters.command('link'))
 async def link_menu(client: Client, message: Message):
     """Handle /link command to display a menu for link generation options."""
@@ -655,7 +665,7 @@ async def flink_start_process_callback(client: Client, query: CallbackQuery):
         logger.error(to_small_caps_with_html(f"error in flink_start_process_callback: {e}"))
         await query.message.edit_text(to_small_caps_with_html("<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ An error occurred while starting process.</b>\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
-@Bot.on_message(filters.private & (filters.forwarded | filters.regex(r"^https?://t\.me/.*$")))
+@Bot.on_message(filters.private & admin & filters.create(flink_db_post_filter))
 async def handle_db_post_input(client: Client, message: Message):
     """Handle db channel post input for flink command."""
     logger.info(to_small_caps_with_html(f"db post input received from user {message.from_user.id}"))
@@ -752,7 +762,7 @@ async def handle_db_post_input(client: Client, message: Message):
         await message.reply_text(to_small_caps_with_html(f"<b>━━━━━━━━━━━━━━━━━━</b>\n<b>❌ Error: {str(e)}</b>\nPlease ensure the input is valid and try again.\n<b>━━━━━━━━━━━━━━━━━━</b>"), parse_mode=ParseMode.HTML)
 
 async def flink_generate_final_output(client: Client, message: Message):
-    """Generate the final output for flink command with download buttons."""
+    """Generate the final output for flink Mest with download buttons."""
     logger.info(to_small_caps_with_html(f"generating final output for user {message.from_user.id}"))
     try:
         user_id = message.from_user.id
