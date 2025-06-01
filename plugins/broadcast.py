@@ -37,7 +37,14 @@ async def cast_input_filter(_, __, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
     logger.info(f"Checking cast_input_filter for chat {chat_id}: state={state}")
-    return state in ["awaiting_broadcast_input", "awaiting_pin_input", "awaiting_delete_input"]
+    return state in ["awaiting_broadcast_input", "awaiting_pin_input", "awaiting_delete_message"]
+
+# Custom filter for delete duration input
+async def delete_duration_filter(_, __, message: Message):
+    chat_id = message.chat.id
+    state = await db.get_temp_state(chat_id)
+    logger.info(f"Checking delete_duration_filter for chat {chat_id}: state={state}")
+    return state == "awaiting_delete_duration" and message.text and message.text.isdigit()
 
 #=====================================================================================##
 
@@ -56,14 +63,12 @@ async def cast_settings(client: Bot, message: Message):
 
     buttons = InlineKeyboardMarkup(
         [
+            [InlineKeyboardButton("📢 Bʀᴏᴀᴅᴄᴀꜱᴛ", callback_data="cast_broadcast")],
             [
-                InlineKeyboardButton("📢 Bʀᴏᴀᴅᴄᴀꜱᴛ", callback_data="cast_broadcast"),
                 InlineKeyboardButton("📌 Pɪɴ", callback_data="cast_pin"),
-                InlineKeyboardButton("🗑 Dᴇʟᴇᴛᴇ", callback_data="cast_delete")
+                InlineKeyboardButton("🗑 Dᴇdelete", callback_data="cast_delete")
             ],
-            [
-                InlineKeyboardButton("• Cʟᴏꜱᴇ •", callback_data="cast_close")
-            ]
+            [InlineKeyboardButton("• Cʟᴏꜱᴇ •", callback_data="cast_close")]
         ]
     )
 
@@ -136,12 +141,11 @@ async def cast_callback(client: Bot, callback: CallbackQuery):
         await callback.answer("Pʟᴇᴀꜱᴇ ꜱᴇɴᴅ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ᴘɪɴ.")
 
     elif data == "cast_delete":
-        await db.set_temp_state(chat_id, "awaiting_delete_input")
+        await db.set_temp_state(chat_id, "awaiting_delete_duration")
         await client.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
-            text="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ (ᴛᴇxᴛ, ɪᴍᴀɢᴇ, ᴏʀ ᴀɴʏ ᴍᴇᴅɪᴀ).</b></blockquote>\n" \
-                 "<blockquote><b>Aʟꜱᴏ, ꜱᴘᴇᴄɪꜰʏ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ (ᴇ.ɢ., '300' ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ).</b></blockquote>",
+            text="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ (ᴇ.ɢ., '300' ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ).</b></blockquote>",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("• Cᴀɴᴄᴇʟ •", callback_data="cast_cancel")
@@ -149,7 +153,7 @@ async def cast_callback(client: Bot, callback: CallbackQuery):
             ]),
             parse_mode=ParseMode.HTML
         )
-        await callback.answer("Pʟᴇᴀꜱᴇ ꜱᴇɴᴅ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ᴀɴᴅ ᴅᴜʀᴀᴛɪᴏɴ.")
+        await callback.answer("Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ.")
 
     elif data == "cast_close":
         await db.set_temp_state(chat_id, "")
@@ -160,6 +164,35 @@ async def cast_callback(client: Bot, callback: CallbackQuery):
         await db.set_temp_state(chat_id, "")
         await cast_settings(client, callback.message)
         await callback.answer("Aᴄᴛɪᴏɴ ᴄᴀɴᴄᴇʟʟᴇᴅ!")
+
+#=====================================================================================##
+
+@Bot.on_message(filters.private & admin & filters.create(delete_duration_filter))
+async def handle_delete_duration(client: Bot, message: Message):
+    """Handle the duration input for delete broadcast."""
+    chat_id = message.chat.id
+    try:
+        duration = int(message.text)
+        if duration <= 0:
+            raise ValueError("Duration must be positive")
+    except ValueError:
+        await message.reply("<b>❌ Iɴᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ. Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ ᴏꜰ ꜱᴇᴄᴏɴᴅꜱ.</b>")
+        return
+
+    # Store duration in temp data
+    await db.set_temp_data(chat_id, "delete_duration", duration)
+    await db.set_temp_state(chat_id, "awaiting_delete_message")
+
+    await message.reply(
+        "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ (ᴛᴇxᴛ, ɪᴍᴀɢᴇ, ᴏʀ ᴀɴʯ ᴍᴇᴅɪᴀ).</b></blockquote>",
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("• Cᴀɴᴄᴇʟ •", callback_data="cast_cancel")
+            ]
+        ]),
+        parse_mode=ParseMode.HTML
+    )
+    logger.info(f"Stored duration {duration} for chat {chat_id} and set state to awaiting_delete_message")
 
 #=====================================================================================##
 
@@ -199,7 +232,7 @@ async def handle_cast_input(client: Bot, message: Message):
             except Exception as e:
                 logger.error(f"Failed to broadcast to {user_id}: {e}")
                 unsuccessful += 1
-            await asyncio.sleep(0.1)  # Small delay to prevent rate limits
+            await asyncio.sleep(0.1)
 
         status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴘʟᴇᴛᴇᴅ</u></b>
 
@@ -239,17 +272,8 @@ Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
 Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
 Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
 
-    elif state == "awaiting_delete_input":
-        try:
-            duration_text = message.text.split("\n")[-1].strip() if message.text else None
-            duration = int(duration_text) if duration_text and duration_text.isdigit() else 300  # Default 5 minutes
-            if duration <= 0:
-                raise ValueError("Duration must be positive")
-        except ValueError:
-            await pls_wait.edit("<b>❌ Iɴᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ. Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ ᴏꜰ ꜱᴇᴄᴏɴᴅꜱ.</b>")
-            await db.set_temp_state(chat_id, "")
-            return
-
+    elif state == "awaiting_delete_message":
+        duration = await db.get_temp_data(chat_id, "delete_duration") or 300  # Default 5 minutes
         for user_id in valid_users:
             try:
                 sent_msg = await message.copy(user_id)
@@ -273,11 +297,11 @@ Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
                 unsuccessful += 1
             await asyncio.sleep(0.1)
 
-        status = f"""<b><u>Aᴜᴛᴏ-Dᴇʟᴇᴛᴇ Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴘʟᴇᴛᴇᴅ</u></b>
+        status = f"""<b><u>Aᴜᴛᴏ-Dᴇʟᴇᴛᴇ Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
 Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
-Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
+Bʟᴏᴄᴋᴇᴴ Uꜱᴇʀꜱ: <code>{blocked}</code>
 Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
 Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>
 Dᴜʀᴀᴛɪᴏɴ: <code>{get_readable_time(duration)}</code>"""
@@ -302,7 +326,6 @@ async def send_pin_text(client: Bot, message: Message):
         pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴘʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
         for chat_id in query:
             try:
-                # Send and pin the message
                 sent_msg = await broadcast_msg.copy(chat_id)
                 await client.pin_chat_message(chat_id=chat_id, message_id=sent_msg.id, both_sides=True)
                 successful += 1
@@ -318,22 +341,22 @@ async def send_pin_text(client: Bot, message: Message):
                 await db.del_user(chat_id)
                 deleted += 1
             except Exception as e:
-                print(f"Fᴀɪʟᴇᴅ ᴛᴏ ꜱᴇɴᴅ ᴏʀ ᴘɪɴ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ {chat_id}: {e}")
+                logger.error(f"Failed to send or pin message to {chat_id}: {e}")
                 unsuccessful += 1
             total += 1
 
-        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ</u></b>
+        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴄᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
 Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
 Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
+Dᴇʟᴇᴛᴇᴴ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
 Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
 
         return await pls_wait.edit(status)
 
     else:
-        msg = await message.reply("Rᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʰʀᴏᴀᴅᴄᴀꜱᴛ ᴀɴᴅ ᴘɪɴ ɪᴛ.")
+        msg = await message.reply("Rᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʜʀᴏᴀᴅᴄᴀꜱᴛ ᴀɴᴅ ᴘɪɴ ɪᴛ.")
         await asyncio.sleep(8)
         await msg.delete()
 
@@ -350,7 +373,7 @@ async def send_text(client: Bot, message: Message):
         deleted = 0
         unsuccessful = 0
 
-        pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴘʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
+        pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴪʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
         for chat_id in query:
             try:
                 await broadcast_msg.copy(chat_id)
@@ -370,12 +393,12 @@ async def send_text(client: Bot, message: Message):
                 pass
             total += 1
 
-        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ</u></b>
+        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴄᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
 Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
-Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
+Bʟᴏᴄᴋᴇᴴ Uꜱᴇʀꜱ: <code>{blocked}</code>
+Dᴇʟᴇᴛᴇᴴ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
 Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
 
         return await pls_wait.edit(status)
@@ -404,12 +427,12 @@ async def delete_broadcast(client: Bot, message: Message):
         deleted = 0
         unsuccessful = 0
 
-        pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴘʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
+        pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴪʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
         for chat_id in query:
             try:
                 sent_msg = await broadcast_msg.copy(chat_id)
-                await asyncio.sleep(duration)  # Wait for the specified duration
-                await sent_msg.delete()  # Delete the message after the duration
+                await asyncio.sleep(duration)
+                await sent_msg.delete()
                 successful += 1
             except FloodWait as e:
                 await asyncio.sleep(e.x)
@@ -432,8 +455,8 @@ async def delete_broadcast(client: Bot, message: Message):
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
 Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
-Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
+Bʟᴏᴄᴋᴇᴴ Uꜱᴇʀꜱ: <code>{blocked}</code>
+Dᴇʟᴇᴛᴇᴴ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
 Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
 
         return await pls_wait.edit(status)
