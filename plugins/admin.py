@@ -23,7 +23,7 @@ from config import *
 from helper_func import *
 from database.database import *
 
-# Function to show user settings with user list, buttons, and message effects (Moved from banuser.py)
+# Function to show user settings with user list, buttons, and message effects
 async def show_user_settings(client: Client, chat_id: int, message_id: int = None):
     settings_text = "<b>›› Uꜱᴇʀ Sᴇᴛᴛɪɴɢꜱ:</b>\n\n"
     user_ids = await db.full_userbase()
@@ -171,7 +171,7 @@ async def show_admin_settings(client: Client, chat_id: int, message_id: int = No
             )
 
 # Command to show admin settings
-@Bot.on_message(filters.command('admin') & filters.private & admin)
+@Bot.on_message(filters.command('admin') & filters.private)
 async def admin_settings(client: Client, message: Message):
     await show_admin_settings(client, message.chat.id)
 
@@ -181,10 +181,11 @@ async def admin_callback(client: Client, callback: CallbackQuery):
     data = callback.data
     chat_id = callback.message.chat.id
     message_id = callback.message.id
+    user_id = callback.from_user.id
 
-    # Restrict admin_add, admin_remove to OWNER_ID only
-    if data in ["admin_add", "admin_remove"] and callback.from_user.id != OWNER_ID:
-        await callback.answer("🚫 Only the owner can perform this action!", show_alert=True)
+    # Restrict admin_add and admin_remove to OWNER_ID only
+    if data in ["admin_add", "admin_remove"] and user_id != OWNER_ID:
+        await callback.answer("🚫 Only the owner can add or remove admins!", show_alert=True)
         return
 
     if data == "admin_add":
@@ -233,7 +234,7 @@ async def admin_callback(client: Client, callback: CallbackQuery):
                     name = admin.first_name if admin.first_name else "Unknown"
                     admin_list += f"<b><blockquote><a href='tg://user?id={admin_id}'>{name}</a> - <code>{admin_id}</code></blockquote></b>\n"
                 except Exception as e:
-                    admin_list += f"<b><blockquote>Unknown - <code>{admin_id}</code></b></blockquote>\n"
+                    admin_list += f"<b><blockquote>Unknown - <code>{admin_id}</code></blockquote></b>\n"
 
         reply_markup = InlineKeyboardMarkup([
             [
@@ -265,17 +266,12 @@ async def admin_callback(client: Client, callback: CallbackQuery):
         await show_admin_settings(client, chat_id, message_id)
         await callback.answer("Bᴀᴄᴋ ᴛᴏ ꜱᴇᴛᴛɪɴɢꜱ!")
 
-# Callback handler for user settings buttons (Moved from banuser.py)
+# Callback handler for user settings buttons
 @Bot.on_callback_query(filters.regex(r"^user_"))
 async def user_callback(client: Client, callback: CallbackQuery):
     data = callback.data
     chat_id = callback.message.chat.id
     message_id = callback.message.id
-
-    # Restrict user_ban, user_unban, user_list, user_banlist to OWNER_ID only
-    if data in ["user_ban", "user_unban", "user_list", "user_banlist"] and callback.from_user.id != OWNER_ID:
-        await callback.answer("🚫 Only the owner can perform this action!", show_alert=True)
-        return
 
     if data == "user_ban":
         await db.set_temp_state(chat_id, "awaiting_ban_input")
@@ -313,7 +309,7 @@ async def user_callback(client: Client, callback: CallbackQuery):
 
     elif data == "user_list":
         user_ids = await db.full_userbase()
-        if not user_ids or not isinstance(user_ids, (list, tuple)):  # Ensure user_ids is iterable
+        if not user_ids or not isinstance(user_ids, (list, tuple)):
             user_list = "<b><blockquote>❌ Nᴏ ᴜꜱᴇʀꜱ ꜰᴏᴜɴᴅ.</blockquote></b>"
         else:
             user_list = ""
@@ -353,7 +349,7 @@ async def user_callback(client: Client, callback: CallbackQuery):
                     user_link = f'<a href="tg://user?id={uid}">{user.first_name}</a>'
                     result += f"• {user_link} — <code>{uid}</code>\n"
                 except:
-                    result += f"• <code>{uid}</code> — <i>Cᴏᴜʟᴅ ɴᴏᴛ ꜰᴇᴛᴄʜ ɴᴀᴮᴇ</i>\n"
+                    result += f"• <code>{uid}</code> — <i>Cᴏᴜʟᴅ ɴᴏᴛ ꜰᴇᴛᴄʜ ɴᴀᴍᴇ</i>\n"
 
         reply_markup = InlineKeyboardMarkup([
             [
@@ -386,13 +382,21 @@ async def user_callback(client: Client, callback: CallbackQuery):
         await callback.answer("Bᴀᴄᴋ ᴛᴏ ꜱᴇᴛᴛɪɴɢꜱ!")
 
 # Handle admin input for adding/removing admins and banning/unbanning users
-@Bot.on_message(filters.private & filters.regex(r"^-?\d+$|^all$") & filters.user(OWNER_ID))
+@Bot.on_message(filters.private & filters.regex(r"^-?\d+$|^all$") & admin)
 async def handle_admin_input(client: Client, message: Message):
     chat_id = message.chat.id
+    user_id = message.from_user.id
     state = await db.get_temp_state(chat_id)
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
 
     try:
+        # Restrict admin add/remove input handling to OWNER_ID only
+        if state in ["awaiting_add_admin_input", "awaiting_remove_admin_input"] and user_id != OWNER_ID:
+            await message.reply("<blockquote><b>🚫 Only the owner can add or remove admins!</b></blockquote>")
+            await db.set_temp_state(chat_id, "")
+            await show_admin_settings(client, chat_id)
+            return
+
         if state == "awaiting_add_admin_input":
             admin_ids = message.text.split()
             pro = await message.reply("<b><i>Pʟᴇᴀꜱᴇ ᴡᴀɪᴛ...</i></b>", quote=True)
@@ -426,7 +430,7 @@ async def handle_admin_input(client: Client, message: Message):
                 await pro.edit(f"<b>✅ Aᴅᴍɪɴ(ꜱ) ᴀᴅᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ:</b>\n\n{admin_list}", reply_markup=reply_markup)
             else:
                 await pro.edit(
-                    f"<b>❌ Sᴏᴍᴇ ᴇʀʀᴏʀꜱ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴀᴅᴅɪɴɢ ᴀᴅᴮɪɴꜱ:</b>\n\n{admin_list.strip()}\n\n"
+                    f"<b>❌ Sᴏᴍᴇ ᴇʀʀᴏʀꜱ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴀᴅᴅɪɴɢ ᴀᴅᴍɪɴꜱ:</b>\n\n{admin_list.strip()}\n\n"
                     "<b><i>Pʟᴇᴀꜱᴇ ᴄʜᴇᴄᴋ ᴀɴᴅ ᴛʀʏ ᴀɢᴀɪɴ.</i></b>",
                     reply_markup=reply_markup
                 )
@@ -447,9 +451,9 @@ async def handle_admin_input(client: Client, message: Message):
                     id = int(message.text)
                     if id in admin_ids:
                         await db.del_admin(id)
-                        await message.reply(f"<blockquote><b>✅ Aᴅᴮɪɴ ʀᴇᴮᴏᴠᴇᴅ:</b></blockquote>\n <code>{id}</code>")
+                        await message.reply(f"<blockquote><b>✅ Aᴅᴍɪɴ ʀᴇᴍᴏᴠᴇᴅ:</b></blockquote>\n <code>{id}</code>")
                     else:
-                        await message.reply(f"<blockquote><b>❌ Aᴅᴮɪɴ ɴᴏᴛ ꜰᴏᴜɴᴅ:</b></blockquote>\n <code>{id}</code>")
+                        await message.reply(f"<blockquote><b>❌ Aᴅᴍɪɴ ɴᴏᴛ ꜰᴏᴜɴᴅ:</b></blockquote>\n <code>{id}</code>")
                 except ValueError:
                     await message.reply("<blockquote><b>Uꜱᴀɢᴇ:</b></blockquote>\n <code>/deladmin <admin_id | all</code>")
                 except Exception as e:
@@ -472,7 +476,7 @@ async def handle_admin_input(client: Client, message: Message):
                     continue
 
                 if uid_int in await db.get_all_admins() or uid_int == OWNER_ID:
-                    report += f"<blockquote><b>⛔ Sᴋɪᴘᴘᴇᴅ ᴀᴅᴮɪɴ/ᴏᴡɴᴇʀ ID: <code>{uid_int}</code></b></blockquote>\n"
+                    report += f"<blockquote><b>⛔ Sᴋɪᴘᴘᴇᴅ ᴀᴅᴍɪɴ/ᴏᴡɴᴇʀ ID: <code>{uid_int}</code></b></blockquote>\n"
                     continue
 
                 if uid_int in banuser_ids:
@@ -484,7 +488,7 @@ async def handle_admin_input(client: Client, message: Message):
                     report += f"<blockquote><b>✅ Bᴀɴɴᴇᴅ: <code>{uid_int}</code></b></blockquote>\n"
                     success_count += 1
                 else:
-                    report += f"<blockquote><b>⚠️ Iɴᴠᴀʟɪᴅ Tᴇʟᴇɢʀᴀᴮ ID ʟᴇɴɢᴛʜ: <code>{uid_int}</code></b></blockquote>\n"
+                    report += f"<blockquote><b>⚠️ Iɴᴠᴀʟɪᴅ Tᴇʟᴇɢʀᴀᴍ ID ʟᴇɴɢᴛʜ: <code>{uid_int}</code></b></blockquote>\n"
 
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Cʟᴏꜱᴇ", callback_data="user_close")]])
 
@@ -545,10 +549,10 @@ async def add_admins(client: Client, message: Message):
 
     if not admins:
         return await pro.edit(
-            "<b>Yᴏᴜ ɴᴇᴇᴅ ᴛᴏ ᴘʀᴏᴠɪᴅᴇ ᴜꜱᴇʀ ɪᴅ(ꜱ) ᴛᴏ ᴀᴅᴅ ᴀꜱ ᴀᴅᴮɪɴ.</b>\n\n"
+            "<b>Yᴏᴜ ɴᴇᴇᴅ ᴛᴏ ᴘʀᴏᴠɪᴅᴇ ᴜꜱᴇʀ ɪᴅ(ꜱ) ᴛᴏ ᴀᴅᴅ ᴀꜱ ᴀᴅᴍɪɴ.</b>\n\n"
             "<b>Uꜱᴀɢᴇ:</b>\n"
-            "<code>/add_admin [user_id]</code> — Aᴅᴅ ᴏɴᴇ ᴏʀ ᴮᴏʀᴇ ᴜꜱᴇʀ ɪᴅꜱ\n\n"
-            "<b>Eхᴀᴮᴘʟᴇ:</b>\n"
+            "<code>/add_admin [user_id]</code> — Aᴅᴅ ᴏɴᴇ ᴏʀ ᴍᴏʀᴇ ᴜꜱᴇʀ ɪᴅꜱ\n\n"
+            "<b>Eхᴀᴍᴘʟᴇ:</b>\n"
             "<code>/add_admin 1234567890 9876543210</code>",
             reply_markup=reply_markup
         )
@@ -575,10 +579,10 @@ async def add_admins(client: Client, message: Message):
     if check == len(admins):
         for id in admins:
             await db.add_admin(int(id))
-        await pro.edit(f"<b>✅ Aᴅᴮɪɴ(ꜱ) ᴀᴅᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ:</b>\n\n{admin_list}", reply_markup=reply_markup)
+        await pro.edit(f"<b>✅ Aᴅᴍɪɴ(ꜱ) ᴀᴅᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ:</b>\n\n{admin_list}", reply_markup=reply_markup)
     else:
         await pro.edit(
-            f"<b>❌ Sᴏᴮᴇ ᴇʀʀᴏʀꜱ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴀᴅᴅɪɴɢ ᴀᴅᴮɪɴꜱ:</b>\n\n{admin_list.strip()}\n\n"
+            f"<b>❌ Sᴏᴍᴇ ᴇʀʀᴏʀꜱ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʲʰ ᴀᴅᴅɪɴɢ ᴀᴅᴍɪɴꜱ:</b>\n\n{admin_list.strip()}\n\n"
             "<b><i>Pʟᴇᴀꜱᴇ ᴄʜᴇᴄᴋ ᴀɴᴅ ᴛʀʏ ᴀɢᴀɪɴ.</i></b>",
             reply_markup=reply_markup
         )
@@ -593,10 +597,10 @@ async def delete_admins(client: Client, message: Message):
 
     if not admins:
         return await pro.edit(
-            "<b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴠᴀʟɪᴅ ᴀᴅᴮɪɴ ɪᴅ(ꜱ) ᴛᴏ ʀᴇᴮᴏᴠᴇ.</b>\n\n"
+            "<b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴠᴀʟɪᴅ ᴀᴅᴍɪɴ ɪᴅ(ꜱ) ᴛᴏ ʀᴇᴍᴏᴠᴇ.</b>\n\n"
             "<b>Uꜱᴀɢᴇ:</b>\n"
-            "<code>/deladmin [user_id]</code> — Rᴇᴮᴏᴠᴇ ꜱᴘᴇᴄɪғɪᴄ ɪᴅꜱ\n"
-            "<code>/deladmin all</code> — Rᴇᴮᴏᴠᴇ ᴀʟʟ ᴀᴅᴮɪɴꜱ",
+            "<code>/deladmin [user_id]</code> — Rᴇᴍᴏᴠᴇ ꜱᴘᴇᴄɪғɪᴄ ɪᴅꜱ\n"
+            "<code>/deladmin all</code> — Rᴇᴍᴏᴠᴇ ᴀʟʟ ᴀᴅᴍɪɴꜱ",
             reply_markup=reply_markup
         )
 
@@ -605,9 +609,9 @@ async def delete_admins(client: Client, message: Message):
             for id in admin_ids:
                 await db.del_admin(id)
             ids = "\n".join(f"<blockquote><code>{admin}</code> ✅</blockquote>" for admin in admin_ids)
-            return await pro.edit(f"<b>⛔ Aʟʟ ᴀᴅᴮɪɴ ɪᴅꜱ ʜᴀᴠᴇ ʙᴇᴇɴ ʀᴇᴮᴏᴠᴇᴅ:</b>\n{ids}", reply_markup=reply_markup)
+            return await pro.edit(f"<b>⛔ Aʟʟ ᴀᴅᴍɪɴ ɪᴅꜱ ʜᴀᴠᴇ ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ:</b>\n{ids}", reply_markup=reply_markup)
         else:
-            return await pro.edit("<b><blockquote>Nᴏ ᴀᴅᴮɪɴ ɪᴅꜱ ᴛᴏ ʀᴇᴮᴏᴠᴇ.</blockquote></b>", reply_markup=reply_markup)
+            return await pro.edit("<b><blockquote>Nᴏ ᴀᴅᴍɪɴ ɪᴅꜱ ᴛᴏ ʀᴇᴍᴏᴠᴇ.</blockquote></b>", reply_markup=reply_markup)
 
     if admin_ids:
         passed = ''
@@ -620,13 +624,13 @@ async def delete_admins(client: Client, message: Message):
 
             if id in admin_ids:
                 await db.del_admin(id)
-                passed += f"<blockquote><code>{id}</code> ✅ Rᴇᴮᴏᴠᴇᴅ</blockquote>\n"
+                passed += f"<blockquote><code>{id}</code> ✅ Rᴇᴍᴏᴠᴇᴅ</blockquote>\n"
             else:
-                passed += f"<blockquote><b>Iᴅ <code>{id}</code> ɴᴏᴛ ꜰᴏᴜɴᴅ ɪɴ ᴀᴅᴮɪɴ ʟɪꜱᴛ.</b></blockquote>\n"
+                passed += f"<blockquote><b>Iᴅ <code>{id}</code> ɴᴏᴛ ꜰᴏᴜɴᴅ ɪɴ ᴀᴅᴍɪɴ ʟɪꜱᴛ.</b></blockquote>\n"
 
-        await pro.edit(f"<b>⛔ Aᴅᴮɪɴ ʀᴇᴮᴏᴠᴀʟ ʀᴇꜱᴜʟᴛ:</b>\n\n{passed}", reply_markup=reply_markup)
+        await pro.edit(f"<b>⛔ Aᴅᴍɪɴ ʀᴇᴍᴏᴠᴀʟ ʀᴇꜱᴜʟᴛ:</b>\n\n{passed}", reply_markup=reply_markup)
     else:
-        await pro.edit("<b><blockquote>Nᴏ ᴀᴅᴮɪɴ ɪᴅꜱ ᴀᴠᴀɪʟᴀʙʟᴇ ᴛᴏ ᴅᴇʟᴇᴛᴇ.</blockquote></b>", reply_markup=reply_markup)
+        await pro.edit("<b><blockquote>Nᴏ ᴀᴅᴍɪɴ ɪᴅꜱ ᴀᴠᴀɪʟᴀʙʟᴇ ᴛᴏ ᴅᴇʟᴇᴛᴇ.</blockquote></b>", reply_markup=reply_markup)
 
 @Bot.on_message(filters.command('admins') & filters.private & admin)
 async def get_admins(client: Client, message: Message):
@@ -634,7 +638,7 @@ async def get_admins(client: Client, message: Message):
     admin_ids = await db.get_all_admins()
 
     if not admin_ids:
-        admin_list = "<b><blockquote>❌ Nᴏ ᴀᴅᴮɪɴꜱ ꜰᴏᴜɴᴅ.</blockquote></b>"
+        admin_list = "<b><blockquote>❌ Nᴏ ᴀᴅᴍɪɴꜱ ꜰᴏᴜɴᴅ.</blockquote></b>"
     else:
         admin_list = "\n".join(f"<b><blockquote>Iᴅ: <code>{id}</code></blockquote></b>" for id in admin_ids)
 
@@ -644,10 +648,10 @@ async def get_admins(client: Client, message: Message):
             InlineKeyboardButton("• Cʟᴏꜱᴇ •", callback_data="admin_close")
         ]
     ])
-    await pro.edit(f"<b>⚡ Cᴜʀʀᴇɴᴛ ᴀᴅᴮɪɴ ʟɪꜱᴛ:</b>\n\n{admin_list}", reply_markup=reply_markup)
+    await pro.edit(f"<b>⚡ Cᴜʀʀᴇɴᴛ ᴀᴅᴍɪɴ ʟɪꜱᴛ:</b>\n\n{admin_list}", reply_markup=reply_markup)
 
-# BAN-USER-SYSTEM (Moved from banuser.py)
-@Bot.on_message(filters.private & filters.command('ban') & filters.user(OWNER_ID))
+# BAN-USER-SYSTEM
+@Bot.on_message(filters.private & filters.command('ban') & admin)
 async def add_banuser(client: Client, message: Message):        
     pro = await message.reply("⏳ <i>Pʀᴏᴄᴇꜱꜱɪɴɢ ʀᴇꜱᴜᴇꜱᴛ...</i>", quote=True)
     banuser_ids = await db.get_ban_users()
@@ -657,9 +661,9 @@ async def add_banuser(client: Client, message: Message):
 
     if not banusers:
         return await pro.edit(
-            "<b>❗ Yᴏᴜ ᴮᴜꜱᴛ ᴘʀᴏᴠɪᴅᴇ ᴜꜱᴇʀ IDs ᴛᴏ ʙᴀɴ.</b>\n\n"
+            "<b>❗ Yᴏᴜ ᴍᴜꜱᴛ ᴘʀᴏᴠɪᴅᴇ ᴜꜱᴇʀ IDs ᴛᴏ ʙᴀɴ.</b>\n\n"
             "<b>📌 Uꜱᴀɢᴇ:</b>\n"
-            "<code>/ban [user_id]</code> — Bᴀɴ ᴏɴᴇ ᴏʀ ᴮᴏʀᴇ ᴜꜱᴇʀꜱ ʙʏ ID.",
+            "<code>/ban [user_id]</code> — Bᴀɴ ᴏɴᴇ ᴏʀ ᴍᴏʀᴇ ᴜꜱᴇʀꜱ ʙʏ ID.",
             reply_markup=reply_markup
         )
 
@@ -672,7 +676,7 @@ async def add_banuser(client: Client, message: Message):
             continue
 
         if uid_int in await db.get_all_admins() or uid_int == OWNER_ID:
-            report += f"⛔ Sᴋɪᴘᴘᴇᴅ ᴀᴅᴮɪɴ/ᴏᴡɴᴇʀ ID: <code>{uid_int}</code>\n"
+            report += f"⛔ Sᴋɪᴘᴘᴇᴅ ᴀᴅᴍɪɴ/ᴏᴡɴᴇʀ ID: <code>{uid_int}</code>\n"
             continue
 
         if uid_int in banuser_ids:
@@ -684,14 +688,14 @@ async def add_banuser(client: Client, message: Message):
             report += f"✅ Bᴀɴɴᴇᴅ: <code>{uid_int}</code>\n"
             success_count += 1
         else:
-            report += f"⚠️ Iɴᴠᴀʟɪᴅ Tᴇʟᴇɢʀᴀᴮ ID ʟᴇɴɢᴛʜ: <code>{uid_int}</code>\n"
+            report += f"⚠️ Iɴᴠᴀʟɪᴅ Tᴇʟᴇɢʀᴀᴍ ID ʟᴇɴɢᴛʜ: <code>{uid_int}</code>\n"
 
     if success_count:
         await pro.edit(f"<b>✅ Bᴀɴɴᴇᴅ Uꜱᴇʀꜱ Uᴘᴅᴀᴛᴇᴅ:</b>\n\n{report}", reply_markup=reply_markup)
     else:
         await pro.edit(f"<b>❌ Nᴏ ᴜꜱᴇʀꜱ ᴡᴇʀᴇ ʙᴀɴɴᴇᴅ.</b>\n\n{report}", reply_markup=reply_markup)
 
-@Bot.on_message(filters.private & filters.command('unban') & filters.user(OWNER_ID))
+@Bot.on_message(filters.private & filters.command('unban') & admin)
 async def delete_banuser(client: Client, message: Message):        
     pro = await message.reply("⏳ <i>Pʀᴏᴄᴇꜱꜱɪɴɢ ʀᴇꜱᴜᴇꜱᴛ...</i>", quote=True)
     banuser_ids = await db.get_ban_users()
@@ -704,13 +708,13 @@ async def delete_banuser(client: Client, message: Message):
             "<b>❗ Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴜꜱᴇʀ IDs ᴛᴏ ᴜɴʙᴀɴ.</b>\n\n"
             "<b>📌 Uꜱᴀɢᴇ:</b>\n"
             "<code>/unban [user_id]</code> — Uɴʙᴀɴ ꜱᴘᴇᴄɪғɪᴄ ᴜꜱᴇʀ(ꜱ)\n"
-            "<code>/unban all</code> — Rᴇᴮᴏᴠᴇ ᴀʟʟ ʙᴀɴɴᴇᴅ ᴜꜱᴇʀꜱ",
+            "<code>/unban all</code> — Rᴇᴍᴏᴠᴇ ᴀʟʟ ʙᴀɴɴᴇᴅ ᴜꜱᴇʀꜱ",
             reply_markup=reply_markup
         )
 
     if banusers[0].lower() == "all":
         if not banuser_ids:
-            return await pro.edit("<b>✅ Nᴏ ᴜꜱᴇʰꜱ ɪɴ ᴛʜᴇ ʙᴀɴ ʟɪꜱᴛ.</b>", reply_markup=reply_markup)
+            return await pro.edit("<b>✅ Nᴏ ᴜꜱᴇʀꜱ ɪɴ ᴛʜᴇ ʙᴀɴ ʟɪꜱᴛ.</b>", reply_markup=reply_markup)
         for uid in banuser_ids:
             await db.del_ban_user(uid)
         listed = "\n".join([f"✅ Uɴʙᴀɴɴᴇᴅ: <code>{uid}</code>" for uid in banuser_ids])
@@ -732,7 +736,7 @@ async def delete_banuser(client: Client, message: Message):
 
     await pro.edit(f"<b>🚫 Uɴʙᴀɴ Rᴇᴘᴏʀᴛ:</b>\n\n{report}", reply_markup=reply_markup)
 
-@Bot.on_message(filters.private & filters.command('banlist') & filters.user(OWNER_ID))
+@Bot.on_message(filters.private & filters.command('banlist') & admin)
 async def get_banuser_list(client: Client, message: Message):        
     pro = await message.reply("⏳ <i>Fᴇᴛᴄʜɪɴɢ Bᴀɴ Lɪꜱᴛ...</i>", quote=True)
     banuser_ids = await db.get_ban_users()
@@ -756,20 +760,20 @@ async def get_banuser_list(client: Client, message: Message):
             user_link = f'<a href="tg://user?id={uid}">{user.first_name}</a>'
             result += f"• {user_link} — <code>{uid}</code>\n"
         except:
-            result += f"• <code>{uid}</code> — <i>Cᴏᴜʟᴅ ɴᴏᴛ ꜰᴇᴛᴄʜ ɴᴀᴮᴇ</i>\n"
+            result += f"• <code>{uid}</code> — <i>Cᴏᴜʟᴅ ɴᴏᴛ ꜰᴇᴛᴄʜ ɴᴀᴍᴇ</i>\n"
 
     await pro.edit(
         result,
         disable_web_page_preview=True,
         reply_markup=InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("• Bᴀᴄᴕ •", callback_data="user_back"),
+                InlineKeyboardButton("• Bᴀᴄᴋ •", callback_data="user_back"),
                 InlineKeyboardButton("• Cʟᴏꜱᴇ •", callback_data="user_close")
             ]
         ])
     )
 
-@Bot.on_message(filters.command('user') & filters.private & filters.user(OWNER_ID))
+@Bot.on_message(filters.command('user') & filters.private & admin)
 async def user_settings(client: Client, message: Message):
     await show_user_settings(client, message.chat.id)
 
