@@ -71,11 +71,8 @@ class Bot(Client):
             sys.exit()
 
         self.set_parse_mode(ParseMode.HTML)
-        self.LOGGER.info(f"ʙᴏᴛ ɪs ᴀʟɪᴠᴇ..!\n\nᴄʀᴇᴀᴛᴇᴅ ʙʏ \n 『ᴀɴɪᴍᴇ-ʟᴏʀᴅ-ʙᴏᴛ』")
-        self.LOGGER.info(f"ʙᴏᴛ ᴅᴇᴘʟᴏʏᴇᴅ ʙʏ @ᴡʜᴏ-ᴀᴍ-ɪ")
-        self.set_parse_mode(ParseMode.HTML)
+        self.LOGGER.info(f"ʙᴏᴛ ɪs ᴀʟɪᴠᴇ..!\n\nᴄʀᴇᴀᴛᴇᴅ ʙʏ \n 『ᴀɴɪᴍᴇ-ʟᴏʀᴅ-ʙᴏᴛ』\nʙᴏᴛ ᴅᴇᴘʟᴏʏᴇᴅ ʙʏ @ᴡʜᴏ-ᴀᴍ-ɪ\nʙᴏᴛ ɪs ᴀʟɪᴠᴇ..! ᴍᴀᴅᴇ ʙʏ @ᴀɴɪᴍᴇ ʟᴏʀᴅ\nʙᴏᴛ ɪs ɴᴏᴡ ᴀʟɪᴠᴇ. ᴛʜᴀɴᴋs ᴛᴏ @ᴡʜᴏ-ᴀᴍ-ɪ\n▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄\n|------------------『A N I M E  L O R D』----------------------|\n▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀\n               ◈◈◈◈◈◈ ɪ_s_ᴀ_ʟ_ɪ_ᴠ_ᴇ ◈◈◈◈◈◈  \n                       ▼   ᴀᴄᴄᴇssɪɴɢ   ▼  \n                         ███████] 99%")
         self.username = usr_bot_me.username
-        self.LOGGER.info(f"ʙᴏᴛ ɪs ᴀʟɪᴠᴇ..! ᴍᴀᴅᴇ ʙʏ @ᴀɴɪᴍᴇ ʟᴏʀᴅ")   
 
         # sᴛᴀʀᴛ ᴡᴇʙ sᴇʀᴠᴇʀ
         app = web.AppRunner(await web_server())
@@ -83,19 +80,9 @@ class Bot(Client):
         await web.TCPSite(app, "0.0.0.0", PORT).start()
 
         try:
-            await self.send_message(OWNER_ID, text=f"<b><blockquote>ʙᴏᴛ ʀᴇsᴛᴀʀᴛᴇᴅ ʙʏ @ᴀɴɪᴍᴇ_ʟᴏʀᴅ_ʙᴏᴛ\n\n<code>{name}</code></blockquote></b>")
+            await self.send_message(OWNER_ID, text=f"<b><blockquote>ʙᴏᴛ ʀᴇsᴛᴀʀᴛᴇᴅ ʙʏ @ᴀɴɪᴍᴇ_ʟᴏʀᴅ_ʙᴏᴛ</blockquote></b>")
         except Exception as e:
             self.LOGGER.warning(f"ғᴀɪʟᴇᴅ ᴛᴏ sᴇɴᴅ sᴛᴀʀᴛᴜᴘ ᴍᴇssᴀɢᴇ ᴛᴏ OWNER_ID: {str(e)}")
-
-        self.LOGGER.info(f"ʙᴏᴛ ɪs ɴᴏᴡ ᴀʟɪᴠᴇ. ᴛʜᴀɴᴋs ᴛᴏ @ᴡʜᴏ-ᴀᴍ-ɪ")
-        self.LOGGER.info(f"""
-▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄
-|------------------『A N I M E  L O R D』----------------------|
-▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀
-               ◈◈◈◈◈◈ ɪ_s_ᴀ_ʟ_ɪ_ᴠ_ᴇ ◈◈◈◈◈◈  
-                       ▼   ᴀᴄᴄᴇssɪɴɢ   ▼  
-                         ███████] 99%
-""")  
 
     async def stop(self, *args):
         await super().stop()
