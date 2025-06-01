@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 #=====================================================================================##
 
-REPLY_ERROR = "<code>Uꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ ᴀꜱ ᴀ ʀᴇᴘʟʏ ᴛᴏ ᴀɴʏ ᴛᴇʟᴇɢʰʀᴀᴍ ᴍᴇꜱꜱᴀɢᴇ ᴡɪᴛʜᴏᴜᴛ ᴀɴʏ ꜱᴘᴀᴄᴇꜱ.</code>"
+REPLY_ERROR = "<code>Uꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ ᴀꜱ ᴀ ʀᴇᴘʟʏ ᴛᴏ ᴀɴʏ ᴛᴇʟᴇɢʀᴀᴍ ᴍᴇꜱꜱᴀɢᴇ ᴡɪᴛʜᴏᴜᴛ ᴀɴʏ ꜱᴘᴀᴄᴇꜱ.</code>"
 
 # Custom filter for cast input
 async def cast_input_filter(_, __, message: Message):
@@ -68,6 +68,7 @@ async def cast_settings(client: Bot, message: Message):
     )
 
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
 
     try:
         await client.send_photo(
@@ -75,7 +76,8 @@ async def cast_settings(client: Bot, message: Message):
             photo=selected_image,
             caption=settings_text,
             reply_markup=buttons,
-            parse_mode=ParseMode.HTML
+            parse_mode=ParseMode.HTML,
+            message_effect_id=selected_effect
         )
         logger.info(f"Sent cast settings with image {selected_image} for chat {message.chat.id}")
     except Exception as e:
@@ -85,7 +87,8 @@ async def cast_settings(client: Bot, message: Message):
             text=settings_text,
             reply_markup=buttons,
             parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            message_effect_id=selected_effect
         )
         logger.info(f"Sent text-only cast settings as fallback for chat {message.chat.id}")
 
@@ -98,6 +101,7 @@ async def cast_callback(client: Bot, callback: CallbackQuery):
     chat_id = callback.message.chat.id
     message_id = callback.message.id
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
 
     logger.info(f"Received cast callback query with data: {data} in chat {chat_id}")
 
@@ -168,17 +172,7 @@ async def handle_cast_input(client: Bot, message: Message):
 
     query = await db.full_userbase()
     banned_users = await db.get_ban_users()
-    valid_users = []
-    for uid in query:
-        if uid not in banned_users:
-            try:
-                chat = await client.get_chat(uid)
-                if not chat.is_bot:  # Filter out bot accounts
-                    valid_users.append(uid)
-            except Exception as e:
-                logger.error(f"Failed to check user {uid}: {e}")
-                continue
-
+    valid_users = [uid for uid in query if uid not in banned_users]
     total = len(valid_users)
     successful = 0
     blocked = 0
@@ -207,7 +201,7 @@ async def handle_cast_input(client: Bot, message: Message):
                 unsuccessful += 1
             await asyncio.sleep(0.1)  # Small delay to prevent rate limits
 
-        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
+        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴘʟᴇᴛᴇᴅ</u></b>
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
 Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
@@ -237,7 +231,7 @@ Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
                 unsuccessful += 1
             await asyncio.sleep(0.1)
 
-        status = f"""<b><u>Pɪɴ Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
+        status = f"""<b><u>Pɪɴ Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴘʟᴇᴛᴇᴅ</u></b>
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
 Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
@@ -279,7 +273,7 @@ Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
                 unsuccessful += 1
             await asyncio.sleep(0.1)
 
-        status = f"""<b><u>Aᴜᴛᴏ-Dᴇʟᴇᴛᴇ Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
+        status = f"""<b><u>Aᴜᴛᴏ-Dᴇʟᴇᴛᴇ Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴘʟᴇᴛᴇᴅ</u></b>
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
 Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
@@ -298,28 +292,17 @@ Dᴜʀᴀᴛɪᴏɴ: <code>{get_readable_time(duration)}</code>"""
 async def send_pin_text(client: Bot, message: Message):
     if message.reply_to_message:
         query = await db.full_userbase()
-        banned_users = await db.get_ban_users()
-        valid_users = []
-        for uid in query:
-            if uid not in banned_users:
-                try:
-                    chat = await client.get_chat(uid)
-                    if not chat.is_bot:
-                        valid_users.append(uid)
-                except Exception as e:
-                    logger.error(f"Failed to check user {uid}: {e}")
-                    continue
-
         broadcast_msg = message.reply_to_message
-        total = len(valid_users)
+        total = 0
         successful = 0
         blocked = 0
         deleted = 0
         unsuccessful = 0
 
         pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴘʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
-        for chat_id in valid_users:
+        for chat_id in query:
             try:
+                # Send and pin the message
                 sent_msg = await broadcast_msg.copy(chat_id)
                 await client.pin_chat_message(chat_id=chat_id, message_id=sent_msg.id, both_sides=True)
                 successful += 1
@@ -335,22 +318,22 @@ async def send_pin_text(client: Bot, message: Message):
                 await db.del_user(chat_id)
                 deleted += 1
             except Exception as e:
-                logger.error(f"Failed to send or pin message to {chat_id}: {e}")
+                print(f"Fᴀɪʟᴇᴅ ᴛᴏ ꜱᴇɴᴅ ᴏʀ ᴘɪɴ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ {chat_id}: {e}")
                 unsuccessful += 1
-            await asyncio.sleep(0.1)
+            total += 1
 
-        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴄᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
+        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ</u></b>
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
 Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
 Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʜʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
+Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
 Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
 
         return await pls_wait.edit(status)
 
     else:
-        msg = await message.reply("Rᴇᴪʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʜʀᴏᴀᴅᴄᴀꜱᴛ ᴀɴᴅ ᴪɪɴ ɪᴛ.")
+        msg = await message.reply("Rᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʰʀᴏᴀᴅᴄᴀꜱᴛ ᴀɴᴅ ᴘɪɴ ɪᴛ.")
         await asyncio.sleep(8)
         await msg.delete()
 
@@ -360,27 +343,15 @@ Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
 async def send_text(client: Bot, message: Message):
     if message.reply_to_message:
         query = await db.full_userbase()
-        banned_users = await db.get_ban_users()
-        valid_users = []
-        for uid in query:
-            if uid not in banned_users:
-                try:
-                    chat = await client.get_chat(uid)
-                    if not chat.is_bot:
-                        valid_users.append(uid)
-                except Exception as e:
-                    logger.error(f"Failed to check user {uid}: {e}")
-                    continue
-
         broadcast_msg = message.reply_to_message
-        total = len(valid_users)
+        total = 0
         successful = 0
         blocked = 0
         deleted = 0
         unsuccessful = 0
 
-        pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴪʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
-        for chat_id in valid_users:
+        pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴘʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
+        for chat_id in query:
             try:
                 await broadcast_msg.copy(chat_id)
                 successful += 1
@@ -394,17 +365,17 @@ async def send_text(client: Bot, message: Message):
             except InputUserDeactivated:
                 await db.del_user(chat_id)
                 deleted += 1
-            except Exception as e:
-                logger.error(f"Failed to broadcast to {chat_id}: {e}")
+            except:
                 unsuccessful += 1
-            await asyncio.sleep(0.1)
+                pass
+            total += 1
 
-        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴄᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
+        status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ</u></b>
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
 Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
 Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʜʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
+Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
 Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
 
         return await pls_wait.edit(status)
@@ -426,31 +397,19 @@ async def delete_broadcast(client: Bot, message: Message):
             return
 
         query = await db.full_userbase()
-        banned_users = await db.get_ban_users()
-        valid_users = []
-        for uid in query:
-            if uid not in banned_users:
-                try:
-                    chat = await client.get_chat(uid)
-                    if not chat.is_bot:
-                        valid_users.append(uid)
-                except Exception as e:
-                    logger.error(f"Failed to check user {uid}: {e}")
-                    continue
-
         broadcast_msg = message.reply_to_message
-        total = len(valid_users)
+        total = 0
         successful = 0
         blocked = 0
         deleted = 0
         unsuccessful = 0
 
-        pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴪʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
-        for chat_id in valid_users:
+        pls_wait = await message.reply("<i>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴘʀᴏᴄᴇꜱꜱɪɴɢ....</i>")
+        for chat_id in query:
             try:
                 sent_msg = await broadcast_msg.copy(chat_id)
-                await asyncio.sleep(duration)
-                await sent_msg.delete()
+                await asyncio.sleep(duration)  # Wait for the specified duration
+                await sent_msg.delete()  # Delete the message after the duration
                 successful += 1
             except FloodWait as e:
                 await asyncio.sleep(e.x)
@@ -464,23 +423,23 @@ async def delete_broadcast(client: Bot, message: Message):
             except InputUserDeactivated:
                 await db.del_user(chat_id)
                 deleted += 1
-            except Exception as e:
-                logger.error(f"Failed to delete broadcast to {chat_id}: {e}")
+            except:
                 unsuccessful += 1
-            await asyncio.sleep(0.1)
+                pass
+            total += 1
 
         status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴄᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
 Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
 Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʜʟᴇᴛᴇᴴ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
+Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
 Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
 
         return await pls_wait.edit(status)
 
     else:
-        msg = await message.reply("Pʟᴇᴀꜱᴇ ʀᴇᴪʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʀᴏᴀᴅᴄᴀꜱᴛ ɪᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ.")
+        msg = await message.reply("Pʟᴇᴀꜱᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʀᴏᴀᴅᴄᴀꜱᴛ ɪᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ.")
         await asyncio.sleep(8)
         await msg.delete()
 
