@@ -54,7 +54,7 @@ async def short_url(client: Client, message: Message, base64_string):
         short_link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, prem_link)
         buttons = [
             [InlineKeyboardButton(text="ᴅᴏᴡɴʟᴏᴀᴅ", url=short_link), InlineKeyboardButton(text="ᴛᴜᴛᴏʀɪᴀʟ", url=TUT_VID)],
-            [InlineKeyboardButton(text="ᴘʀᴇᴍɪᴜᴍ", callback_data="premium")]
+            [InlineKeyboardButton(text="ᴘʙᴇᴍɪᴜᴍ", callback_data="premium")]
         ]
         await message.reply_photo(
             photo=SHORTENER_PIC,
@@ -146,7 +146,8 @@ async def start_command(client: Client, message: Message):
             except Exception as e:
                 print(f"ғᴀɪʟᴇᴅ ᴛᴏ sᴇɴᴅ ᴍᴇssᴀɢᴇ: {e}")
                 pass
-        if FILE_AUTO_DELETE > 0:
+        auto_delete_mode = await db.get_auto_delete_mode()  # Check auto-delete mode
+        if auto_delete_mode and FILE_AUTO_DELETE > 0:  # Only proceed if mode is enabled and timer is positive
             notification_msg = await message.reply(
                 f"ᴛʜɪs ғɪʟᴇ ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ɪɴ {get_exp_time(FILE_AUTO_DELETE).lower()}. ᴘʟᴇᴀsᴇ sᴀᴠᴇ ᴏʀ ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ ʏᴏᴜʀ sᴀᴠᴇᴅ ᴍᴇssᴀɢᴇs ʙᴇғᴏʀᴇ ɪᴛ ɢᴇᴛs ᴅᴇʟᴇᴛᴇᴅ."
             )
@@ -204,8 +205,7 @@ async def start_command(client: Client, message: Message):
                 mention=message.from_user.mention,
                 id=message.from_user.id
             ),
-            reply_markup=reply_markup,
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            reply_markup=reply_markup
         )
     except Exception as e:
         print(f"ᴇʀʀᴏʀ sᴇɴᴅɪɴɢ sᴛᴀʀᴛ ᴘʜᴏᴛᴏ: {e}")
@@ -407,23 +407,12 @@ async def premium_cmd(bot: Bot, message: Message):
         "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ɢᴇᴛ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs ʀᴇʟᴀᴛᴇᴅ ᴄᴏᴍᴍᴀɴᴅs.</b>\n\n"
         "<b>ᴏᴛ ᴄᴏᴍᴍᴀɴᴅs:</b></blockquote>\n"
         "- /addpremium - <b>ɢʀᴀɴᴛ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss [ᴀᴅᴍɪɴ]</b>\n"
-        "- /remove_premium - <b>ʀᴇᴠᴏᴋᴇ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss [ᴀᴅᴍɪɴ]</b>\n"
-        "- /premium_users - <b>ʟɪsᴛ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs [ᴀᴅᴍɪɴ]</b>"
+        "- /remove_premium - <b>ʀᴇᴠᴏᴋᴇ ᴘʀᴇᴮɪᴜᴍ ᴀᴄᴄᴇss [ᴀᴅᴍɪɴ]</b>\n"
+        "- /premium_users - <b>ʟɪsᴛ ᴘʀᴇᴍɪᴜᴮ ᴜsᴇʀs [ᴀᴅᴮɪɴ]</b>"
     )
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
     await message.reply_text(reply_text, reply_markup=reply_markup)
 
-@Bot.on_message(filters.command('broadcast_cmd') & filters.private & admin)
-async def broadcast_cmd(bot: Bot, message: Message):
-    reply_text = (
-        "<blockquote><b>ᴜsᴇ ᴛʜᴇsᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ɢᴇᴛ ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴍᴀɴᴅs.</b>\n\n"
-        "</b>ᴏᴛ ᴄᴏᴍᴍᴀɴᴅs:</b></blockquote>\n"
-        "- /broadcast - <b>ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇs ᴛᴏ ᴜsᴇʀs [ᴀᴅᴍɪɴ]</b>\n"
-        "- /dbroadcast - <b>ʙʀᴏᴀᴅᴄᴀsᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ [ᴀᴅᴍɪɴ]</b>\n"
-        "- /pbroadcast - <b>ᴘɪɴ ʙʀᴏᴀᴅᴄᴀsᴛ ᴛᴏ ᴀʟʟ ᴜsᴇʀs [ᴀᴅᴍɪɴ]</b>"
-    )
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
 
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
