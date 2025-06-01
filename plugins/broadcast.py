@@ -37,7 +37,7 @@ async def cast_input_filter(_, __, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
     logger.info(f"Checking cast_input_filter for chat {chat_id}: state={state}")
-    return state in ["awaiting_broadcast_input", "awaiting_pin_input", "awaiting_delete_input"]
+    return state in ["awaiting_broadcast_input", "awaiting_pin_input", "awaiting_delete_input", "awaiting_delete_duration"]
 
 #=====================================================================================##
 
@@ -57,7 +57,9 @@ async def cast_settings(client: Bot, message: Message):
     buttons = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("📢 Bʀᴏᴀᴅᴄᴀꜱᴛ", callback_data="cast_broadcast"),
+                InlineKeyboardButton("📢 Bʀᴏᴀᴅᴄᴀꜱᴛ", callback_data="cast_broadcast")
+            ],
+            [
                 InlineKeyboardButton("📌 Pɪɴ", callback_data="cast_pin"),
                 InlineKeyboardButton("🗑 Dᴇʟᴇᴛᴇ", callback_data="cast_delete")
             ],
@@ -136,12 +138,11 @@ async def cast_callback(client: Bot, callback: CallbackQuery):
         await callback.answer("Pʟᴇᴀꜱᴇ ꜱᴇɴᴅ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ᴘɪɴ.")
 
     elif data == "cast_delete":
-        await db.set_temp_state(chat_id, "awaiting_delete_input")
+        await db.set_temp_state(chat_id, "awaiting_delete_duration")
         await client.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
-            text="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ (ᴛᴇxᴛ, ɪᴍᴀɢᴇ, ᴏʀ ᴀɴʏ ᴍᴇᴅɪᴀ).</b></blockquote>\n" \
-                 "<blockquote><b>Aʟꜱᴏ, ꜱᴘᴇᴄɪꜰʏ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ (ᴇ.ɢ., '300' ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ).</b></blockquote>",
+            text="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ (ᴇ.ɢ., '300' ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ).</b></blockquote>",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("• Cᴀɴᴄᴇʟ •", callback_data="cast_cancel")
@@ -149,7 +150,7 @@ async def cast_callback(client: Bot, callback: CallbackQuery):
             ]),
             parse_mode=ParseMode.HTML
         )
-        await callback.answer("Pʟᴇᴀꜱᴇ ꜱᴇɴᴅ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ᴀɴᴅ ᴅᴜʀᴀᴛɪᴏɴ.")
+        await callback.answer("Pʟᴇᴀꜱᴇ ᴇɴᴛᴇʀ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ.")
 
     elif data == "cast_close":
         await db.set_temp_state(chat_id, "")
@@ -160,6 +161,43 @@ async def cast_callback(client: Bot, callback: CallbackQuery):
         await db.set_temp_state(chat_id, "")
         await cast_settings(client, callback.message)
         await callback.answer("Aᴄᴛɪᴏɴ ᴄᴀɴᴄᴇʟʟᴇᴅ!")
+
+#=====================================================================================##
+
+@Bot.on_message(filters.private & admin & filters.text & filters.create(lambda _, __, message: db.get_temp_state(message.chat.id) == "awaiting_delete_duration"), group=4)
+async def handle_delete_duration(client: Bot, message: Message):
+    chat_id = message.chat.id
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
+
+    logger.info(f"Handling delete duration input for chat {chat_id}")
+
+    try:
+        duration = int(message.text)
+        if duration <= 0:
+            raise ValueError("Duration must be positive")
+        await db.set_temp_data(chat_id, "delete_duration", duration)
+        await db.set_temp_state(chat_id, "awaiting_delete_input")
+        await client.send_photo(
+            chat_id=chat_id,
+            photo=selected_image,
+            caption="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ (ᴛᴇxᴛ, ɪᴍᴀɢᴇ, ᴏʀ ᴀɴʏ ᴍᴇᴅɪᴀ).</b></blockquote>",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("• Cᴀɴᴄᴇʟ •", callback_data="cast_cancel")
+                ]
+            ]),
+            parse_mode=ParseMode.HTML,
+            message_effect_id=selected_effect
+        )
+    except ValueError:
+        await client.send_photo(
+            chat_id=chat_id,
+            photo=selected_image,
+            caption="<b>❌ Iɴᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ. Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ ᴏꜰ ꜱᴇᴄᴏɴᴅꜱ.</b>",
+            parse_mode=ParseMode.HTML,
+            message_effect_id=selected_effect
+        )
 
 #=====================================================================================##
 
@@ -240,16 +278,7 @@ Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
 Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
 
     elif state == "awaiting_delete_input":
-        try:
-            duration_text = message.text.split("\n")[-1].strip() if message.text else None
-            duration = int(duration_text) if duration_text and duration_text.isdigit() else 300  # Default 5 minutes
-            if duration <= 0:
-                raise ValueError("Duration must be positive")
-        except ValueError:
-            await pls_wait.edit("<b>❌ Iɴᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ. Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ ᴏꜰ ꜱᴇᴄᴏɴᴅꜱ.</b>")
-            await db.set_temp_state(chat_id, "")
-            return
-
+        duration = await db.get_temp_data(chat_id, "delete_duration") or 300  # Default to 300 if not set
         for user_id in valid_users:
             try:
                 sent_msg = await message.copy(user_id)
@@ -273,7 +302,7 @@ Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
                 unsuccessful += 1
             await asyncio.sleep(0.1)
 
-        status = f"""<b><u>Aᴜᴛᴏ-Dᴇʟᴇᴛᴇ Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴘʟᴇᴛᴇᴅ</u></b>
+        status = f"""<b><u>Aᴜᴛᴏ-Dᴇʟᴇᴛᴇ Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
 Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
@@ -333,7 +362,7 @@ Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
         return await pls_wait.edit(status)
 
     else:
-        msg = await message.reply("Rᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʰʀᴏᴀᴅᴄᴀꜱᴛ ᴀɴᴅ ᴘɪɴ ɪᴛ.")
+        msg = await message.reply("Rᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʜʀᴏᴀᴅᴄᴀꜱᴛ ᴀɴᴅ ᴘɪɴ ɪᴛ.")
         await asyncio.sleep(8)
         await msg.delete()
 
