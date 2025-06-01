@@ -54,7 +54,7 @@ async def short_url(client: Client, message: Message, base64_string):
         short_link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, prem_link)
         buttons = [
             [InlineKeyboardButton(text="ᴅᴏᴡɴʟᴏᴀᴅ", url=short_link), InlineKeyboardButton(text="ᴛᴜᴛᴏʀɪᴀʟ", url=TUT_VID)],
-            [InlineKeyboardButton(text="ᴘʀᴇᴍɪᴜᴍ", callback_data="premium")]
+            [InlineKeyboardButton(text="ᴘʙᴇᴍɪᴜᴍ", callback_data="premium")]
         ]
         await message.reply_photo(
             photo=SHORTENER_PIC,
@@ -165,7 +165,8 @@ async def start_command(client: Client, message: Message):
                 keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("ɢᴇᴛ ғɪʟᴇ ᴀɢᴀɪɴ!", url=reload_url)]]) if reload_url else None
                 await notification_msg.edit(
                     "ʏᴏᴜʀ ᴠɪᴅᴇᴏ/ғɪʟᴇ ɪs sᴜᴄᴄᴇssғᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ!\n\nᴄʟɪᴄᴋ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ᴅᴇʟᴇᴛᴇᴅ ᴠɪᴅᴇᴏ/ғɪʟᴇ.",
-                    reply_markup=keyboard
+                    reply_markup=keyboard,
+                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
                 )
             except Exception as e:
                 print(f"ᴇʀʀᴏʀ ᴜᴘᴅᴀᴛɪɴɢ ɴᴏᴛɪғɪᴄᴀᴛɪᴏɴ: {e}")
@@ -292,7 +293,7 @@ async def not_joined(client: Client, message: Message):
         )
     except Exception as e:
         logger.error(f"Final error: {e}")
-        await temp.edit(f"<blockquote><b>ᴇʀʀᴏʀ, ᴄᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʰʀ @Mehediyt69\nʀᴇᴀsᴏɴ: {e}</b></blockquote>")
+        await temp.edit(f"<blockquote><b>ᴇʀʀᴏʀ, ᴄᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ @Mehediyt69\nʀᴇᴀsᴏɴ: {e}</b></blockquote>")
     finally:
         await temp.delete()
 
@@ -300,7 +301,7 @@ async def not_joined(client: Client, message: Message):
 async def check_plan(client: Client, message: Message):
     user_id = message.from_user.id
     status_message = await check_user_plan(user_id)
-    await message.reply_text(status_message)
+    await message.reply_text(status_message, message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
 
 @Bot.on_message(filters.command('addPremium') & filters.private & admin)
 async def add_premium_user_command(client, msg):
@@ -317,43 +318,49 @@ async def add_premium_user_command(client, msg):
             "/addpremium 123456789 30 m - 30 ᴍɪɴᴜᴛᴇs\n"
             "/addpremium 123456789 2 h - 2 ʜᴏᴜʀs\n"
             "/addpremium 123456789 1 d - 1 ᴅᴀʏ\n"
-            "/addpremium 123456789 1 y - 1 ʏᴇᴀʀ</b></blockquote>"
+            "/addpremium 123456789 1 y - 1 ʏᴇᴀʀ</b></blockquote>",
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
         return
     try:
         usermega_id = int(msg.command[1])
         time_value = int(msg.command[2])
         time_unit = msg.command[3].lower()
-        expiration_time = await add_premium(usermega_id, time_value, time_unit)
+        expiration_time = await add_premium(user_id, time_value, time_unit)
         await msg.reply_text(
-            f"ᴜsᴇʀ {usermega_id} ᴀᴅᴅᴇᴅ ᴀs ᴀ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ғᴏʀ {time_value} {time_unit}.\n"
-            f"ᴇxᴘɪʀᴀᴛɪᴏɴ ᴛɪᴍᴇ: {expiration_time}."
+            f"ᴜsᴇʀ {user_id} ᴀᴅᴅᴇᴅ ᴀs ᴀ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ғᴏʀ {time_value} {time_unit}.\n"
+            f"ᴇxᴘɪʀᴀᴛɪᴏɴ ᴛɪᴍᴇ: {expiration_time}.",
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
         await client.send_message(
-            chat_id=usermega_id,
+            chat_id=user_id,
             text=(
                 f"<blockquote><b>ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴛɪᴠᴀᴛᴇᴅ!</b></blockquote>\n\n"
                 f"<b>Yᴏᴜ ʜᴀᴠᴇ ʀᴇᴄᴇɪᴠᴇᴅ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ғᴏʀ {time_value} {time_unit}.</b>\n"
-                f"<b>ᴇxᴘɪʀᴇs ᴏɴ: {expiration_time}</b>",
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
+                f"<b>ᴇxᴘɪʀᴇs ᴏɴ: {expiration_time}</b>"
+            ),
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
     except ValueError:
-        await msg.reply_text("<blockquote><b>ɪɴᴠᴀʟɪᴅ ɪɴᴘᴜᴛ. ᴘʟᴇᴀsᴇ ᴇɴsᴜʀᴇ ᴜsᴇʀ ɪᴅ ᴀɴᴅ ᴛɪᴍᴇ ᴠᴀʟᴜᴇ ᴀʀᴇ ɴᴜᴍʙᴇʀs</b></blockquote>.")
+        await msg.reply_text("<blockquote><b>ɪɴᴠᴀʟɪᴅ ɪɴᴘᴜᴛ. ᴘʟᴇᴀsᴇ ᴇɴsᴜʀᴇ ᴜsᴇʀ ɪᴅ ᴀɴᴅ ᴛɪᴍᴇ ᴠᴀʟᴜᴇ ᴀʀᴇ ɴᴜᴍʙᴇʀs</b></blockquote>.",
+                            message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
     except Exception as e:
-        await msg.reply_text(f"ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ: {str(e)}")
+        await msg.reply_text(f"ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ: {str(e)}", message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
 
 @Bot.on_message(filters.command('remove_premium') & filters.private & admin)
 async def pre_remove_user(client: Client, msg: Message):
     if len(msg.command) != 2:
-        await msg.reply_text("<blockquote><b>ᴜsᴀɢᴇ:</b></blockquote> /remove_premium user_id")
+        await msg.reply_text("<blockquote><b>ᴜsᴀɢᴇ:</b></blockquote> /remove_premium user_id",
+                             message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
         return
     try:
         user_id = int(msg.command[1])
         await remove_premium(user_id)
-        await msg.reply_text(f"<blockquote><b>ᴜsᴇʀ {user_id} ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>")
+        await msg.reply_text(f"<blockquote><b>ᴜsᴇʀ {user_id} ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ.</b></blockquote>",
+                             message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
     except ValueError:
-        await msg.reply_text("ᴜsᴇʀ ɪᴅ ᴍᴜsᴛ ʙᴇ ᴀɴ ɪɴᴛᴇɢᴇʀ ᴏʀ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ ɪɴ ᴅᴀᴛᴀʙᴀsᴇ.")
+        await msg.reply_text("ᴜsᴇʀ ɪᴅ ᴍᴜsᴛ ʙᴇ ᴀɴ ɪɴᴛᴇɢᴇʀ ᴏʀ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ ɪɴ ᴅᴀᴛᴀʙᴀsᴇ.",
+                             message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
 
 @Bot.on_message(filters.command('premium_users') & filters.private & admin)
 async def list_premium_users_command(client, message):
@@ -393,19 +400,23 @@ async def list_premium_users_command(client, message):
                 f"ᴇʀʀᴏʀ: ᴜɴᴀʙʟᴇ ᴛᴏ ғᴇᴛᴄʜ ᴜsᴇʀ ᴅᴇᴛᴀɪʟs ({str(e)})"
             )
     if len(premium_user_list) == 1:
-        await message.reply_text("ɴᴏ ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs ғᴏᴜɴᴅ ɪɴ ᴍʏ ᴅᴀᴛᴀʙᴀsᴇ.")
+        await message.reply_text("ɴᴏ ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴮɪᴜᴍ ᴜsᴇʀs ғᴏᴜɴᴅ ɪɴ ᴍʏ ᴅᴀᴛᴀʙᴀsᴇ.",
+                                 message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
     else:
-        await message.reply_text("\n\n".join(premium_user_list), parse_mode=None)
+        await message.reply_text("\n\n".join(premium_user_list), parse_mode=None,
+                                 message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
 
 @Bot.on_message(filters.command("count") & filters.private & admin)
 async def total_verify_count_cmd(client, message: Message):
     total = await db.get_total_verify_count()
-    await message.reply_text(f"<blockquote><b>ᴛᴏᴛᴀʟ ᴠᴇʀɪғɪᴇᴅ ᴛᴏᴋᴇɴs ᴛᴏᴅᴀʏ: {total}</b></blockquote>")
+    await message.reply_text(f"<blockquote><b>ᴛᴏᴛᴀʟ ᴠᴇʀɪғɪᴇᴅ ᴛᴏᴋᴇɴs ᴛᴏᴅᴀʏ: {total}</b></blockquote>",
+                             message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
 
 @Bot.on_message(filters.command('commands') & filters.private & admin)
 async def bcmd(bot: Bot, message: Message):        
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(text=CMD_TXT, reply_markup=reply_markup, quote=True)
+    await message.reply_text(text=CMD_TXT, reply_markup=reply_markup, quote=True,
+                             message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
 
 @Bot.on_message(filters.command('premium_cmd') & filters.private & admin)
 async def premium_cmd(bot: Bot, message: Message):
@@ -417,7 +428,9 @@ async def premium_cmd(bot: Bot, message: Message):
         "- /premium_users - <b>ʟɪsᴛ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs [ᴀᴅᴍɪɴ]</b>"
     )
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
+    await message.reply_text(reply_text, reply_markup=reply_markup,
+                             message_effect_id=random.choice(MESSAGE_EFFECT_IDS))
+
 
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
