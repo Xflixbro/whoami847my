@@ -37,7 +37,14 @@ async def cast_input_filter(_, __, message: Message):
     chat_id = message.chat.id
     state = await db.get_temp_state(chat_id)
     logger.info(f"Checking cast_input_filter for chat {chat_id}: state={state}")
-    return state in ["awaiting_broadcast_input", "awaiting_pin_input", "awaiting_delete_input", "awaiting_delete_duration"]
+    return state in ["awaiting_broadcast_input", "awaiting_pin_input", "awaiting_delete_input"]
+
+# Custom filter for delete duration input
+async def delete_duration_filter(_, __, message: Message):
+    chat_id = message.chat.id
+    state = await db.get_temp_state(chat_id)
+    logger.info(f"Checking delete_duration_filter for chat {chat_id}: state={state}, message_text={message.text}")
+    return state == "awaiting_delete_duration" and message.text and message.text.isdigit()
 
 #=====================================================================================##
 
@@ -164,7 +171,7 @@ async def cast_callback(client: Bot, callback: CallbackQuery):
 
 #=====================================================================================##
 
-@Bot.on_message(filters.private & admin & filters.text & filters.create(lambda _, __, message: db.get_temp_state(message.chat.id) == "awaiting_delete_duration"), group=4)
+@Bot.on_message(filters.private & admin & filters.create(delete_duration_filter), group=4)
 async def handle_delete_duration(client: Bot, message: Message):
     chat_id = message.chat.id
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
@@ -305,7 +312,7 @@ Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
         status = f"""<b><u>Aᴜᴛᴏ-Dᴇʟᴇᴛᴇ Bʀᴏᴀᴅᴄᴀꜱᴛ Cᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
-Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
+Sᴜᴄᴄᴇꜱꜱꜰᴜʜ: <code>{successful}</code>
 Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
 Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
 Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>
@@ -347,7 +354,7 @@ async def send_pin_text(client: Bot, message: Message):
                 await db.del_user(chat_id)
                 deleted += 1
             except Exception as e:
-                print(f"Fᴀɪʟᴇᴅ ᴛᴏ ꜱᴇɴᴅ ᴏʀ ᴘɪɴ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ {chat_id}: {e}")
+                logger.error(f"Fᴀɪʟᴇᴅ ᴛᴏ ꜱᴇɴᴅ ᴏʀ ᴘɪɴ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ {chat_id}: {e}")
                 unsuccessful += 1
             total += 1
 
@@ -356,7 +363,7 @@ async def send_pin_text(client: Bot, message: Message):
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
 Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
 Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
-Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
+Dᴇʟᴇᴐဈ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
 Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
 
         return await pls_wait.edit(status)
@@ -460,7 +467,7 @@ async def delete_broadcast(client: Bot, message: Message):
         status = f"""<b><u>Bʀᴏᴀᴅᴄᴀꜱᴛ ᴡɪᴛʜ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴄᴏᴍᴪʟᴇᴛᴇᴅ</u></b>
 
 Tᴏᴛᴀʟ Uꜱᴇʀꜱ: <code>{total}</code>
-Sᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{successful}</code>
+Sᴜᴄᴄᴇꜱꜱꜰᴜʜ: <code>{successful}</code>
 Bʟᴏᴄᴋᴇᴅ Uꜱᴇʀꜱ: <code>{blocked}</code>
 Dᴇʟᴇᴛᴇᴅ Aᴄᴄᴏᴜɴᴛꜱ: <code>{deleted}</code>
 Uɴꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ: <code>{unsuccessful}</code>"""
