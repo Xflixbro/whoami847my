@@ -1,136 +1,209 @@
-import asyncio
+#
+# Copyright © 2025 by AnimeLord-Bots@Github, <https://github.com/AnimeLord-Bots>
+#
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
+
 import base64
-import logging
-import random
 import re
-import string
+import asyncio
 import time
-from datetime import datetime, timedelta
-from typing import List, Optional
-from pyrogram import Client
+import logging
+from pyrogram import Client, filters
 from pyrogram.enums import ChatMemberStatus
-from pyrogram.errors import FloodWait, UserNotParticipant, ChatAdminRequired
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
+from config import *
 from database.database import db
-from config import SHORTLINK_URL, SHORTLINK_API, FSUB_LINK_EXPIRY
+from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
+from pyrogram.errors import FloodWait
+from short_url import shorten_url
 
 logger = logging.getLogger(__name__)
 
-# Chat data cache
-chat_data_cache = {}
-
-async def is_subscribed(client: Client, user_id: int) -> bool:
-    """
-    Check if a user is subscribed to all required force-sub channels.
-    Returns True if subscribed to all active channels or if force-sub is disabled.
-    """
+async def check_admin(filter, client, update):
+    """Check if a user is an admin or owner."""
     try:
-        force_sub_enabled: bool = await db.get_force_sub_mode()
-        if not force_sub_enabled:
-            return True
+        user_id = update.from_user.id       
+        return any([user_id == OWNER_ID, await db.admin_exist(user_id)])
+    except Exception as e:
+        logger.error(f"Exception in check_admin: {e}")
+        return False
 
-        channel_ids: List[int] = await db.show_channels()
-        if not channel_ids:
-            return True
-
-        for channel_id in channel_ids:
-            mode: str = await db.get_channel_mode(channel_id)
-            if mode != "on":
-                continue
-            try:
-                member = await client.get_chat_member(chat_id=channel_id, user_id=user_id)
-                if member.status in {ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER}:
-                    continue
-                else:
-                    return False
-            except UserNotParticipant:
-                return False
-            except ChatAdminRequired:
-                logger.error(f"Bot is not an admin in channel {channel_id}")
-                await db.rem_channel(channel_id)
-                continue
-            except Exception as e:
-                logger.error(f"Error checking subscription for user {user_id} in channel {channel_id}: {e}")
-                continue
+async def is_subscribed(client: Client, user_id: int):
+    """Check if a user is subscribed to all required channels."""
+    # Check if force-sub is globally enabled
+    if not await db.get_force_sub_enabled():
+        logger.debug(f"Force-sub is globally disabled for user {user_id}")
         return True
-    except Exception as e:
-        logger.error(f"Error in is_subscribed for user {user_id}: {e}")
-        return False
 
-async def is_sub(client: Client, user_id: int, channel_id: int) -> bool:
-    """
-    Check if a user is subscribed to a specific channel.
-    """
-    try:
-        member = await client.get_chat_member(chat_id=channel_id, user_id=user_id)
-        return member.status in {ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER}
-    except UserNotParticipant:
-        return False
-    except Exception as e:
-        logger.error(f"Error checking subscription for user {user_id} in channel {channel_id}: {e}")
-        return False
+    channel_ids = await db.show_channels()
 
-async def get_messages(client: Client, message_ids: List[int]):
-    messages = []
-    for message_id in message_ids:
+    if not channel_ids:
+        logger.debug("No force-sub channels configured")
+        return True
+
+    if user_id == OWNER_ID:
+        logger.debug(f"User {user_id} is owner, skipping subscription check")
+        return True
+
+    for cid in channel_ids:
         try:
-            message = await client.get_messages(chat_id=client.db_channel.id, message_ids=message_id)
-            if message:
-                messages.append(message)
+            mode = await db.get_channel_mode(cid)
+            if mode == "off":
+                logger.debug(f"Channel {cid} is disabled for force-sub")
+                continue
+
+            if not await is_sub(client, user_id, cid):
+                # Retry once if join request might be processing
+                if mode == "on":
+                    await asyncio.sleep(1)  # Reduced timeout
+                    if await is_sub(client, user_id, cid):
+                        continue
+                logger.debug(f"User {user_id} not subscribed to channel {cid}")
+                return False
         except Exception as e:
-            logger.error(f"Error fetching message {message_id}: {e}")
-            continue
-    return messages
+            logger.error(f"Error checking subscription for channel {cid}: {e}")
+            continue  # Skip invalid channels
 
-def get_readable_time(seconds: int) -> str:
-    periods = [('year', 31536000), ('month', 2592000), ('day', 86400), ('hour', 3600), ('minute', 60), ('second', 1)]
-    result = []
-    for period_name, period_seconds in periods:
-        if seconds >= period_seconds:
-            period_value, seconds = divmod(seconds, period_seconds)
-            result.append(f"{int(period_value)} {period_name}{'s' if period_value != 1 else ''}")
-    return ', '.join(result) if result else '0 seconds'
+    logger.debug(f"User {user_id} is subscribed to all required channels")
+    return True
 
-async def get_shortlink(url: str, api: str, link: str) -> str:
-    """
-    Generate a short link using the provided shortener API.
-    """
+async def is_sub(client: Client, user_id: int, channel_id: int):
+    """Check if a user is a member of a specific channel."""
     try:
-        import aiohttp
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{url}/api?api={api}&url={link}") as response:
-                data = await response.json()
-                if data.get("status") == "success":
-                    return data.get("shortenedUrl")
-                else:
-                    logger.error(f"Shortlink API error: {data.get('message')}")
-                    return link
+        member = await client.get_chat_member(channel_id, user_id)
+        status = member.status
+        logger.debug(f"[SUB] User {user_id} in {channel_id} with status {status}")
+        return status in {
+            ChatMemberStatus.OWNER,
+            ChatMemberStatus.ADMINISTRATOR,
+            ChatMemberStatus.MEMBER
+        }
+
+    except UserNotParticipant:
+        mode = await db.get_channel_mode(channel_id)
+        logger.debug(f"[NOT SUB] User {user_id} not in {channel_id}, mode={mode}")
+        if mode == "on":
+            exists = await db.req_user_exist(channel_id, user_id)
+            logger.debug(f"[REQ] User {user_id} join request for {channel_id}: {exists}")
+            return exists
+        logger.debug(f"[NOT SUB] User {user_id} not in {channel_id} and mode != on")
+        return False
+
     except Exception as e:
-        logger.error(f"Error generating shortlink: {e}")
-        return link
+        logger.error(f"[!] Error in is_sub for channel {channel_id}, user {user_id}: {e}")
+        return False
 
-def get_exp_time(seconds: int) -> str:
-    periods = [('Year', 31536000), ('Month', 2592000), ('Day', 86400), ('Hour', 3600), ('Minute', 60)]
-    result = []
-    for period_name, period_seconds in periods:
-        if seconds >= period_seconds:
-            period_value, seconds = divmod(seconds, period_seconds)
-            result.append(f"{int(period_value)} {period_name}{'s' if period_value != 1 else ''}")
-            break
-    return ' '.join(result) if result else f"{seconds} Seconds"
-
-async def decode(base64_string: str) -> str:
+async def encode(string):
     try:
-        decoded_bytes = base64.b64decode(base64_string + "=" * (-len(base64_string) % 4))
-        return decoded_bytes.decode('utf-8')
-    except Exception as e:
-        logger.error(f"Error decoding base64 string: {e}")
-        raise
-
-def encode(string: str) -> str:
-    try:
-        encoded_bytes = base64.b64encode(string.encode('utf-8')).decode('utf-8')
-        return encoded_bytes.rstrip("=")
+        string_bytes = string.encode("utf-8")
+        base64_bytes = base64.urlsafe_b64encode(string_bytes)
+        base64_string = base64_bytes.decode("utf-8").strip("=")
+        return base64_string
     except Exception as e:
         logger.error(f"Error encoding string: {e}")
-        raise
+        return ""
+
+async def decode(base64_string):
+    try:
+        base64_string = base64_string.strip("=")
+        base64_bytes = (base64_string + "=" * (-len(base64_string) % 4)).encode("utf-8")
+        string_bytes = base64.urlsafe_b64decode(base64_bytes) 
+        string = string_bytes.decode("utf-8")
+        return string
+    except Exception as e:
+        logger.error(f"Error decoding base64 string: {e}")
+        return ""
+
+async def get_messages(client: Client, message_ids):
+    messages = []
+    total_messages = 0
+    while total_messages != len(message_ids):
+        temp_ids = message_ids[total_messages:total_messages+200]
+        try:
+            msgs = await client.get_messages(
+                chat_id=client.db_channel.id,
+                message_ids=msgs_ids
+            )
+        except FloodWait as e:
+            await asyncio.sleep(e.value)
+            msgs = await client.get_messages(
+                chat_id=client.db_channel.id,
+                message_ids=msgs_ids
+            )
+        except Exception as e:
+            logger.error(f"Error getting messages: {e}")
+            pass
+        total_messages += len(temp_ids)
+        messages.extend(msgs)
+    return messages
+
+async def get_message_id(client: Client, message):
+    if message.forward_from_chat:
+        if message.forward_from_chat.id == client.db_channel.id:
+            return message.forward_from_message_id
+        else:
+            return 0
+    elif message.forward_sender_name:
+        return 0
+    elif message.text:
+        pattern = r"https://t.me/(?:c/)?(.*)/(\d+)"
+        matches = re.match(pattern, message.text)
+        if not matches:
+            return 0
+        channel_id = matches.group(1)
+        msg_id = int(matches.group(2))
+        if channel_id.isdigit():
+            if f"-100{channel_id}" == str(client.db_channel.id):
+                return msg_id
+        else:
+            if channel_id == client.db_channel.username:
+                return msg_id
+    return 0
+
+def get_readable_time(seconds: int) -> str:
+    count = 0
+    up_time = ""
+    time_list = []
+    time_suffix_list = ["s", "m", "h", "days"]
+    while count < 4:
+        count += 1
+        remainder, result = divmod(seconds, remainder, 60) if remainder < 3 else divmod(seconds, 24)
+        if seconds == 0 and remainder == 0:
+            break
+        time_list.append(int(result))
+        seconds = int(remainder)
+    hmm = len(time_list)
+    for x in range(hmm):
+        time_list[x] = str(time_list[x]) + time_suffix_list[x]
+    if len(time_list) == 4:
+        up_time += f"{time_list.pop()}, "
+    time_list.reverse()
+    up_time += ":".join(time_list)
+    return up_time
+
+def get_exp_time(seconds):
+    periods = [('days', ' 86400), ('days', hours', 3600), ('hours', mins', 60), ('mins', secs', 1)]
+    result = []
+    for period_name, period_seconds in periods:
+        if seconds >= period_seconds:
+            period_value = seconds // period_seconds
+            seconds = seconds % period_seconds
+            result.append(f"{int(period_value)} {period_name}")
+    return result and ", ".join(result) or "0 secs"
+
+async def get_shortlink(client, url, api, link):
+    try:
+        short_link = await shorten_url(url, link, api_key=api)
+        return short_link
+    except Exception as e:
+        logger.error(f"Error shortening link: {e}")
+        return link
+
+subscribed = filters.create(is_subscribed)
+admin = filters.create(check_admin)
+
+#
+# 
