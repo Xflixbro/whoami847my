@@ -1,35 +1,23 @@
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-
-from aiohttp import web
-from plugins import web_server
 import asyncio
-import pyromod.listen
+import os
+import logging
+from datetime import datetime
+from aiohttp import web
 from pyrogram import Client
 from pyrogram.enums import ParseMode
 import sys
-from datetime import datetime
-import logging
-#ᴀɴɪᴍᴇ ʟᴏʀᴅ
+from plugins import web_server
 from config import *
-from database.database import db  # Updated import
+from database.database import db
 
-name = """『A N I M E _ L O R D』"""
+name = "『A N I M E _ L O R D』"
 
-# Configure custom logging formatter to display only the message
 logging.basicConfig(
     level=logging.INFO,
-    format='%(message)s',  # Only the message, no timestamp or level
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
+    format='%(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
 )
+logger = logging.getLogger(__name__)
 
 class Bot(Client):
     def __init__(self):
@@ -40,17 +28,34 @@ class Bot(Client):
             plugins={
                 "root": "plugins"
             },
-            workers=TG_BOT_WORKERS,
+            workers=TW_BOT_WORKERS,
             bot_token=TG_BOT_TOKEN
         )
-        self.LOGGER = logging.getLogger(__name__)
+        self.LOGGER = logger
 
     async def start(self):
+        session_file = "Bot.session"
+        if os.path.exists(session_file):
+            try:
+                os.remove(session_file)
+                self.LOGGER.info("Removed old session file")
+            except Exception as e:
+                self.LOGGER.error(f"Failed to remove session file: {e}")
+
         await super().start()
         usr_bot_me = await self.get_me()
         self.uptime = datetime.now()
 
-        # Load settings from database
+        invalid_channels = await db.validate_channels(self)
+        if invalid_channels:
+            try:
+                await self.send_message(
+                    chat_id=OWNER_ID,
+                    text=f"🚨 Removed {len(invalid_channels)} invalid channels from force-sub list: {invalid_channels}"
+                )
+            except Exception as e:
+                self.LOGGER.error(f"Failed to notify owner about invalid channels: {e}")
+
         global PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK
         settings = await db.get_settings()
         PROTECT_CONTENT = settings.get('PROTECT_CONTENT', False)
@@ -65,46 +70,37 @@ class Bot(Client):
             test = await self.send_message(chat_id=db_channel.id, text="Test Message")
             await test.delete()
         except Exception as e:
-            self.LOGGER.warning(e)
-            self.LOGGER.warning(f"ᴍᴀᴋᴇ sᴜʀᴇ ʙᴏᴛ ɪs ᴀᴅᴍɪɴ ɪɴ ᴅʙ ᴄʜᴀɴɴᴇʟ, ᴀɴᴅ ᴅᴏᴜʙʟᴇ ᴄʜᴇᴄᴋ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ_ɪᴅ ᴠᴀʟᴜᴇ, ᴄᴜʀʀᴇɴᴛ ᴠᴀʟᴜᴇ {CHANNEL_ID}")
-            self.LOGGER.info("\nʙᴏᴛ sᴛᴏᴘᴘᴇᴅ. ᴊᴏɪɴ https://t.me/Anime_Lord_Support ғᴏʀ sᴜᴘᴘᴏʀᴛ")
-            sys.exit()
+            self.LOGGER.error(f"Error accessing DB channel: {e}")
+            self.LOGGER.info(f"Bot stopped. Ensure bot is admin in DB channel and CHANNEL_ID ({CHANNEL_ID}) is correct.")
+            self.LOGGER.info("Join https://t.me/Anime_Lord_Support for support")
+            sys.exit(1)
 
         self.set_parse_mode(ParseMode.HTML)
-        self.LOGGER.info(f"ʙᴏᴛ ɪs ᴀʟɪᴠᴇ..!\n\nᴄʀᴇᴀᴛᴇᴅ ʙʏ \n 『ᴀɴɪᴍᴇ-ʟᴏʀᴅ-ʙᴏᴛ』\nʙᴏᴛ ᴅᴇᴘʟᴏʏᴇᴅ ʙʏ @ᴡʜᴏ-ᴀᴍ-ɪ\nʙᴏᴛ ɪs ᴀʟɪᴠᴇ..! ᴍᴀᴅᴇ ʙʏ @ᴀɴɪᴍᴇ ʟᴏʀᴅ\nʙᴏᴛ ɪs ɴᴏᴡ ᴀʟɪᴠᴇ. ᴛʜᴀɴᴋs ᴛᴏ @ᴡʜᴏ-ᴀᴍ-ɪ\n▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄\n|------------------『A N I M E  L O R D』----------------------|\n▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀\n               ◈◈◈◈◈◈ ɪ_s_ᴀ_ʟ_ɪ_ᴠ_ᴇ ◈◈◈◈◈◈  \n                       ▼   ᴀᴄᴄᴇssɪɴɢ   ▼  \n                         ███████] 99%")
+        self.LOGGER.info(
+            f"Bot is alive!\n\nCreated by AnimeLord-Bots\n"
+            f"Deployed by @who-am-i\n"
+            f"Bot: @{usr_bot_me.username}\n"
+            f"{'-'*50}\n"
+            f"|{' '*20}『A N I M E  L O R D』{' '*20}|\n"
+            f"{'-'*80}\n"
+            f"🔥 I AM ALIVE 🔥\n"
+            f"Accessing... █████ 100%"
+        )
         self.username = usr_bot_me.username
 
-        # sᴛᴀʀᴛ ᴡᴇʙ sᴇʀᴠᴇʀ
         app = web.AppRunner(await web_server())
         await app.setup()
         await web.TCPSite(app, "0.0.0.0", PORT).start()
 
         try:
-            await self.send_message(OWNER_ID, text=f"<b><blockquote>ʙᴏᴛ ʀᴇsᴛᴀʀᴛᴇᴅ ʙʏ @ᴀɴɪᴍᴇ_ʟᴏʀᴅ_ʙᴏᴛ</blockquote></b>")
+            await self.send_message(OWNER_ID, "<b>Bot restarted by @AnimeLord_Bots</b>")
         except Exception as e:
-            self.LOGGER.warning(f"ғᴀɪʟᴇᴅ ᴛᴏ sᴇɴᴅ sᴛᴀʀᴛᴜᴘ ᴍᴇssᴀɢᴇ ᴛᴏ OWNER_ID: {str(e)}")
+            self.LOGGER.error(f"Failed to send startup message to OWNER_ID: {e}")
 
     async def stop(self, *args):
         await super().stop()
-        self.LOGGER.info("ʙᴏᴛ sᴛᴏᴘᴘᴇᴅ.")
+        self.LOGGER.info("Bot stopped.")
 
-    def run(self):
-        """Run the bot."""
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.start())
-        try:
-            loop.run_forever()
-        except KeyboardInterrupt:
-            self.LOGGER.info("ғᴜᴄᴋɪɴ ᴅᴏᴡɴ...")
-        finally:
-            loop.run_until_complete(self.stop())
-
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-#
+if __name__ == "__main__":
+    bot = Bot()
+    bot.run()
