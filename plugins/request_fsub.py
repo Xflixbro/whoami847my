@@ -1,75 +1,173 @@
 import asyncio
-import re
+import random
 import logging
-from typing import Optional
-from pyrogram import Client, filters, enums
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto, ChatMemberUpdated
-from pyrogram.enums import ParseMode, ChatAction, ChatType, ChatMemberStatus
+from pyrogram import Client, filters
+from pyrogram.enums import ParseMode, ChatMemberStatus
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.types import InputMediaPhoto
 from bot import Bot
-from config import RANDOM_IMAGES, START_PIC, FSUB_LINK_EXPIRY, MESSAGE_EFFECT_IDS
+from config import OWNER_ID, RANDOM_IMAGES, START_PIC, FSUB_LINK_EXPIRY
 from database.database import db
-from helper_func import admin
 
-# Set up logging
 logger = logging.getLogger(__name__)
 
-# Custom filter for channel ID input
-async def channel_input_filter(_, _, message):
-    chat_id: int = message.chat.id
-    state: str = await db.get_temp_state(chat_id)
-    if state == "awaiting_channel_input" and message.text:
-        logger.info(f"Channel input received for chat {chat_id}: {message.text}")
-        return True
-    return False
+MESSAGE_EFFECT_IDS = [5104841245755180586, 5107584321108051014, 5044134455711629726, 5046509860389126144, 5104859649142078462, 5046589136895476101]
 
-# Custom filter for single channel toggle selection
-async def single_toggle_filter(_, _, message):
-    chat_id: int = message.chat.id
-    state: str = await db.get_temp_state(chat_id)
-    if state == "awaiting_single_toggle_input" and message.text:
-        logger.info(f"Single toggle input received for chat {chat_id}: {message.text}")
-        return True
-    return False
+async def show_channel_list(client: Client, chat_id: int, message_id: int = None):
+    """Show the list of all force-sub channels."""
+    settings_text = "<b>Force-Sub Channels List:</b>\n\n"
+    channels = await db.show_channels()
 
-# Show force subscription settings
-async def show_force_subscription_settings(client: Client, chat_id: int, message_id: Optional[int] = None):
-    force_sub_mode: bool = await db.get_force_sub_mode()
-    channels: list = await db.show_channels()
-    
-    mode_status: str = "Enabled ✅" if force_sub_mode else "Disabled ❌" else ""
-    settings_text: str = (
-        f"» <b>Force Subscription Settings</b>\n\n"
-        f"<blockquote>» <b>Force Sub Mode:</b> {mode_status}</blockquote>\n"
-        f"<blockquote>» <b>Total Channels:</b> {len(channels)}</blockquote>\n\n"
-        f"<b>Click Below Buttons To Change Settings</b>"
-    )
+    if not channels:
+        settings_text += "<blockquote><i>No channels configured.</i></blockquote>"
+    else:
+        for ch_id in channels:
+            try:
+                chat = await client.get_chat(ch_id)
+                member = await client.get_chat_member(ch_id, "me")
+                if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+                    settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Bot is not admin</i></b></blockquote>\n"
+                    continue
+                mode = await db.get_channel_mode(ch_id)
+                status = "🟢 Enabled" if mode == "on" else "🔴 Disabled"
+                link = f"https://t.me/{chat.username}" if chat.username else await client.export_chat_invite_link(ch_id)
+                settings_text += (
+                    f"<blockquote><b><a href='{link}'>{chat.title}</a></b>\n"
+                    f"- <b>ID:</b> <code>{ch_id}</code>\n"
+                    f"- <b>Mode:</b> {status}</blockquote>\n"
+                )
+            except Exception as e:
+                logger.error(f"Failed to fetch channel {ch_id}: {e}")
+                settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable (Error: {e})</i></b></blockquote>\n"
 
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("• Add Channel •", callback_data="fsub_add"),
-            InlineKeyboardButton("• Remove •", callback_data="fsub_remove")
-        ],
-        [
-            InlineKeyboardButton("• Channels List", callback_data="fsub_list"),
-            InlineKeyboardButton("• Single Off", callback_data="fsub_single_toggle")
-        ],
-        [
-            InlineKeyboardButton("• Fully Off •", callback_data="fsub_fully_toggle"),
-            InlineKeyboardButton("• Refresh", callback_data="fsub_refresh")
-        ]
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Back to Menu", callback_data="fsub_back")]
     ])
 
-    selected_image: str = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
 
-    try:
-        if message_id:
+    if message_id:
+        try:
+            await client.edit_message_media(
+                chat_id=chat_id,
+                message_id=message_id,
+                media=InputMediaPhoto(media=selected_image, caption=settings_text),
+                reply_markup=buttons
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit message with image: {e}")
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML
+            )
+    else:
+        try:
+            await client.send_photo(
+                chat_id=chat_id,
+                photo=selected_image,
+                caption=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
+            await client.send_message(
+                chat_id=chat_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+
+async def show_single_off_channels(client: Client, chat_id: int, message_id: int = None):
+    """Show menu to toggle individual channel force-sub status."""
+    channels = await db.show_channels()
+    if not channels:
+        await client.send_message(
+            chat_id=chat_id,
+            text="<b>No channels configured for force-sub.</b>",
+            parse_mode=ParseMode.HTML,
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+        )
+        return
+
+    settings_text = "<b>Select a channel to toggle force-sub:</b>\n\n"
+    buttons = []
+    for ch_id in channels:
+        try:
+            chat = await client.get_chat(ch_id)
+            mode = await db.get_channel_mode(ch_id)
+            status = "🟢" if mode == "on" else "🔴"
+            buttons.append([InlineKeyboardButton(f"{status} {chat.title}", callback_data=f"single_off_{ch_id}")])
+        except Exception as e:
+            logger.error(f"Failed to fetch channel {ch_id}: {e}")
+            buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"single_off_{ch_id}")])
+
+    buttons.append([InlineKeyboardButton("Back", callback_data="fsub_back")])
+
+    if message_id:
+        try:
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=settings_text,
+                reply_markup=InlineKeyboardMarkup(buttons),
+                parse_mode=ParseMode.HTML
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit message: {e}")
+    else:
+        await client.send_message(
+            chat_id=chat_id,
+            text=settings_text,
+            reply_markup=InlineKeyboardMarkup(buttons),
+            parse_mode=ParseMode.HTML,
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+        )
+
+async def show_global_fsub_toggle(client: Client, chat_id: int, message_id: int = None):
+    """Show global force-sub toggle settings."""
+    fsub_enabled = await db.get_force_sub_enabled()
+    mode_status = "Enabled ✅" if fsub_enabled else "Disabled ❌"
+
+    settings_text = (
+        "<b>Force Subscription Settings</b>\n\n"
+        f"<blockquote><b>Force Sub Mode:</b> {mode_status}</blockquote>\n\n"
+        "<b>Click below to change settings</b>"
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("Disable ❌" if fsub_enabled else "Enable ✅", callback_data="fsub_global_toggle")],
+            [InlineKeyboardButton("Refresh", callback_data="fsub_global_refresh"), InlineKeyboardButton("Back", callback_data="fsub_back")]
+        ]
+    )
+
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+
+    if message_id:
+        try:
             await client.edit_message_media(
                 chat_id=chat_id,
                 message_id=message_id,
                 media=InputMediaPhoto(media=selected_image, caption=settings_text),
                 reply_markup=keyboard
             )
-        else:
+        except Exception as e:
+            logger.error(f"Failed to edit message with image: {e}")
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=settings_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
+    else:
+        try:
             await client.send_photo(
                 chat_id=chat_id,
                 photo=selected_image,
@@ -78,17 +176,8 @@ async def show_force_subscription_settings(client: Client, chat_id: int, message
                 parse_mode=ParseMode.HTML,
                 message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
-    except Exception as e:
-        logger.error(f"Failed to send/edit message with image: {e}")
-        if message_id:
-            await client.edit_message_text(
-                chat_id=chat_id,
-                message_id=message_id,
-                text=settings_text,
-                reply_markup=keyboard,
-                parse_mode=ParseMode.HTML
-            )
-        else:
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
             await client.send_message(
                 chat_id=chat_id,
                 text=settings_text,
@@ -97,359 +186,297 @@ async def show_force_subscription_settings(client: Client, chat_id: int, message
                 message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
 
-# Show fully off settings
-async def show_fully_off_settings(client: Client, chat_id: int, message_id: int):
-    force_sub_mode: bool = await db.get_force_sub_mode()
-    mode_status: str = "Enabled ✅" if force_sub_mode else "Disabled ❌"
-    
-    settings_text: str = (
-        f"» <b>Force Sub Fully Off Settings</b>\n\n"
-        f"<blockquote>» <b>Force Sub Mode:</b> {mode_status}</blockquote>\n\n"
-        f"<b>Click Below Buttons To Change Settings</b>"
-    )
+async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
+    """Show the force-sub settings menu with channel list and controls."""
+    settings_text = "<b>›› Force Subscription Settings:</b>\n\n"
+    fsub_enabled = await db.get_force_sub_enabled()
+    channels = await db.show_channels()
 
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("• Disabled ❌" if force_sub_mode else "• Enabled ✅", callback_data="fsub_mode_toggle"),
-            InlineKeyboardButton("• Refresh •", callback_data="fsub_fully_refresh")
-        ],
-        [
-            InlineKeyboardButton("• Back 🔙", callback_data="fsub_back")
-        ]
-    ])
-
-    selected_image: str = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-
-    try:
-        await client.edit_message_media(
-            chat_id=chat_id,
-            message_id=message_id,
-            media=InputMediaPhoto(media=selected_image, caption=settings_text),
-            reply_markup=keyboard
-        )
-    except Exception as e:
-        logger.error(f"Failed to edit message with image: {e}")
-        await client.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_id,
-            text=settings_text,
-            reply_markup=keyboard,
-            parse_mode=ParseMode.HTML
-        )
-
-# Show channels list
-async def show_channels_list(client: Client, chat_id: int, message_id: int):
-    channels: list = await db.show_channels()
-    settings_text: str = "» <b>Force Sub Channels List</b>\n\n"
-    
     if not channels:
-        settings_text += "<blockquote><i>No channels configured yet.</i></blockquote>"
+        settings_text += "<blockquote><i>No channels configured. Use 'Add Channels' to add a channel.</i></blockquote>"
     else:
         settings_text += "<blockquote><b>⚡ Force-sub Channels:</b></blockquote>\n\n"
         for ch_id in channels:
             try:
                 chat = await client.get_chat(ch_id)
-                mode: str = await db.get_channel_mode(ch_id)
-                link: str = f"https://t.me/{chat.username}" if chat.username else await client.export_chat_invite_link(ch_id)
-                mode_status: str = "Enabled ✅" if mode == "on" else "Disabled ❌"
-                settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code> ({mode_status})</b></blockquote>\n"
+                member = await client.get_chat_member(ch_id, "me")
+                if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+                    settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Bot is not admin</i></b></blockquote>\n"
+                    continue
+                mode = await db.get_channel_mode(ch_id)
+                status = "🟢 ON" if mode == "on" else "🔴 OFF"
+                link = f"https://t.me/{chat.username}" if chat.username else await client.export_chat_invite_link(ch_id)
+                settings_text += (
+                    f"<blockquote><b><a href='{link}'>{chat.title}</a></b>\n"
+                    f"- ID: <code>{ch_id}</code>\n"
+                    f"- Mode: {status}</blockquote>\n"
+                )
             except Exception as e:
-                logger.error(f"Failed to fetch chat {ch_id}: {e}")
-                settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
+                logger.error(f"Failed to fetch channel {ch_id}: {e}")
+                settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Invalid (Error: {e})</i></b></blockquote>\n"
 
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("• Back 🔙", callback_data="fsub_back")]
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Add Channels", callback_data="fsub_add_channel"), InlineKeyboardButton("Remove Channels", callback_data="fsub_remove_channel")],
+        [InlineKeyboardButton("Toggle Mode", callback_data="fsub_toggle_mode")],
+        [InlineKeyboardButton("Channels List", callback_data="fsub_channels_list"), InlineKeyboardButton("Single Off", callback_data="fsub_single_off")],
+        [InlineKeyboardButton("Fully Off", callback_data="fsub_global"), InlineKeyboardButton("Refresh", callback_data="fsub_refresh")],
+        [InlineKeyboardButton("Close", callback_data="close")]
     ])
 
-    selected_image: str = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
 
-    try:
-        await client.edit_message_media(
-            chat_id=chat_id,
-            message_id=message_id,
-            media=InputMediaPhoto(media=selected_image, caption=settings_text),
-            reply_markup=keyboard
-        )
-    except Exception as e:
-        logger.error(f"Failed to edit message with image: {e}")
-        await client.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_id,
-            text=settings_text,
-            reply_markup=keyboard,
-            parse_mode=ParseMode.HTML
-        )
+    if message_id:
+        try:
+            await client.edit_message_media(
+                chat_id=chat_id,
+                message_id=message_id,
+                media=InputMediaPhoto(media=selected_image, caption=settings_text),
+                reply_markup=buttons
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit message with image: {e}")
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML
+            )
+    else:
+        try:
+            await client.send_photo(
+                chat_id=chat_id,
+                photo=selected_image,
+                caption=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
+            await client.send_message(
+                chat_id=chat_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            )
 
-@Bot.on_message(filters.command('forcesub') & filters.private & admin)
+@Bot.on_message(filters.command('forcesub') & filters.private & filters.create(lambda _, __, m: m.from_user.id == OWNER_ID or db.admin_exist(m.from_user.id)))
 async def force_sub_settings(client: Client, message: Message):
+    """Handle /forcesub command to show settings."""
     await db.set_temp_state(message.chat.id, "")
-    logger.info(f"Reset state for chat {message.chat.id} before showing force-sub settings")
+    logger.info(f"Reset state for /forcesub in chat {message.chat.id}")
     await show_force_sub_settings(client, message.chat.id)
 
 @Bot.on_callback_query(filters.regex(r"^fsub_"))
 async def force_sub_callback(client: Client, callback: CallbackQuery):
-    data: str = callback.data
-    chat_id: int = callback.message.chat.id
-    message_id: int = callback.message.id
-    selected_image: str = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    """Handle callback queries for force-sub settings."""
+    data = callback.data
+    chat_id = callback.message.chat.id
+    message_id = callback.message.id
 
-    if data == "fsub_add":
-        await db.set_temp_state(chat_id, "awaiting_channel_input")
-        await db.set_temp_data(chat_id, "action", "add")
-        logger.info(f"Set state to 'awaiting_channel_input' and action to 'add' for chat {chat_id}")
-        try:
-            await callback.message.reply_photo(
-                photo=selected_image,
-                caption=(
-                    "<blockquote><b>Please provide the channel ID or username.</b></blockquote>\n"
-                    "<blockquote><b>Example: -1001234567890 or @ChannelUsername</b></blockquote>"
-                ),
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-        except Exception as e:
-            logger.error(f"Failed to send photo: {e}")
-            await callback.message.reply(
-                "<blockquote><b>Please provide the channel ID or username.</b></blockquote>\n"
-                "<blockquote><b>Example: -1001234567890 or @ChannelUsername</b></blockquote>",
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-        await callback.answer("Enter the channel ID or username!")
+    if data == "fsub_add_channel":
+        await db.set_temp_state(chat_id, "awaiting_add_channel")
+        await client.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text="<b>Enter the channel ID.</b>\n\nAdd one channel at a time.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Back", callback_data="fsub_back"), InlineKeyboardButton("Close", callback_data="close")]
+            ]),
+            parse_mode=ParseMode.HTML
+        )
+        await callback.answer("Enter the channel ID")
 
-    elif data == "fsub_remove":
-        await db.set_temp_state(chat_id, "awaiting_channel_input")
-        await db.set_temp_data(chat_id, "action", "remove")
-        logger.info(f"Set state to 'awaiting_channel_input' and action to 'remove' for chat {chat_id}")
-        try:
-            await callback.message.reply_photo(
-                photo=selected_image,
-                caption=(
-                    "<blockquote><b>Please provide the channel ID or username to remove.</b></blockquote>\n"
-                    "<blockquote><b>Example: -1001234567890 or @ChannelUsername</b></blockquote>"
-                ),
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-        except Exception as e:
-            logger.error(f"Failed to send photo: {e}")
-            await callback.message.reply(
-                "<blockquote><b>Please provide the channel ID or username to remove.</b></blockquote>\n"
-                "<blockquote><b>Example: -1001234567890 or @ChannelUsername</b></blockquote>",
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-        await callback.answer("Enter the channel ID or username to remove!")
+    elif data == "fsub_remove_channel":
+        await db.set_temp_state(chat_id, "awaiting_remove_channel")
+        await client.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text="<b>Enter channel ID or type 'all' to remove all channels.</b>",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Back", callback_data="fsub_back"), InlineKeyboardButton("Close", callback_data="close")]
+            ]),
+            parse_mode=ParseMode.HTML
+        )
+        await callback.answer("Enter channel ID or 'all'")
 
-    elif data == "fsub_list":
-        await show_channels_list(client, chat_id, message_id)
-        await callback.answer("Channels List Displayed!")
+    elif data == "fsub_toggle_mode":
+        channels = await db.show_channels()
+        if not channels:
+            await callback.message.reply_text("<b>No force-sub channels found.</b>")
+            await callback.answer()
+            return
 
-    elif data == "fsub_single_toggle":
-        await db.set_temp_state(chat_id, "awaiting_single_toggle_input")
-        logger.info(f"Set state to 'awaiting_single_toggle_input' for chat {chat_id}")
-        channels: list = await db.show_channels()
-        settings_text: str = "<blockquote><b>Please provide the channel ID to toggle.</b></blockquote>\n"
-        if channels:
-            settings_text += "<blockquote><b>Available Channels:</b></blockquote>\n"
-            for ch_id in channels:
-                try:
-                    chat = await client.get_chat(ch_id)
-                    mode: str = await db.get_channel_mode(ch_id)
-                    mode_status: str = "Enabled ✅" if mode == "on" else "Disabled ❌"
-                    settings_text += f"<blockquote><b>{chat.title} - <code>{ch_id}</code> ({mode_status})</b></blockquote>\n"
-                except Exception as e:
-                    logger.error(f"Failed to fetch chat {ch_id}: {e}")
-                    settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
-        try:
-            await callback.message.reply_photo(
-                photo=selected_image,
-                caption=settings_text,
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-        except Exception as e:
-            logger.error(f"Failed to send photo: {e}")
-            await callback.message.reply(
-                settings_text,
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-        await callback.answer("Enter the channel ID to toggle!")
+        buttons = []
+        for ch_id in channels:
+            try:
+                chat = await client.get_chat(ch_id)
+                mode = await db.get_channel_mode(ch_id)
+                status = "✅" if mode == "on" else "❌"
+                buttons.append([InlineKeyboardButton(f"{status} {chat.title}", callback_data=f"rfs={ch_id}")])
+            except Exception as e:
+                logger.error(f"Failed to fetch channel {ch_id}: {e}")
+                buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Invalid)", callback_data=f"rfs={ch_id}")])
 
-    elif data == "fsub_fully_toggle":
-        await show_fully_off_settings(client, chat_id, message_id)
-        await callback.answer("Fully Off Settings Displayed!")
+        buttons.append([InlineKeyboardButton("Back", callback_data="fsub_back")])
 
-    elif data == "fsub_mode_toggle":
-        current_mode: bool = await db.get_force_sub_mode()
-        new_mode: bool = not current_mode
-        await db.set_force_sub_mode(new_mode)
-        await show_fully_off_settings(client, chat_id, message_id)
-        await callback.answer(f"Force Sub Mode {'Enabled' if new_mode else 'Disabled'}!")
+        await client.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text="<b>Select a channel to toggle force-sub mode:</b>",
+            reply_markup=InlineKeyboardMarkup(buttons),
+            parse_mode=ParseMode.HTML
+        )
+        await callback.answer()
 
-    elif data == "fsub_fully_refresh":
-        await show_fully_off_settings(client, chat_id, message_id)
-        await callback.answer("Settings Refreshed!")
+    elif data == "fsub_channels_list":
+        await show_channel_list(client, chat_id, message_id)
+        await callback.answer("Showing channels list")
+
+    elif data == "fsub_single_off":
+        await show_single_off_channels(client, chat_id, message_id)
+        await callback.answer("Select channel to toggle")
+
+    elif data == "fsub_global":
+        await show_global_fsub_toggle(client, chat_id, message_id)
+        await callback.answer("Showing global force-sub settings")
+
+    elif data == "fsub_global_toggle":
+        current_mode = await db.get_force_sub_enabled()
+        new_mode = not current_mode
+        await db.set_force_sub_enabled(new_mode)
+        await show_global_fsub_toggle(client, chat_id, message_id)
+        await callback.answer(f"Force-sub {'Enabled' if new_mode else 'Disabled'} globally")
+
+    elif data == "fsub_global_refresh":
+        await show_global_fsub_toggle(client, chat_id, message_id)
+        await callback.answer("Settings refreshed")
 
     elif data == "fsub_refresh":
         await show_force_sub_settings(client, chat_id, message_id)
-        await callback.answer("Settings Refreshed!")
+        await callback.answer("Settings refreshed")
+
+    elif data == "close":
+        await db.set_temp_state(chat_id, "")
+        await callback.message.delete()
+        await callback.answer()
 
     elif data == "fsub_back":
         await db.set_temp_state(chat_id, "")
         await show_force_sub_settings(client, chat_id, message_id)
-        await callback.answer("Back to previous menu!")
+        await callback.answer("Back to menu")
 
-@Bot.on_message(filters.private & admin & filters.create(channel_input_filter))
-async def handle_channel_input(client: Client, message: Message):
-    chat_id: int = message.chat.id
-    input_text: str = message.text.strip()
-    action: str = await db.get_temp_data(chat_id, "action")
-    logger.info(f"Handling channel input for chat {chat_id}: {input_text}, action: {action}")
-
-    # Extract channel ID from input
-    try:
-        if input_text.startswith("@"):
-            chat = await client.get_chat(input_text)
-            channel_id: int = chat.id
-        elif input_text.startswith("-100"):
-            channel_id: int = int(input_text)
-        else:
-            await message.reply(
-                "<blockquote><b>Invalid channel ID or username. Please provide a valid ID or username.</b></blockquote>",
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-            return
-    except Exception as e:
-        logger.error(f"Failed to resolve channel {input_text}: {e}")
-        await message.reply(
-            "<blockquote><b>Failed to find the channel. Ensure the bot is an admin in the channel.</b></blockquote>",
-            parse_mode=ParseMode.HTML,
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-        )
-        return
-
-    if action == "add":
+    elif data.startswith("single_off_"):
+        ch_id = int(data.split("_")[2])
         try:
-            chat = await client.get_chat(channel_id)
-            if chat.type != ChatType.CHANNEL:
-                await message.reply(
-                    "<blockquote><b>Please provide a valid channel ID or username.</b></blockquote>",
-                    parse_mode=ParseMode.HTML,
-                    message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            current_mode = await db.get_channel_mode(ch_id)
+            new_mode = "off" if current_mode == "on" else "on"
+            await db.set_channel_mode(ch_id, new_mode)
+            chat = await client.get_chat(ch_id)
+            status = "✅" if new_mode == "on" else "❌"
+            await callback.message.edit_text(
+                f"<b>Force-sub toggled:</b>\n\n"
+                f"<b>Channel:</b> <a href='https://t.me/{chat.username if chat.username else ch_id}'>{chat.title}</a>\n"
+                f"<b>ID:</b> <code>{ch_id}</code>\n"
+                f"<b>Status:</b> {status} {'Enabled' if new_mode == 'on' else 'Disabled'}",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Back", callback_data="fsub_single_off")]
+                ]),
+                parse_mode=ParseMode.HTML
+            )
+            await callback.answer(f"Channel {chat.title} {'enabled' if new_mode == 'on' else 'disabled'}")
+        except Exception as e:
+            logger.error(f"Failed to toggle channel {ch_id}: {e}")
+            await callback.message.edit_text(
+                f"<b>Error toggling channel {ch_id}:</b> {e}",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Back", callback_data="fsub_single_off")]
+                ])
+            )
+            await callback.answer("Error toggling channel")
+
+@Bot.on_callback_query(filters.regex(r"^rfs="))
+async def toggle_mode_callback(client: Client, callback: CallbackQuery):
+    """Handle toggle mode for individual channels."""
+    ch_id = int(callback.data.split("=")[1])
+    try:
+        current_mode = await db.get_channel_mode(ch_id)
+        new_mode = "off" if current_mode == "on" else "on"
+        await db.set_channel_mode(ch_id, new_mode)
+        chat = await client.get_chat(ch_id)
+        await callback.message.edit_text(
+            f"<b>Force-sub mode toggled:</b>\n\n"
+            f"<b>Channel:</b> <a href='https://t.me/{chat.username if chat.username else ch_id}'>{chat.title}</a>\n"
+            f"<b>Mode:</b> {'🟢 ON' if new_mode == 'on' else '🔴 OFF'}",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Back", callback_data="fsub_toggle_mode")]
+            ]),
+            parse_mode=ParseMode.HTML
+        )
+        await callback.answer(f"Mode set to {'ON' if new_mode == 'on' else 'OFF'} for {chat.title}")
+    except Exception as e:
+        logger.error(f"Failed to toggle mode for channel {ch_id}: {e}")
+        await callback.message.edit_text(
+            f"<b>Error toggling mode for channel {ch_id}:</b> {e}",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Back", callback_data="fsub_toggle_mode")]
+            ])
+        )
+        await callback.answer("Error toggling mode")
+
+@Bot.on_message(filters.private & filters.create(lambda _, __, m: m.from_user.id == OWNER_ID or db.admin_exist(m.from_user.id)) & filters.text)
+async def handle_text_input(client: Client, message: Message):
+    """Handle text input for adding/removing channels."""
+    state = await db.get_temp_state(message.chat.id)
+    if state == "awaiting_add_channel":
+        try:
+            ch_id = int(message.text.strip())
+            await client.get_chat(ch_id)
+            member = await client.get_chat_member(ch_id, "me")
+            if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+                await message.reply_text(
+                    "<b>Bot must be an admin in the channel.</b>",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data="fsub_back")]])
                 )
                 return
-            await db.add_channel(channel_id)
-            await message.reply(
-                f"<blockquote><b>Channel {chat.title} (<code>{channel_id}</code>) added successfully!</b></blockquote>",
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            await db.add_channel(ch_id)
+            await db.set_temp_state(message.chat.id, "")
+            await message.reply_text(
+                f"<b>Channel {ch_id} added to force-sub list.</b>",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Back to Settings", callback_data="fsub_back")]])
             )
+        except ValueError:
+            await message.reply_text("<b>Invalid channel ID. Please enter a valid number.</b>")
         except Exception as e:
-            logger.error(f"Failed to add channel {channel_id}: {e}")
-            await message.reply(
-                f"<blockquote><b>Failed to add channel: {str(e)}</b></blockquote>",
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-    elif action == "remove":
-        if not await db.channel_exist(channel_id):
-            await message.reply(
-                "<blockquote><b>Channel not found in the force-sub list.</b></blockquote>",
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-            return
+            logger.error(f"Failed to add channel: {e}")
+            await message.reply_text(f"<b>Error adding channel:</b> {e}")
+
+    elif state == "awaiting_remove_channel":
         try:
-            chat = await client.get_chat(channel_id)
-            await db.rem_channel(channel_id)
-            await message.reply(
-                f"<blockquote><b>Channel {chat.title} (<code>{channel_id}</code>) removed successfully!</b></blockquote>",
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
+            if message.text.lower() == "all":
+                channels = await db.show_channels()
+                for ch_id in channels:
+                    await db.rem_channel(ch_id)
+                await db.set_temp_state(message.chat.id, "")
+                await message.reply_text(
+                    "<b>All channels removed from force-sub list.</b>",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Back to Settings", callback_data="fsub_back")]])
+                )
+            else:
+                ch_id = int(message.text.strip())
+                if await db.channel_exist(ch_id):
+                    await db.rem_channel(ch_id)
+                    await db.set_temp_state(message.chat.id, "")
+                    await message.reply_text(
+                        f"<b>Channel {ch_id} removed from force-sub list.</b>",
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Back to Settings", callback_data="fsub_back")]])
+                    )
+                else:
+                    await message.reply_text("<b>Channel not found in force-sub list.</b>")
+        except ValueError:
+            await message.reply_text("<b>Invalid input. Enter a valid channel ID or 'all'.</b>")
         except Exception as e:
-            logger.error(f"Failed to remove channel {channel_id}: {e}")
-            await message.reply(
-                f"<blockquote><b>Failed to remove channel: {str(e)}</b></blockquote>",
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-
-    await db.set_temp_state(chat_id, "")
-    await db.set_temp_data(chat_id, "action", None)
-    await show_force_sub_settings(client, chat_id)
-
-@Bot.on_message(filters.private & admin & filters.create(single_toggle_filter))
-async def handle_single_toggle_input(client: Client, message: Message):
-    chat_id: int = message.chat.id
-    input_text: str = message.text.strip()
-    logger.info(f"Handling single toggle input for chat {chat_id}: {input_text}")
-
-    # Extract channel ID from input
-    try:
-        if input_text.startswith("@"):
-            chat = await client.get_chat(input_text)
-            channel_id: int = chat.id
-        elif input_text.startswith("-100"):
-            channel_id: int = int(input_text)
-        else:
-            await message.reply(
-                "<blockquote><b>Invalid channel ID or username. Please provide a valid ID or username.</b></blockquote>",
-                parse_mode=ParseMode.HTML,
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-            )
-            return
-    except Exception as e:
-        logger.error(f"Failed to resolve channel {input_text}: {e}")
-        await message.reply(
-            "<blockquote><b>Failed to find the channel. Ensure the bot is an admin in the channel.</b></blockquote>",
-            parse_mode=ParseMode.HTML,
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-        )
-        return
-
-    if not await db.channel_exist(channel_id):
-        await message.reply(
-            "<blockquote><b>Channel not found in the force-sub list.</b></blockquote>",
-            parse_mode=ParseMode.HTML,
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-        )
-        return
-
-    try:
-        current_mode: str = await db.get_channel_mode(channel_id)
-        new_mode: str = "off" if current_mode == "on" else "on"
-        await db.set_channel_mode(channel_id, new_mode)
-        chat = await client.get_chat(channel_id)
-        await message.reply(
-            f"<blockquote><b>Channel {chat.title} (<code>{channel_id}</code>) force-sub mode set to {'Enabled ✅' if new_mode == 'on' else 'Disabled ❌'}!</b></blockquote>",
-            parse_mode=ParseMode.HTML,
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-        )
-    except Exception as e:
-        logger.error(f"Failed to toggle channel {channel_id}: {e}")
-        await message.reply(
-            f"<blockquote><b>Failed to toggle channel mode: {str(e)}</b></blockquote>",
-            parse_mode=ParseMode.HTML,
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
-        )
-
-    await db.set_temp_state(chat_id, "")
-    await show_force_sub_settings(client, chat_id)
-
-@Bot.on_chat_member_updated(filters.group | filters.channel)
-async def member_has_joined(client: Client, member: ChatMemberUpdated):
-    if (
-        not member.new_chat_member
-        or member.new_chat_member.status not in {ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR}
-        or member.old_chat_member
-    ):
-        return
-    user_id: int = member.from_user.id
-    chat_id: int = member.chat.id
-    if await db.reqChannel_exist(chat_id):
-        await db.del_req_user(chat_id, user_id)
-        logger.info(f"Removed user {user_id} from request list for channel {chat_id}")
+            logger.error(f"Failed to remove channel: {e}")
+            await message.reply_text(f"<b>Error removing channel:</b> {e}")
