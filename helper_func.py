@@ -1,11 +1,5 @@
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+#(©)AnimeLord_Bots
+#Mehediyt69 on Tg #Dont remove this line
 
 import base64
 import re
@@ -18,31 +12,50 @@ from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
 from shortzy import Shortzy
 from pyrogram.errors import FloodWait
 from database.database import *
-from database.db_premium import is_premium_user
+from database.db_premium import *  # Import for premium user check
 
+#
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+#
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
+
+#used for cheking if a user is admin ~Owner also treated as admin level
 async def check_admin(filter, client, update):
     try:
         user_id = update.from_user.id       
         return any([user_id == OWNER_ID, await db.admin_exist(user_id)])
     except Exception as e:
-        logger.error(f"Exception in check_admin: {e}")
+        print(f"! Exception in check_admin: {e}")
         return False
 
+#
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+#
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
+
 async def is_subscribed(client, user_id):
-    # Check if user is premium or owner
-    if user_id == OWNER_ID or await is_premium_user(user_id):
-        logger.debug(f"User {user_id} is Owner or Premium, bypassing force-sub")
+    # Check if user is premium
+    if await is_premium_user(user_id):
         return True
 
     # Check global force-sub mode
     global_mode = await db.get_force_sub_global_mode()
     if not global_mode:
-        logger.debug(f"Global force-sub mode is disabled, bypassing for user {user_id}")
         return True
 
     channel_ids = await db.show_channels()
     if not channel_ids:
-        logger.debug(f"No force-sub channels configured for user {user_id}")
+        return True
+
+    if user_id == OWNER_ID:
         return True
 
     for cid in channel_ids:
@@ -50,14 +63,21 @@ async def is_subscribed(client, user_id):
             # Retry once if join request might be processing
             mode = await db.get_channel_mode(cid)
             if mode == "on":
-                await asyncio.sleep(2)  # Give time for @on_chat_join_request to process
+                await asyncio.sleep(2)  # give time for @on_chat_join_request to process
                 if await is_sub(client, user_id, cid):
                     continue
-            logger.debug(f"User {user_id} not subscribed to channel {cid}")
             return False
 
-    logger.debug(f"User {user_id} is subscribed to all required channels")
     return True
+
+#
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+#
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
 
 async def is_sub(client, user_id, channel_id):
     try:
@@ -69,6 +89,7 @@ async def is_sub(client, user_id, channel_id):
             ChatMemberStatus.ADMINISTRATOR,
             ChatMemberStatus.MEMBER
         }
+
     except UserNotParticipant:
         mode = await db.get_channel_mode(channel_id)
         logger.debug(f"[NOT SUB] User {user_id} not in {channel_id}, mode={mode}")
@@ -78,9 +99,19 @@ async def is_sub(client, user_id, channel_id):
             return exists
         logger.debug(f"[NOT SUB] User {user_id} not in {channel_id} and mode != on")
         return False
+
     except Exception as e:
-        logger.error(f"Error in is_sub for user {user_id} in channel {channel_id}: {e}")
+        logger.error(f"[!] Eʀʀᴏʀ ɪɴ ɪꜱ_ꜱᴜʙ(): {e}")
         return False
+
+#
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+#
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
 
 async def encode(string):
     string_bytes = string.encode("ascii")
@@ -89,7 +120,7 @@ async def encode(string):
     return base64_string
 
 async def decode(base64_string):
-    base64_string = base64_string.strip("=")
+    base64_string = base64_string.strip("=") # links generated before this commit will be having = sign, hence striping them to handle padding errors.
     base64_bytes = (base64_string + "=" * (-len(base64_string) % 4)).encode("ascii")
     string_bytes = base64.urlsafe_b64decode(base64_bytes) 
     string = string_bytes.decode("ascii")
@@ -127,7 +158,7 @@ async def get_message_id(client, message):
         return 0
     elif message.text:
         pattern = r"https://t.me/(?:c/)?(.*)/(\d+)"
-        matches = re.match(pattern, message.text)
+        matches = re.match(pattern,message.text)
         if not matches:
             return 0
         channel_id = matches.group(1)
@@ -170,6 +201,15 @@ def get_exp_time(seconds):
             period_value, seconds = divmod(seconds, period_seconds)
             result += f'{int(period_value)} {period_name}'
     return result
+
+#
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+#
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
 
 async def get_shortlink(url, api, link):
     shortzy = Shortzy(api_key=api, base_site=url)
