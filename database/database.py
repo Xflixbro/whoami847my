@@ -46,7 +46,8 @@ class Mehedi:
         self.fsub_data = self.db['fsub']
         self.rqst_fsub_data = self.db['request_forcesub']
         self.rqst_fsub_Channel_data = self.db['request_forcesub_channel']
-        self.settings_data = self.db['settings_data']  # New collection for settings
+        self.settings_data = self.db['settings_data']
+        self.force_sub_global_mode_data = self.db['force_sub_global_mode']  # New collection for global mode
 
     async def present_user(self, user_id: int):
         found = await self.user_data.find_one({'_id': user_id})
@@ -143,7 +144,6 @@ class Mehedi:
         return data.get('state', '') if data else ''
 
     async def set_temp_data(self, chat_id: int, key: str, value):
-        """Set temporary data for a chat in the database."""
         existing = await self.temp_state_data.find_one({'_id': chat_id})
         if existing:
             await self.temp_state_data.update_one(
@@ -159,7 +159,6 @@ class Mehedi:
         logger.info(f"Set temp data for chat {chat_id}: {key} = {value}")
 
     async def get_temp_data(self, chat_id: int, key: str):
-        """Get temporary data for a chat from the database."""
         data = await self.temp_state_data.find_one({'_id': chat_id})
         if data and 'data' in data and key in data['data']:
             return data['data'][key]
@@ -196,6 +195,20 @@ class Mehedi:
             upsert=True
         )
         logger.info(f"Set channel {channel_id} mode to {mode}")
+
+    async def set_force_sub_global_mode(self, mode: bool):
+        """Set the global force-sub mode (enabled/disabled)."""
+        existing = await self.force_sub_global_mode_data.find_one({})
+        if existing:
+            await self.force_sub_global_mode_data.update_one({}, {'$set': {'enabled': mode}})
+        else:
+            await self.force_sub_global_mode_data.insert_one({'enabled': mode})
+        logger.info(f"Set force-sub global mode to {mode}")
+
+    async def get_force_sub_global_mode(self):
+        """Get the global force-sub mode."""
+        data = await self.force_sub_global_mode_data.find_one({})
+        return data.get('enabled', True) if data else True  # Default to True if not set
 
     async def req_user(self, channel_id: int, user_id: int):
         try:
@@ -273,12 +286,10 @@ class Mehedi:
         return result[0]["total"] if result else 0
 
     async def get_settings(self):
-        """Retrieve current settings from the database."""
         data = await self.settings_data.find_one({'_id': 'bot_settings'})
         return data.get('settings', default_settings) if data else default_settings
 
     async def update_setting(self, setting_name, value):
-        """Update a specific setting in the database."""
         current_settings = await self.get_settings()
         current_settings[setting_name] = value
         await self.settings_data.update_one(
