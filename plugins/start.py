@@ -12,7 +12,7 @@ import asyncio
 import random
 import time
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
 from bot import Bot
 from config import *
 from helper_func import encode, get_message_id, subscribed
