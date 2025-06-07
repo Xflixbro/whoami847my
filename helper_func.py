@@ -13,16 +13,6 @@ from shortzy import Shortzy
 from pyrogram.errors import FloodWait
 from database.database import *
 
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-
-#used for cheking if a user is admin ~Owner also treated as admin level
 async def check_admin(filter, client, update):
     try:
         user_id = update.from_user.id       
@@ -31,16 +21,11 @@ async def check_admin(filter, client, update):
         print(f"! Exception in check_admin: {e}")
         return False
 
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-
 async def is_subscribed(client, user_id):
+    settings = await db.get_settings()
+    if not settings.get('FORCE_SUB_ENABLED', True):
+        return True
+
     channel_ids = await db.show_channels()
 
     if not channel_ids:
@@ -50,25 +35,17 @@ async def is_subscribed(client, user_id):
         return True
 
     for cid in channel_ids:
+        if await db.get_channel_temp_off(cid):
+            continue
         if not await is_sub(client, user_id, cid):
-            # Retry once if join request might be processing
             mode = await db.get_channel_mode(cid)
             if mode == "on":
-                await asyncio.sleep(2)  # give time for @on_chat_join_request to process
+                await asyncio.sleep(2)
                 if await is_sub(client, user_id, cid):
                     continue
             return False
 
     return True
-
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
 
 async def is_sub(client, user_id, channel_id):
     try:
@@ -80,7 +57,6 @@ async def is_sub(client, user_id, channel_id):
             ChatMemberStatus.ADMINISTRATOR,
             ChatMemberStatus.MEMBER
         }
-
     except UserNotParticipant:
         mode = await db.get_channel_mode(channel_id)
         logger.debug(f"[NOT SUB] User {user_id} not in {channel_id}, mode={mode}")
@@ -90,19 +66,9 @@ async def is_sub(client, user_id, channel_id):
             return exists
         logger.debug(f"[NOT SUB] User {user_id} not in {channel_id} and mode != on")
         return False
-
     except Exception as e:
         logger.error(f"[!] Eʀʀᴏʀ ɪɴ ɪꜱ_ꜱᴜʙ(): {e}")
         return False
-
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
 
 async def encode(string):
     string_bytes = string.encode("ascii")
@@ -111,7 +77,7 @@ async def encode(string):
     return base64_string
 
 async def decode(base64_string):
-    base64_string = base64_string.strip("=") # links generated before this commit will be having = sign, hence striping them to handle padding errors.
+    base64_string = base64_string.strip("=")
     base64_bytes = (base64_string + "=" * (-len(base64_string) % 4)).encode("ascii")
     string_bytes = base64.urlsafe_b64decode(base64_bytes) 
     string = string_bytes.decode("ascii")
@@ -149,7 +115,7 @@ async def get_message_id(client, message):
         return 0
     elif message.text:
         pattern = r"https://t.me/(?:c/)?(.*)/(\d+)"
-        matches = re.match(pattern,message.text)
+        matches = re.match(pattern, message.text)
         if not matches:
             return 0
         channel_id = matches.group(1)
@@ -192,15 +158,6 @@ def get_exp_time(seconds):
             period_value, seconds = divmod(seconds, period_seconds)
             result += f'{int(period_value)} {period_name}'
     return result
-
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
 
 async def get_shortlink(url, api, link):
     shortzy = Shortzy(api_key=api, base_site=url)
