@@ -70,12 +70,14 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 InlineKeyboardButton(" Remove Channels •", callback_data="fsub_remove_channel")
             ],
             [
-                InlineKeyboardButton("• Toggle Mode •", callback_data="fsub_toggle_mode"),
-                InlineKeyboardButton(" Channels List •", callback_data="fsub_channels_list")
+                InlineKeyboardButton("• Toggle Mode •", callback_data="fsub_toggle_mode")
             ],
             [
                 InlineKeyboardButton("• Single Off •", callback_data="fsub_single_off"),
                 InlineKeyboardButton(" Fully Off •", callback_data="fsub_fully_off")
+            ],
+            [
+                InlineKeyboardButton(" Channels List •", callback_data="fsub_channels_list")
             ],
             [
                 InlineKeyboardButton("• Refresh ", callback_data="fsub_refresh"),
