@@ -27,7 +27,8 @@ default_settings = {
     'HIDE_CAPTION': False,
     'DISABLE_CHANNEL_BUTTON': True,
     'BUTTON_NAME': None,
-    'BUTTON_LINK': None
+    'BUTTON_LINK': None,
+    'FORCE_SUB_ENABLED': True  # New field for enabling/disabling force-sub system
 }
 
 class Mehedi:
@@ -46,7 +47,7 @@ class Mehedi:
         self.fsub_data = self.db['fsub']
         self.rqst_fsub_data = self.db['request_forcesub']
         self.rqst_fsub_Channel_data = self.db['request_forcesub_channel']
-        self.settings_data = self.db['settings_data']  # New collection for settings
+        self.settings_data = self.db['settings_data']
 
     async def present_user(self, user_id: int):
         found = await self.user_data.find_one({'_id': user_id})
@@ -143,7 +144,6 @@ class Mehedi:
         return data.get('state', '') if data else ''
 
     async def set_temp_data(self, chat_id: int, key: str, value):
-        """Set temporary data for a chat in the database."""
         existing = await self.temp_state_data.find_one({'_id': chat_id})
         if existing:
             await self.temp_state_data.update_one(
@@ -159,7 +159,6 @@ class Mehedi:
         logger.info(f"Set temp data for chat {chat_id}: {key} = {value}")
 
     async def get_temp_data(self, chat_id: int, key: str):
-        """Get temporary data for a chat from the database."""
         data = await self.temp_state_data.find_one({'_id': chat_id})
         if data and 'data' in data and key in data['data']:
             return data['data'][key]
@@ -171,7 +170,7 @@ class Mehedi:
 
     async def add_channel(self, channel_id: int):
         if not await self.channel_exist(channel_id):
-            await self.fsub_data.insert_one({'_id': channel_id, 'mode': 'off'})
+            await self.fsub_data.insert_one({'_id': channel_id, 'mode': 'off', 'temp_off': False})
             logger.info(f"Added channel {channel_id} to force-sub list")
             return
 
@@ -196,6 +195,18 @@ class Mehedi:
             upsert=True
         )
         logger.info(f"Set channel {channel_id} mode to {mode}")
+
+    async def get_channel_temp_off(self, channel_id: int):
+        data = await self.fsub_data.find_one({'_id': channel_id})
+        return data.get("temp_off", False) if data else False
+
+    async def set_channel_temp_off(self, channel_id: int, temp_off: bool):
+        await self.fsub_data.update_one(
+            {'_id': channel_id},
+            {'$set': {'temp_off': temp_off}},
+            upsert=True
+        )
+        logger.info(f"Set channel {channel_id} temp_off to {temp_off}")
 
     async def req_user(self, channel_id: int, user_id: int):
         try:
@@ -273,12 +284,10 @@ class Mehedi:
         return result[0]["total"] if result else 0
 
     async def get_settings(self):
-        """Retrieve current settings from the database."""
         data = await self.settings_data.find_one({'_id': 'bot_settings'})
         return data.get('settings', default_settings) if data else default_settings
 
     async def update_setting(self, setting_name, value):
-        """Update a specific setting in the database."""
         current_settings = await self.get_settings()
         current_settings[setting_name] = value
         await self.settings_data.update_one(
