@@ -212,7 +212,7 @@ async def start_command(client: Client, message: Message):
             message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
     except Exception as e:
-        print(f"ᴇʀʀᴏʀ sᴇɴᴅɪɴɢ sᴛᴀʀᴟ ᴘʜᴏᴛᴏ: {e}")
+        print(f"ᴇʀʀᴏʀ sᴇɴᴅɪɴɢ sᴛᴀʀᴛ ᴘʜᴏᴛᴏ: {e}")
         await asyncio.sleep(0.5)
         await message.reply_photo(
             photo=START_PIC,
@@ -263,7 +263,6 @@ async def not_joined(client: Client, message: Message):
                                 raise e
 
                     name = data.title
-                    channel_id = data.id
 
                     # Generate proper invite link based on the mode
                     if mode == "on":
@@ -283,7 +282,7 @@ async def not_joined(client: Client, message: Message):
                             )
                             link = invite.invite_link
 
-                    buttons.append([InlineKeyboardButton(text=f"{name} ({channel_id})", url=link)])
+                    buttons.append([InlineKeyboardButton(text=f"{name}", url=link)])
                     count += 1
                     await temp.edit(f"<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ {count}...</b></blockquote>")
                 except Exception as e:
