@@ -16,7 +16,7 @@ import time
 import logging
 from pyrogram import Client, filters, __version__
 from pyrogram.enums import ParseMode, ChatAction, ChatMemberStatus, ChatType
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatMemberUpdated, ChatPermissions
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, ChatMemberUpdated, ChatPermissions, InputMediaPhoto
 from bot import Bot
 from helper_func import *
 from database.database import *
@@ -57,6 +57,10 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code> ({status})</b></blockquote>\n"
             except Exception as e:
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
+                if "USERNAME_NOT_OCCUPIED" in str(e):
+                    await db.rem_channel(ch_id)  # Remove invalid channel from database
+                    logger.info(f"Removed invalid channel {ch_id} from database")
+                    continue
                 settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
 
     buttons = InlineKeyboardMarkup(
@@ -147,6 +151,10 @@ async def show_channels_list(client: Client, chat_id: int, message_id: int):
                 settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code></b></blockquote>\n"
             except Exception as e:
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
+                if "USERNAME_NOT_OCCUPIED" in str(e):
+                    await db.rem_channel(ch_id)  # Remove invalid channel from database
+                    logger.info(f"Removed invalid channel {ch_id} from database")
+                    continue
                 settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
 
     buttons = InlineKeyboardMarkup(
@@ -319,6 +327,10 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
             except Exception as e:
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
+                if "USERNAME_NOT_OCCUPIED" in str(e):
+                    await db.rem_channel(ch_id)  # Remove invalid channel from database
+                    logger.info(f"Removed invalid channel {ch_id} from database")
+                    continue
                 buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
 
         buttons.append([InlineKeyboardButton("Close ✖️", callback_data="fsub_close")])
@@ -353,6 +365,10 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 buttons.append([InlineKeyboardButton(title, callback_data=f"fsub_temp_off_{ch_id}")])
             except Exception as e:
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
+                if "USERNAME_NOT_OCCUPIED" in str(e):
+                    await db.rem_channel(ch_id)  # Remove invalid channel from database
+                    logger.info(f"Removed invalid channel {ch_id} from database")
+                    continue
                 buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"fsub_temp_off_{ch_id}")])
 
         buttons.append([InlineKeyboardButton("Close ✖️", callback_data="fsub_close")])
@@ -542,6 +558,10 @@ async def change_force_sub_mode(client: Client, message: Message):
             buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
         except Exception as e:
             logger.error(f"Failed to fetch chat {ch_id}: {e}")
+            if "USERNAME_NOT_OCCUPIED" in str(e):
+                await db.rem_channel(ch_id)  # Remove invalid channel from database
+                logger.info(f"Removed invalid channel {ch_id} from database")
+                continue
             buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
 
     buttons.append([InlineKeyboardButton("Close ✖️", callback_data="fsub_close")])
