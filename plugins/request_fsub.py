@@ -20,7 +20,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 from bot import Bot
 from helper_func import *
 from database.database import *
-from config import OWNER_ID
+from config import OWNER_ID, RANDOM_IMAGES, START_PIC
 
 # Set up logging for this module
 logger = logging.getLogger(__name__)
@@ -38,7 +38,10 @@ MESSAGE_EFFECT_IDS = [
 # Function to show force-sub settings with channels list, buttons, image, and message effects
 async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
     """Show the force-sub settings menu with channel list and controls."""
-    settings_text = "<b>›› Request Fsub Settings:</b>\n\n"
+    settings = await db.get_settings()
+    force_sub_enabled = settings.get('FORCE_SUB_ENABLED', True)
+    mode_status = "🟢 Enabled" if force_sub_enabled else "🔴 Disabled"
+    settings_text = f"<b>›› Request Fsub Settings:</b>\n\n<blockquote><b>Force Sub Mode: {mode_status}</b></blockquote>\n\n"
     channels = await db.show_channels()
     
     if not channels:
@@ -48,8 +51,10 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         for ch_id in channels:
             try:
                 chat = await client.get_chat(ch_id)
+                temp_off = await db.get_channel_temp_off(ch_id)
+                status = "🔴 Off" if temp_off else "🟢 On"
                 link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
-                settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code></b></blockquote>\n"
+                settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code> ({status})</b></blockquote>\n"
             except Exception as e:
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
                 settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
@@ -61,7 +66,12 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 InlineKeyboardButton(" Remove Channels •", callback_data="fsub_remove_channel")
             ],
             [
-                InlineKeyboardButton("• Toggle Mode •", callback_data="fsub_toggle_mode")
+                InlineKeyboardButton("• Toggle Mode •", callback_data="fsub_toggle_mode"),
+                InlineKeyboardButton(" Channels List •", callback_data="fsub_channels_list")
+            ],
+            [
+                InlineKeyboardButton("• Single Off •", callback_data="fsub_single_off"),
+                InlineKeyboardButton(" Fully Off •", callback_data="fsub_fully_off")
             ],
             [
                 InlineKeyboardButton("• Refresh ", callback_data="fsub_refresh"),
@@ -100,7 +110,6 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
             logger.info(f"Sent photo message with image {selected_image} and effect {selected_effect}")
         except Exception as e:
             logger.error(f"Failed to send photo message with image {selected_image}: {e}")
-            # Fallback to text-only message
             try:
                 await client.send_message(
                     chat_id=chat_id,
@@ -113,7 +122,6 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 logger.info(f"Sent text-only message with effect {selected_effect} as fallback")
             except Exception as e:
                 logger.error(f"Failed to send text-only message with effect {selected_effect}: {e}")
-                # Final fallback without effect
                 await client.send_message(
                     chat_id=chat_id,
                     text=settings_text,
@@ -122,6 +130,124 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                     disable_web_page_preview=True
                 )
                 logger.info("Sent text-only message without effect as final fallback")
+
+# Function to show the channels list
+async def show_channels_list(client: Client, chat_id: int, message_id: int):
+    """Show the list of force-sub channels with their links."""
+    channels = await db.show_channels()
+    settings_text = "<b>›› Force-sub Channels List:</b>\n\n"
+    
+    if not channels:
+        settings_text += "<blockquote><i>No channels configured yet.</i></blockquote>"
+    else:
+        for ch_id in channels:
+            try:
+                chat = await client.get_chat(ch_id)
+                link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
+                settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code></b></blockquote>\n"
+            except Exception as e:
+                logger.error(f"Failed to fetch chat {ch_id}: {e}")
+                settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
+
+    buttons = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("• Back •", callback_data="fsub_back"),
+                InlineKeyboardButton("• Close •", callback_data="fsub_close")
+            ]
+        ]
+    )
+
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
+
+    try:
+        await client.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=settings_text,
+            reply_markup=buttons,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+        logger.info("Edited message with channels list")
+    except Exception as e:
+        logger.error(f"Failed to edit message: {e}")
+        await client.send_message(
+            chat_id=chat_id,
+            text=settings_text,
+            reply_markup=buttons,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
+            message_effect_id=selected_effect
+        )
+        logger.info(f"Sent channels list message with effect {selected_effect}")
+
+# Function to show the fully off settings
+async def show_fully_off_settings(client: Client, chat_id: int, message_id: int = None):
+    """Show the fully off settings menu for force-sub system."""
+    settings = await db.get_settings()
+    force_sub_enabled = settings.get('FORCE_SUB_ENABLED', True)
+    mode_status = "🟢 Enabled" if force_sub_enabled else "🔴 Disabled"
+    settings_text = f"<b>›› Force Sub Fully Off Settings:</b>\n\n<blockquote><b>Force Sub Mode: {mode_status}</b></blockquote>\n\n"
+    settings_text += "<b>Click below buttons to change settings</b>"
+
+    buttons = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("• Disable ❌" if force_sub_enabled else "• Enable ✅", callback_data="fsub_toggle_full"),
+                InlineKeyboardButton("• Refresh ", callback_data="fsub_full_refresh")
+            ],
+            [
+                InlineKeyboardButton("• Back •", callback_data="fsub_back"),
+                InlineKeyboardButton("• Close •", callback_data="fsub_close")
+            ]
+        ]
+    )
+
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
+
+    if message_id:
+        try:
+            await client.edit_message_media(
+                chat_id=chat_id,
+                message_id=message_id,
+                media=InputMediaPhoto(media=selected_image, caption=settings_text),
+                reply_markup=buttons
+            )
+            logger.info("Edited message with fully off settings")
+        except Exception as e:
+            logger.error(f"Failed to edit message with image: {e}")
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML
+            )
+    else:
+        try:
+            await client.send_photo(
+                chat_id=chat_id,
+                photo=selected_image,
+                caption=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                message_effect_id=selected_effect
+            )
+            logger.info(f"Sent fully off settings message with image {selected_image} and effect {selected_effect}")
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
+            await client.send_message(
+                chat_id=chat_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+                message_effect_id=selected_effect
+            )
+            logger.info(f"Sent fully off settings message with effect {selected_effect} as fallback")
 
 @Bot.on_message(filters.command('forcesub') & filters.private & admin)
 async def force_sub_settings(client: Client, message: Message):
@@ -195,7 +321,7 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
                 logger.error(f"Failed to fetch chat {ch_id}: {e}")
                 buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
 
-        buttons.append([InlineKeyboardButton("Close ✖️", callback_data="close")])
+        buttons.append([InlineKeyboardButton("Close ✖️", callback_data="fsub_close")])
 
         await temp.edit(
             "<blockquote><b>⚡ Select a channel to toggle force-sub mode:</b></blockquote>",
@@ -203,6 +329,56 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
             disable_web_page_preview=True
         )
         await callback.answer()
+
+    elif data == "fsub_channels_list":
+        await show_channels_list(client, chat_id, message_id)
+        await callback.answer("Showing channels list!")
+
+    elif data == "fsub_single_off":
+        temp = await callback.message.reply("<b><i>Wait a sec...</i></b>", quote=True)
+        channels = await db.show_channels()
+
+        if not channels:
+            await temp.edit("<blockquote><b>❌ No force-sub channels found.</b></blockquote>")
+            await callback.answer()
+            return
+
+        buttons = []
+        for ch_id in channels:
+            try:
+                chat = await client.get_chat(ch_id)
+                temp_off = await db.get_channel_temp_off(ch_id)
+                status = "🔴 Off" if temp_off else "🟢 On"
+                title = f"{status} {chat.title}"
+                buttons.append([InlineKeyboardButton(title, callback_data=f"fsub_temp_off_{ch_id}")])
+            except Exception as e:
+                logger.error(f"Failed to fetch chat {ch_id}: {e}")
+                buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"fsub_temp_off_{ch_id}")])
+
+        buttons.append([InlineKeyboardButton("Close ✖️", callback_data="fsub_close")])
+
+        await temp.edit(
+            "<blockquote><b>⚡ Select a channel to toggle temporary off mode:</b></blockquote>",
+            reply_markup=InlineKeyboardMarkup(buttons),
+            disable_web_page_preview=True
+        )
+        await callback.answer()
+
+    elif data == "fsub_fully_off":
+        await show_fully_off_settings(client, chat_id, message_id)
+        await callback.answer("Showing fully off settings!")
+
+    elif data == "fsub_toggle_full":
+        settings = await db.get_settings()
+        current_mode = settings.get('FORCE_SUB_ENABLED', True)
+        new_mode = not current_mode
+        await db.update_setting('FORCE_SUB_ENABLED', new_mode)
+        await show_fully_off_settings(client, chat_id, message_id)
+        await callback.answer(f"Force-sub mode {'enabled' if new_mode else 'disabled'}!")
+
+    elif data == "fsub_full_refresh":
+        await show_fully_off_settings(client, chat_id, message_id)
+        await callback.answer("Settings refreshed!")
 
     elif data == "fsub_refresh":
         await show_force_sub_settings(client, chat_id, callback.message.id)
@@ -218,10 +394,36 @@ async def force_sub_callback(client: Client, callback: CallbackQuery):
         await show_force_sub_settings(client, chat_id, message_id)
         await callback.answer("Back to settings!")
 
-    elif data == "fsub_cancel":
-        await db.set_temp_state(chat_id, "")
-        await show_force_sub_settings(client, chat_id, message_id)
-        await callback.answer("Action cancelled!")
+    elif data.startswith("fsub_temp_off_"):
+        ch_id = int(callback.data.split("_")[-1])
+        logger.info(f"Toggling temp_off for channel {ch_id} by user {callback.from_user.id}")
+
+        try:
+            current_temp_off = await db.get_channel_temp_off(ch_id)
+            new_temp_off = not current_temp_off
+            await db.set_channel_temp_off(ch_id, new_temp_off)
+            
+            chat = await client.get_chat(ch_id)
+            status = "🔴 Off" if new_temp_off else "🟢 On"
+            await callback.message.edit_text(
+                f"<blockquote><b>✅ Temporary mode toggled for channel:</b></blockquote>\n\n"
+                f"<blockquote><b>Name:</b> <a href='https://t.me/{chat.username}'>{chat.title}</a></blockquote>\n"
+                f"<blockquote><b>ID:</b> <code>{ch_id}</code></blockquote>\n"
+                f"<blockquote><b>Mode:</b> {status} {'Disabled' if new_temp_off else 'Enabled'}</blockquote>",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("• Back •", callback_data="fsub_single_off")]
+                ]),
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+            await callback.answer(f"Channel {ch_id} {'disabled' if new_temp_off else 'enabled'} temporarily!")
+        except Exception as e:
+            logger.error(f"Failed to toggle temp_off for channel {ch_id}: {e}")
+            await callback.message.edit_text(
+                f"<blockquote><b>❌ Failed to toggle temporary mode for channel:</b></blockquote>\n<code>{ch_id}</code>\n\n<i>{e}</i>",
+                parse_mode=ParseMode.HTML
+            )
+            await callback.answer()
 
 # Modified filter to avoid conflict with link_generator.py
 async def fsub_state_filter(_, __, message: Message):
@@ -235,7 +437,6 @@ async def fsub_state_filter(_, __, message: Message):
     if not message.text:
         logger.info(f"No message text provided in chat {chat_id}")
         return False
-    # Only process channel ID or 'all' inputs
     is_valid_input = message.text.lower() == "all" or (message.text.startswith("-") and message.text[1:].isdigit())
     logger.info(f"Input validation for chat {chat_id}: is_valid_input={is_valid_input}")
     return is_valid_input
@@ -343,7 +544,7 @@ async def change_force_sub_mode(client: Client, message: Message):
             logger.error(f"Failed to fetch chat {ch_id}: {e}")
             buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
 
-    buttons.append([InlineKeyboardButton("Close ✖️", callback_data="close")])
+    buttons.append([InlineKeyboardButton("Close ✖️", callback_data="fsub_close")])
 
     await temp.edit(
         "<blockquote><b>⚡ Select a channel to toggle force-sub mode:</b></blockquote>",
@@ -426,7 +627,7 @@ async def add_force_sub(client: Client, message: Message):
     args = message.text.split(maxsplit=1)
 
     if len(args) != 2:
-        buttons = [[InlineKeyboardButton("Close", callback_data="close")]]
+        buttons = [[InlineKeyboardButton("Close", callback_data="fsub_close")]]
         await temp.edit(
             "<blockquote><b>Usage:</b></blockquote>\n<code>/addchnl -100XXXXXXXXXX</code>\n\n"
             "<b>Add only one channel at a time.</b>",
