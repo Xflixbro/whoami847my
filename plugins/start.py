@@ -212,7 +212,7 @@ async def start_command(client: Client, message: Message):
             message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
     except Exception as e:
-        print(f"ᴇʀʀᴏʀ sᴇɴᴅɪɴɢ sᴛᴀʀᴛ ᴘʜᴏᴛᴏ: {e}")
+        print(f"ᴇʀʀᴏʀ sᴇɴᴅɪɴɢ sᴛᴀʀᴟ ᴘʜᴏᴛᴏ: {e}")
         await asyncio.sleep(0.5)
         await message.reply_photo(
             photo=START_PIC,
@@ -250,8 +250,17 @@ async def not_joined(client: Client, message: Message):
                     if chat_id in chat_data_cache:
                         data = chat_data_cache[chat_id]
                     else:
-                        data = await client.get_chat(chat_id)
-                        chat_data_cache[chat_id] = data
+                        try:
+                            data = await client.get_chat(chat_id)
+                            chat_data_cache[chat_id] = data
+                        except Exception as e:
+                            logger.error(f"Failed to fetch chat {chat_id}: {e}")
+                            if "USERNAME_NOT_OCCUPIED" in str(e):
+                                await db.rem_channel(chat_id)  # Remove invalid channel from database
+                                logger.info(f"Removed invalid channel {chat_id} from database")
+                                continue
+                            else:
+                                raise e
 
                     name = data.title
                     channel_id = data.id
@@ -279,10 +288,7 @@ async def not_joined(client: Client, message: Message):
                     await temp.edit(f"<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ {count}...</b></blockquote>")
                 except Exception as e:
                     logger.error(f"Error with chat {chat_id}: {e}")
-                    return await temp.edit(
-                        f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Mehediyt69</i></b>\n"
-                        f"<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>"
-                    )
+                    continue  # Skip invalid channels instead of stopping
         if count == 0:  # All required channels are subscribed
             await temp.delete()
             return await start_command(client, message)
@@ -304,8 +310,11 @@ async def not_joined(client: Client, message: Message):
             message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
     except Exception as e:
-        logger.error(f"Final error: {e}")
+        logger.error(f"Final error in not_joined: {e}")
         await temp.edit(f"<blockquote><b>ᴇʀʀᴏʀ, ᴄᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ @Mehediyt69\nʀᴇᴀsᴏɴ: {e}</b></blockquote>")
+        await asyncio.sleep(5)  # Show error for 5 seconds
+        await temp.delete()
+        return await start_command(client, message)  # Proceed to start_command even if error occurs
     finally:
         await temp.delete()
 
@@ -337,7 +346,7 @@ async def add_premium_user_command(client, msg):
             "h - ʜᴏᴜʀs\n"
             "d - ᴅᴀʏs\n"
             "y - ʏᴇᴀʀs\n\n"
-            "ᴇxᴀᴍᴘʟᴇs:\n"
+            "ᴇxᴀᴍᴪʟᴇs:\n"
             "/addpremium 123456789 30 m - 30 ᴍɪɴᴜᴛᴇs\n"
             "/addpremium 123456789 2 h - 2 ʜᴏᴜʀs\n"
             "/addpremium 123456789 1 d - 1 ᴅᴀʏ\n"
