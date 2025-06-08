@@ -48,7 +48,7 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         settings_text += "<blockquote><i>No channels configured yet. Use 𖤓 Add Channels 𖤓 to add a channel.</i></blockquote>"
     else:
         settings_text += "<blockquote><b>⚡ Force-sub Channels:</b></blockquote>\n\n"
-        for ch_id in channels:
+        for ch_id in channels[:5]:  # Show only first 5 channels
             try:
                 chat = await client.get_chat(ch_id)
                 temp_off = await db.get_channel_temp_off(ch_id)
@@ -62,6 +62,8 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                     logger.info(f"Removed invalid channel {ch_id} from database")
                     continue
                 settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
+        if len(channels) > 5:  # If there are more than 5 channels
+            settings_text += f"<blockquote><i>...and {len(channels) - 5} more.</i></blockquote>\n"
 
     buttons = InlineKeyboardMarkup(
         [
@@ -86,7 +88,6 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
         ]
     )
 
-    # Select random image and effect
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
     selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
 
