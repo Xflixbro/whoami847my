@@ -181,7 +181,7 @@ PRICE5 = os.environ.get("PRICE5", "550 rs")
 # Default settings (loaded dynamically in bot.py)
 PROTECT_CONTENT = False
 HIDE_CAPTION = False
-DISABLE_CHANNEL_BUTTON = True
+DISABLE_CHANNEL_BUTTON = False
 BUTTON_NAME = None
 BUTTON_LINK = None
 
