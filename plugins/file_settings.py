@@ -113,6 +113,10 @@ async def go_back(client, callback_query):
 @Client.on_callback_query(filters.regex("set_button"))
 async def set_button_start(client, callback_query):
     print("Set Button callback triggered")
+    # Remove previous handlers to avoid conflicts
+    client.remove_handler(MessageHandler(set_button_name, filters.private & filters.user(callback_query.from_user.id)), group=1)
+    client.remove_handler(MessageHandler(set_button_link, filters.private & filters.user(callback_query.from_user.id)), group=1)
+    
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
     try:
         await callback_query.message.reply_photo(
