@@ -1,11 +1,10 @@
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from pyrogram.types import Update
 from config import PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK, update_setting, get_settings, RANDOM_IMAGES, START_PIC
 import random
 
-# Define message effect IDs
+# Define message effect IDs (used only for /fsettings initial message)
 MESSAGE_EFFECT_IDS = [
     5104841245755180586,  # 🔥
     5107584321108051014,  # 👍
@@ -24,7 +23,7 @@ async def show_settings_message(client, message_or_callback, is_callback=False):
     # Create the settings text in the requested format
     settings_text = "<b>Fɪʟᴇs ʀᴇʟᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs:</b>\n\n"
     settings_text += f"<blockquote><b>›› Pʀᴏᴛᴇᴄᴛ ᴄᴏɴᴛᴇɴᴛ: {'Eɴᴀʙʟᴇᴅ' if settings['PROTECT_CONTENT'] else 'Dɪsᴀʙʟᴇᴅ'} {'✅' if settings['PROTECT_CONTENT'] else '❌'}\n"
-    settings_text += f"›› Hɪᴅᴇ ᴄᴀᴘᴛɪᴏɴ: {'Eɴᴀʙʟᴇᴅ' if settings['HIDE_CAPTION'] else 'Dɪsᴀʙʟᴇᴅ'} {'✅' if settings['HIDE_CAPTION'] else '❌'}\n"
+    settings_text += f"›› Hɪᴅᴇ ᴄᴀᴘᴛɪᴏɴ: {'Eɴᴀʙʟᴇᴅ' if settings['HIDE_CAPTION'] else 'Dɪsᴀʙʲʟᴇᴅ'} {'✅' if settings['HIDE_CAPTION'] else '❌'}\n"
     settings_text += f"›› Cʜᴀɴɴᴇʟ ʙᴜᴛᴛᴏɴ: {'Eɴᴀʙʟᴇᴅ' if not settings['DISABLE_CHANNEL_BUTTON'] else 'Dɪsᴀʙʟᴇᴅ'} {'✅' if not settings['DISABLE_CHANNEL_BUTTON'] else '❌'}\n\n"
     settings_text += f"›› Bᴜᴛᴛᴏɴ Nᴀᴍᴇ: {settings['BUTTON_NAME'] if settings['BUTTON_NAME'] else 'not set'}\n"
     settings_text += f"›› Bᴜᴛᴛᴏɴ Lɪɴᴋ: {settings['BUTTON_LINK'] if settings['BUTTON_LINK'] else 'not set'}</b></blockquote>\n\n"
@@ -59,8 +58,7 @@ async def show_settings_message(client, message_or_callback, is_callback=False):
             print(f"Error editing message with photo: {e}")
             await message_or_callback.message.edit_text(
                 text=settings_text,
-                reply_markup=InlineKeyboardMarkup(buttons),
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                reply_markup=InlineKeyboardMarkup(buttons)
             )
     else:
         try:
@@ -74,8 +72,7 @@ async def show_settings_message(client, message_or_callback, is_callback=False):
             print(f"Error sending photo: {e}")
             await message_or_callback.reply_text(
                 text=settings_text,
-                reply_markup=InlineKeyboardMarkup(buttons),
-                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                reply_markup=InlineKeyboardMarkup(buttons)
             )
 
 @Client.on_message(filters.command("fsettings") & filters.private)
@@ -114,21 +111,20 @@ async def go_back(client, callback_query):
 async def set_button_start(client, callback_query):
     print("Set Button callback triggered")
     # Remove previous handlers to avoid conflicts
-    client.remove_handler(MessageHandler(set_button_name, filters.private & filters.user(callback_query.from_user.id)), group=1)
-    client.remove_handler(MessageHandler(set_button_link, filters.private & filters.user(callback_query.from_user.id)), group=1)
+    for handler in client.dispatcher.groups.get(1, []):
+        if isinstance(handler, MessageHandler) and handler.filters.user == callback_query.from_user.id:
+            client.remove_handler(handler, group=1)
     
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
     try:
         await callback_query.message.reply_photo(
             photo=selected_image,
-            caption="Pʟᴇᴀsᴇ ᴇɴᴛᴇʀ ᴛʜᴇ ɴᴇᴡ Bᴜᴛᴛᴏɴ Nᴀᴍᴇ:",
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            caption="Pʟᴇᴀsᴇ ᴇɴᴛᴇʀ ᴛʜᴇ ɴᴇᴡ Bᴜᴛᴛᴏɴ Nᴀᴍᴇ:"
         )
     except Exception as e:
         print(f"Error sending photo: {e}")
         await callback_query.message.reply_text(
-            "Pʟᴇᴀsᴇ ᴇɴᴛᴇʀ ᴛʜᴇ ɴᴇᴡ Bᴜᴛᴛᴏɴ Nᴀᴍᴇ:",
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            "Pʟᴇᴀsᴇ ᴇɴᴛᴇʀ ᴛʜᴇ ɴᴇᴡ Bᴜᴛᴛᴏɴ Nᴀᴍᴇ:"
         )
     await callback_query.answer()
     client.add_handler(MessageHandler(set_button_name, filters.private & filters.user(callback_query.from_user.id)), group=1)
@@ -140,14 +136,12 @@ async def set_button_name(client, message):
     try:
         await message.reply_photo(
             photo=selected_image,
-            caption="Bᴜᴛᴛᴏɴ Nᴀᴍᴇ ᴜᴘᴅᴀᴛᴇᴅ! Nᴏᴡ ᴇɴᴛᴇʀ ᴛʜᴇ ɴᴇᴡ Bᴜᴛᴛᴏɴ Lɪɴᴋ:",
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            caption="Bᴜᴛᴛᴏɴ Nᴀᴍᴇ ᴜᴪᴅᴀᴛᴇᴅ! Nᴏᴡ ᴇɴᴛᴇʀ ᴛʜᴇ ɴᴇᴡ Bᴜᴛᴛᴏɴ Lɪɴᴋ:"
         )
     except Exception as e:
         print(f"Error sending photo: {e}")
         await message.reply_text(
-            "Bᴜᴛᴛᴏɴ Nᴀᴍᴇ ᴜᴘᴅᴀᴛᴇᴅ! Nᴏᴡ ᴇɴᴛᴇʀ ᴛʜᴇ ɴᴇᴡ Bᴜᴛᴛᴏɴ Lɪɴᴋ:",
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            "Bᴜᴛᴛᴏɴ Nᴀᴍᴇ ᴜᴪᴅᴀᴛᴇᴅ! Nᴏᴡ ᴇɴᴛᴇʀ ᴛʜᴇ ɴᴇᴡ Bᴜᴛᴛᴏɴ Lɪɴᴋ:"
         )
     client.add_handler(MessageHandler(set_button_link, filters.private & filters.user(message.from_user.id)), group=1)
 
@@ -158,14 +152,14 @@ async def set_button_link(client, message):
     try:
         await message.reply_photo(
             photo=selected_image,
-            caption="Bᴜᴛᴛᴏɴ Lɪɴᴋ ᴜᴘᴅᴀᴛᴇᴅ! Uꜱᴇ /fsettings ᴛᴏ sᴇᴇ ᴛʜᴇ ᴜᴘᴅᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs.",
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            caption="Bᴜᴛᴛᴏɴ Lɪɴᴋ ᴜᴪᴅᴀᴛᴇᴅ! Uꜱᴇ /fsettings ᴛᴏ sᴇᴇ ᴛʜᴇ ᴜᴪᴅᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs."
         )
     except Exception as e:
         print(f"Error sending photo: {e}")
         await message.reply_text(
-            "Bᴜᴛᴛᴏɴ Lɪɴᴋ ᴜᴘᴅᴀᴛᴇᴅ! Uꜱᴇ /fsettings ᴛᴏ sᴇᴇ ᴛʜᴇ ᴜᴘᴅᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs.",
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+            "Bᴜᴛᴛᴏɴ Lɪɴᴋ ᴜᴪᴅᴀᴛᴇᴅ! Uꜱᴇ /fsettings ᴛᴏ sᴇᴇ ᴛʜᴇ ᴜᴪᴅᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs."
         )
-    client.remove_handler(MessageHandler(set_button_name, filters.private & filters.user(message.from_user.id)), group=1)
-    client.remove_handler(MessageHandler(set_button_link, filters.private & filters.user(message.from_user.id)), group=1)
+    # Remove handlers after completion
+    for handler in client.dispatcher.groups.get(1, []):
+        if isinstance(handler, MessageHandler) and handler.filters.user == message.from_user.id:
+            client.remove_handler(handler, group=1)
