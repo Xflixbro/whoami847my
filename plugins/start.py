@@ -129,12 +129,22 @@ async def start_command(client: Client, message: Message):
         # Load settings dynamically before copying messages
         settings = await db.get_settings()
         PROTECT_CONTENT = settings.get('PROTECT_CONTENT', False)
-        print(f"Copying message with PROTECT_CONTENT={PROTECT_CONTENT}")
+        HIDE_CAPTION = settings.get('HIDE_CAPTION', False)
+        BUTTON_NAME = settings.get('BUTTON_NAME', None)
+        BUTTON_LINK = settings.get('BUTTON_LINK', None)
+        print(f"Copying message with PROTECT_CONTENT={PROTECT_CONTENT}, HIDE_CAPTION={HIDE_CAPTION}")
         for msg in messages:
-            caption = (CUSTOM_CAPTION.format(previouscaption="" if not msg.caption else msg.caption.html,
-                                             filename=msg.document.file_name) if bool(CUSTOM_CAPTION) and bool(msg.document)
-                       else ("" if not msg.caption else msg.caption.html))
-            reply_markup = msg.reply_markup if DISABLE_CHANNEL_BUTTON else None
+            caption = "" if HIDE_CAPTION else (
+                CUSTOM_CAPTION.format(previouscaption="" if not msg.caption else msg.caption.html,
+                                      filename=msg.document.file_name) if bool(CUSTOM_CAPTION) and bool(msg.document)
+                else ("" if not msg.caption else msg.caption.html))
+            reply_markup = None if DISABLE_CHANNEL_BUTTON else msg.reply_markup
+            # Add custom button if BUTTON_NAME and BUTTON_LINK are set
+            if BUTTON_NAME and BUTTON_LINK:
+                custom_button = InlineKeyboardMarkup([[InlineKeyboardButton(BUTTON_NAME, url=BUTTON_LINK)]])
+                reply_markup = custom_button if not reply_markup else InlineKeyboardMarkup(
+                    reply_markup.inline_keyboard + custom_button.inline_keyboard
+                )
             try:
                 copied_msg = await msg.copy(chat_id=user_id, caption=caption, parse_mode=ParseMode.HTML, 
                                             reply_markup=reply_markup, protect_content=PROTECT_CONTENT)
@@ -150,7 +160,7 @@ async def start_command(client: Client, message: Message):
         auto_delete_mode = await db.get_auto_delete_mode()  # Check auto-delete mode
         if auto_delete_mode and FILE_AUTO_DELETE > 0:  # Only proceed if mode is enabled and timer is positive
             notification_msg = await message.reply(
-                f"ᴛʜɪs ғɪʟᴇ ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ɪɴ {get_exp_time(FILE_AUTO_DELETE).lower()}. ᴘʟᴇᴀsᴇ sᴀᴠᴇ ᴏʀ ғᴏʰᴡᴀʀᴅ ɪᴛ ᴛᴏ ʏᴏᴜʀ sᴀᴠᴇᴅ ᴍᴇssᴀɢᴇs ʙᴇғᴏʀᴇ ɪᴛ ɢᴇᴛs ᴅᴇʟᴇᴛᴇᴅ.",
+                f"ᴛʜɪs ғɪʟᴇ ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ɪɴ {get_exp_time(FILE_AUTO_DELETE).lower()}. ᴘʟᴇᴀsᴇ sᴀᴠᴇ ᴏʀ ғᴏʀᴡᴀʀᴅ ɪᴛ ᴛᴏ ʏᴏᴜʀ sᴀᴠᴇᴅ ᴍᴇssᴀɢᴇs ʙᴇғᴏʀᴇ ɪᴛ ɢᴇᴛs ᴅᴇʟᴇᴛᴇᴅ.",
                 message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
             await asyncio.sleep(FILE_AUTO_DELETE)
