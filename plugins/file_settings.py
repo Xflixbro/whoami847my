@@ -3,6 +3,9 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMedi
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from config import PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK, update_setting, get_settings, RANDOM_IMAGES, START_PIC
 import random
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Define message effect IDs (used only for /fsettings initial message)
 MESSAGE_EFFECT_IDS = [
@@ -23,8 +26,8 @@ async def show_settings_message(client, message_or_callback, is_callback=False):
     # Create the settings text in the requested format
     settings_text = "<b>Fɪʟᴇs ʀᴇʟᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs:</b>\n\n"
     settings_text += f"<blockquote><b>›› Pʀᴏᴛᴇᴄᴛ ᴄᴏɴᴛᴇɴᴛ: {'Eɴᴀʙʟᴇᴅ' if settings['PROTECT_CONTENT'] else 'Dɪsᴀʙʟᴇᴅ'} {'✅' if settings['PROTECT_CONTENT'] else '❌'}\n"
-    settings_text += f"›› Hɪᴅᴇ ᴄᴀᴪᴛɪᴏɴ: {'Eɴᴀʙʟᴇᴅ' if settings['HIDE_CAPTION'] else 'Dɪsᴀʙʲʟᴇᴅ'} {'✅' if settings['HIDE_CAPTION'] else '❌'}\n"
-    settings_text += f"›› Cʜᴀɴɴᴇʟ ʙᴜᴛᴛᴏɴ: {'Eɴᴀʙʟᴇᴅ' if not settings['DISABLE_CHANNEL_BUTTON'] else 'Dɪsᴀʙʟᴇᴅ'} {'✅' if not settings['DISABLE_CHANNEL_BUTTON'] else '❌'}\n\n"
+    settings_text += f"›› Hɪᴅᴇ ᴄᴀᴪᴛɪᴏɴ: {'Eɴᴀʙʲʟᴇᴅ' if settings['HIDE_CAPTION'] else 'Dɪsᴀʙʲʟᴇᴅ'} {'✅' if settings['HIDE_CAPTION'] else '❌'}\n"
+    settings_text += f"›› Cʜᴀɴɴᴇʟ ʙᴜᴛᴛᴏɴ: {'Eɴᴀʙʲʟᴇᴅ' if not settings['DISABLE_CHANNEL_BUTTON'] else 'Dɪsᴀʙʲʟᴇᴅ'} {'✅' if not settings['DISABLE_CHANNEL_BUTTON'] else '❌'}\n\n"
     settings_text += f"›› Bᴜᴛᴛᴏɴ Nᴀᴍᴇ: {settings['BUTTON_NAME'] if settings['BUTTON_NAME'] else 'not set'}\n"
     settings_text += f"›› Bᴜᴛᴛᴏɴ Lɪɴᴋ: {settings['BUTTON_LINK'] if settings['BUTTON_LINK'] else 'not set'}</b></blockquote>\n\n"
     settings_text += "<b>Cʟɪᴄᴋ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴs ᴛᴏ ᴄʜᴀɴɢᴇ sᴇᴛᴛɪɴɢs</b>"
@@ -55,7 +58,7 @@ async def show_settings_message(client, message_or_callback, is_callback=False):
                 reply_markup=InlineKeyboardMarkup(buttons)
             )
         except Exception as e:
-            print(f"Error editing message with photo: {e}")
+            logger.error(f"Error editing message with photo: {e}")
             await message_or_callback.message.edit_text(
                 text=settings_text,
                 reply_markup=InlineKeyboardMarkup(buttons)
@@ -69,7 +72,7 @@ async def show_settings_message(client, message_or_callback, is_callback=False):
                 message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
         except Exception as e:
-            print(f"Error sending photo: {e}")
+            logger.error(f"Error sending photo: {e}")
             await message_or_callback.reply_text(
                 text=settings_text,
                 reply_markup=InlineKeyboardMarkup(buttons)
@@ -107,53 +110,121 @@ async def go_back(client, callback_query):
     await callback_query.message.delete()
     await callback_query.answer("Bᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ!")
 
-@Client.on_callback_query(filters.regex("set_button"))
+@Client.on_callback_query(filters.regex(r"^set_button$"))
 async def set_button_start(client, callback_query):
-    print("Set Button callback triggered")
-    # Remove previous handlers to avoid conflicts
-    for handler in client.dispatcher.groups.get(1, []):
-        if isinstance(handler, MessageHandler) and handler.filters.user == callback_query.from_user.id:
-            client.remove_handler(handler, group=1)
-    
+    logger.info(f"Set Button callback triggered for user {callback_query.from_user.id}")
+    user_id = callback_query.from_user.id
+
+    # Remove any existing message handlers for this user to avoid conflicts
+    try:
+        for handler in client.dispatcher.groups.get(1, []):
+            if isinstance(handler, MessageHandler) and handler.filters.user == user_id:
+                client.remove_handler(handler, group=1)
+                logger.debug(f"Removed existing handler for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error removing handlers for user {user_id}: {e}")
+
+    # Send request for button name
     try:
         await callback_query.message.reply_text(
-            "Give me the button name:"
+            "Give me the button name:",
+            quote=True
         )
+        logger.info(f"Sent 'Give me the button name' message to user {user_id}")
     except Exception as e:
-        print(f"Error sending reply: {e}")
+        logger.error(f"Error sending 'Give me the button name' message to user {user_id}: {e}")
         await callback_query.message.reply_text(
             "Error occurred. Please try again."
         )
-    await callback_query.answer()
-    client.add_handler(MessageHandler(set_button_name, filters.private & filters.user(callback_query.from_user.id)), group=1)
+        await callback_query.answer("Error occurred!")
+        return
+
+    # Add handler for button name
+    client.add_handler(
+        MessageHandler(
+            set_button_name,
+            filters=filters.private & filters.user(user_id)
+        ),
+        group=1
+    )
+    logger.debug(f"Added MessageHandler for set_button_name for user {user_id}")
+    await callback_query.answer("Please provide the button name.")
 
 async def set_button_name(client, message):
+    user_id = message.from_user.id
     new_button_name = message.text.strip()
-    await update_setting("BUTTON_NAME", new_button_name)
+    logger.info(f"Received button name '{new_button_name}' from user {user_id}")
+
+    # Update button name in settings
+    try:
+        await update_setting("BUTTON_NAME", new_button_name)
+        logger.debug(f"Updated BUTTON_NAME to '{new_button_name}' for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error updating BUTTON_NAME for user {user_id}: {e}")
+        await message.reply_text("Error updating button name. Please try again.")
+        return
+
+    # Remove existing handler for button name
+    try:
+        for handler in client.dispatcher.groups.get(1, []):
+            if isinstance(handler, MessageHandler) and handler.filters.user == user_id:
+                client.remove_handler(handler, group=1)
+                logger.debug(f"Removed set_button_name handler for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error removing set_button_name handler for user {user_id}: {e}")
+
+    # Send request for button link
     try:
         await message.reply_text(
-            "Give me the button link:"
+            "Give me the button link:",
+            quote=True
         )
+        logger.info(f"Sent 'Give me the button link' message to user {user_id}")
     except Exception as e:
-        print(f"Error sending reply: {e}")
-        await message.reply_text(
-            "Error occurred. Please try again."
-        )
-    client.add_handler(MessageHandler(set_button_link, filters.private & filters.user(message.from_user.id)), group=1)
+        logger.error(f"Error sending 'Give me the button link' message to user {user_id}: {e}")
+        await message.reply_text("Error occurred. Please try again.")
+        return
+
+    # Add handler for button link
+    client.add_handler(
+        MessageHandler(
+            set_button_link,
+            filters=filters.private & filters.user(user_id)
+        ),
+        group=1
+    )
+    logger.debug(f"Added MessageHandler for set_button_link for user {user_id}")
 
 async def set_button_link(client, message):
+    user_id = message.from_user.id
     new_button_link = message.text.strip()
-    await update_setting("BUTTON_LINK", new_button_link)
+    logger.info(f"Received button link '{new_button_link}' from user {user_id}")
+
+    # Update button link in settings
+    try:
+        await update_setting("BUTTON_LINK", new_button_link)
+        logger.debug(f"Updated BUTTON_LINK to '{new_button_link}' for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error updating BUTTON_LINK for user {user_id}: {e}")
+        await message.reply_text("Error updating button link. Please try again.")
+        return
+
+    # Send confirmation message
     try:
         await message.reply_text(
-            "Bᴜᴛᴛᴏɴ Lɪɴᴋ ᴜᴪᴅᴀᴛᴇᴅ! Uꜱᴇ /fsettings ᴛᴏ sᴇᴇ ᴛʜᴇ ᴜᴪᴅᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs."
+            "Bᴜᴛᴛᴏɴ Lɪɴᴋ ᴜᴪᴅᴀᴛᴇᴅ! Uꜱᴇ /fsettings ᴛᴏ sᴇᴇ ᴛʜᴇ ᴜᴪᴅᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs.",
+            quote=True
         )
+        logger.info(f"Sent confirmation message to user {user_id}")
     except Exception as e:
-        print(f"Error sending reply: {e}")
-        await message.reply_text(
-            "Error occurred. Please try again."
-        )
-    # Remove handlers after completion
-    for handler in client.dispatcher.groups.get(1, []):
-        if isinstance(handler, MessageHandler) and handler.filters.user == message.from_user.id:
-            client.remove_handler(handler, group=1)
+        logger.error(f"Error sending confirmation message to user {user_id}: {e}")
+        await message.reply_text("Error occurred. Please try again.")
+
+    # Remove all handlers for this user
+    try:
+        for handler in client.dispatcher.groups.get(1, []):
+            if isinstance(handler, MessageHandler) and handler.filters.user == user_id:
+                client.remove_handler(handler, group=1)
+                logger.debug(f"Removed set_button_link handler for user {user_id}")
+    except Exception as e:
+        logger.error(f"Error removing set_button_link handler for user {user_id}: {e}")
