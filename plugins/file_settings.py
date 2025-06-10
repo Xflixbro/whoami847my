@@ -25,7 +25,7 @@ async def show_settings_message(client, message_or_callback, is_callback=False):
     
     # Create the settings text in the requested format
     settings_text = "<b>Fɪʟᴇs ʀᴇʟᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs:</b>\n\n"
-    settings_text += f"<blockquote><b>›› Pʀᴏᴛᴇᴄᴛ ᴄᴏɴᴛᴇɴᴛ: {'Eɴᴀʙʟᴇᴅ' if settings['PROTECT_CONTENT'] else 'Dɪsᴀʙʲʟᴇᴅ'} {'✅' if settings['PROTECT_CONTENT'] else '❌'}\n"
+    settings_text += f"<blockquote><b>›› Pʀᴏᴛᴇᴄᴛ ᴄᴏɴᴛᴇɴᴛ: {'Eɴᴀʙʲʟᴇᴅ' if settings['PROTECT_CONTENT'] else 'Dɪsᴀʙʲʟᴇᴅ'} {'✅' if settings['PROTECT_CONTENT'] else '❌'}\n"
     settings_text += f"›› Hɪᴅᴇ ᴄᴀᴪᴛɪᴏɴ: {'Eɴᴀʙʲʟᴇᴅ' if settings['HIDE_CAPTION'] else 'Dɪsᴀʙʲʟᴇᴅ'} {'✅' if settings['HIDE_CAPTION'] else '❌'}\n"
     settings_text += f"›› Cʜᴀɴɴᴇʟ ʙᴜᴛᴛᴏɴ: {'Eɴᴀʙʲʟᴇᴅ' if not settings['DISABLE_CHANNEL_BUTTON'] else 'Dɪsᴀʙʲʟᴇᴅ'} {'✅' if not settings['DISABLE_CHANNEL_BUTTON'] else '❌'}\n\n"
     settings_text += f"›› Bᴜᴛᴛᴏɴ Nᴀᴍᴇ: {settings['BUTTON_NAME'] if settings['BUTTON_NAME'] else 'not set'}\n"
@@ -85,40 +85,40 @@ async def fsettings_command(client, message):
     logger.info(f"/fsettings command received from user {message.from_user.id}")
     await show_settings_message(client, message)
 
-@Client.on_callback_query(filters.callback_data("toggle_protect_content"))
+@Client.on_callback_query(filters.regex(r"^toggle_protect_content$"))
 async def toggle_protect_content(client, callback_query):
     logger.info(f"Toggle protect content triggered by user {callback_query.from_user.id}")
     await update_setting("PROTECT_CONTENT", not get_settings()["PROTECT_CONTENT"])
     await show_settings_message(client, callback_query, is_callback=True)
     await callback_query.answer("Pʀᴏᴛᴇᴄᴛ Cᴏɴᴛᴇɴᴛ ᴛᴏɢɢʟᴇᴅ!")
 
-@Client.on_callback_query(filters.callback_data("toggle_hide_caption"))
+@Client.on_callback_query(filters.regex(r"^toggle_hide_caption$"))
 async def toggle_hide_caption(client, callback_query):
     logger.info(f"Toggle hide caption triggered by user {callback_query.from_user.id}")
     await update_setting("HIDE_CAPTION", not get_settings()["HIDE_CAPTION"])
     await show_settings_message(client, callback_query, is_callback=True)
     await callback_query.answer("Hɪᴅᴇ Cᴀᴪᴛɪᴏɴ ᴛᴏɢɢʟᴇᴅ!")
 
-@Client.on_callback_query(filters.callback_data("toggle_channel_button"))
+@Client.on_callback_query(filters.regex(r"^toggle_channel_button$"))
 async def toggle_channel_button(client, callback_query):
     logger.info(f"Toggle channel button triggered by user {callback_query.from_user.id}")
     await update_setting("DISABLE_CHANNEL_BUTTON", not get_settings()["DISABLE_CHANNEL_BUTTON"])
     await show_settings_message(client, callback_query, is_callback=True)
     await callback_query.answer("Cʜᴀɴɴᴇʟ Bᴜᴛᴛᴏɴ ᴛᴏɢɢʟᴇᴅ!")
 
-@Client.on_callback_query(filters.callback_data("refresh_settings"))
+@Client.on_callback_query(filters.regex(r"^refresh_settings$"))
 async def refresh_settings_message(client, callback_query):
     logger.info(f"Refresh settings triggered by user {callback_query.from_user.id}")
     await show_settings_message(client, callback_query, is_callback=True)
     await callback_query.answer("Sᴇᴛᴛɪɴɢs ʀᴇғʀᴇsʜᴇᴅ!")
 
-@Client.on_callback_query(filters.callback_data("go_back"))
+@Client.on_callback_query(filters.regex(r"^go_back$"))
 async def go_back(client, callback_query):
     logger.info(f"Go back triggered by user {callback_query.from_user.id}")
     await callback_query.message.delete()
     await callback_query.answer("Bᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ!")
 
-@Client.on_callback_query(filters.callback_data("set_button"))
+@Client.on_callback_query(filters.regex(r"^set_button$"))
 async def set_button_start(client, callback_query):
     user_id = callback_query.from_user.id
     logger.info(f"Set Button callback triggered for user {user_id}")
