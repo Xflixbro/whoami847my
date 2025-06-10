@@ -23,7 +23,7 @@ async def show_settings_message(client, message_or_callback, is_callback=False):
     # Create the settings text in the requested format
     settings_text = "<b>Fɪʟᴇs ʀᴇʟᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs:</b>\n\n"
     settings_text += f"<blockquote><b>›› Pʀᴏᴛᴇᴄᴛ ᴄᴏɴᴛᴇɴᴛ: {'Eɴᴀʙʟᴇᴅ' if settings['PROTECT_CONTENT'] else 'Dɪsᴀʙʟᴇᴅ'} {'✅' if settings['PROTECT_CONTENT'] else '❌'}\n"
-    settings_text += f"›› Hɪᴅᴇ ᴄᴀᴘᴛɪᴏɴ: {'Eɴᴀʙʟᴇᴅ' if settings['HIDE_CAPTION'] else 'Dɪsᴀʙʲʟᴇᴅ'} {'✅' if settings['HIDE_CAPTION'] else '❌'}\n"
+    settings_text += f"›› Hɪᴅᴇ ᴄᴀᴪᴛɪᴏɴ: {'Eɴᴀʙʟᴇᴅ' if settings['HIDE_CAPTION'] else 'Dɪsᴀʙʲʟᴇᴅ'} {'✅' if settings['HIDE_CAPTION'] else '❌'}\n"
     settings_text += f"›› Cʜᴀɴɴᴇʟ ʙᴜᴛᴛᴏɴ: {'Eɴᴀʙʟᴇᴅ' if not settings['DISABLE_CHANNEL_BUTTON'] else 'Dɪsᴀʙʟᴇᴅ'} {'✅' if not settings['DISABLE_CHANNEL_BUTTON'] else '❌'}\n\n"
     settings_text += f"›› Bᴜᴛᴛᴏɴ Nᴀᴍᴇ: {settings['BUTTON_NAME'] if settings['BUTTON_NAME'] else 'not set'}\n"
     settings_text += f"›› Bᴜᴛᴛᴏɴ Lɪɴᴋ: {settings['BUTTON_LINK'] if settings['BUTTON_LINK'] else 'not set'}</b></blockquote>\n\n"
@@ -89,7 +89,7 @@ async def toggle_protect_content(client, callback_query):
 async def toggle_hide_caption(client, callback_query):
     await update_setting("HIDE_CAPTION", not get_settings()["HIDE_CAPTION"])
     await show_settings_message(client, callback_query, is_callback=True)
-    await callback_query.answer("Hɪᴅᴇ Cᴀᴘᴛɪᴏɴ ᴛᴏɢɢʟᴇᴅ!")
+    await callback_query.answer("Hɪᴅᴇ Cᴀᴪᴛɪᴏɴ ᴛᴏɢɢʟᴇᴅ!")
 
 @Client.on_callback_query(filters.regex("toggle_channel_button"))
 async def toggle_channel_button(client, callback_query):
@@ -115,16 +115,14 @@ async def set_button_start(client, callback_query):
         if isinstance(handler, MessageHandler) and handler.filters.user == callback_query.from_user.id:
             client.remove_handler(handler, group=1)
     
-    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
     try:
-        await callback_query.message.reply_photo(
-            photo=selected_image,
-            caption="Pʟᴇᴀsᴇ ᴇɴᴛᴇʀ ᴛʜᴇ ɴᴇᴡ Bᴜᴛᴛᴏɴ Nᴀᴍᴇ:"
+        await callback_query.message.reply_text(
+            "Give me the button name:"
         )
     except Exception as e:
-        print(f"Error sending photo: {e}")
+        print(f"Error sending reply: {e}")
         await callback_query.message.reply_text(
-            "Pʟᴇᴀsᴇ ᴇɴᴛᴇʀ ᴛʜᴇ ɴᴇᴡ Bᴜᴛᴛᴏɴ Nᴀᴍᴇ:"
+            "Error occurred. Please try again."
         )
     await callback_query.answer()
     client.add_handler(MessageHandler(set_button_name, filters.private & filters.user(callback_query.from_user.id)), group=1)
@@ -132,32 +130,28 @@ async def set_button_start(client, callback_query):
 async def set_button_name(client, message):
     new_button_name = message.text.strip()
     await update_setting("BUTTON_NAME", new_button_name)
-    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
     try:
-        await message.reply_photo(
-            photo=selected_image,
-            caption="Bᴜᴛᴛᴏɴ Nᴀᴍᴇ ᴜᴪᴅᴀᴛᴇᴅ! Nᴏᴡ ᴇɴᴛᴇʀ ᴛʜᴇ ɴᴇᴡ Bᴜᴛᴛᴏɴ Lɪɴᴋ:"
+        await message.reply_text(
+            "Give me the button link:"
         )
     except Exception as e:
-        print(f"Error sending photo: {e}")
+        print(f"Error sending reply: {e}")
         await message.reply_text(
-            "Bᴜᴛᴛᴏɴ Nᴀᴍᴇ ᴜᴪᴅᴀᴛᴇᴅ! Nᴏᴡ ᴇɴᴛᴇʀ ᴛʜᴇ ɴᴇᴡ Bᴜᴛᴛᴏɴ Lɪɴᴋ:"
+            "Error occurred. Please try again."
         )
     client.add_handler(MessageHandler(set_button_link, filters.private & filters.user(message.from_user.id)), group=1)
 
 async def set_button_link(client, message):
     new_button_link = message.text.strip()
     await update_setting("BUTTON_LINK", new_button_link)
-    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
     try:
-        await message.reply_photo(
-            photo=selected_image,
-            caption="Bᴜᴛᴛᴏɴ Lɪɴᴋ ᴜᴪᴅᴀᴛᴇᴅ! Uꜱᴇ /fsettings ᴛᴏ sᴇᴇ ᴛʜᴇ ᴜᴪᴅᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs."
-        )
-    except Exception as e:
-        print(f"Error sending photo: {e}")
         await message.reply_text(
             "Bᴜᴛᴛᴏɴ Lɪɴᴋ ᴜᴪᴅᴀᴛᴇᴅ! Uꜱᴇ /fsettings ᴛᴏ sᴇᴇ ᴛʜᴇ ᴜᴪᴅᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs."
+        )
+    except Exception as e:
+        print(f"Error sending reply: {e}")
+        await message.reply_text(
+            "Error occurred. Please try again."
         )
     # Remove handlers after completion
     for handler in client.dispatcher.groups.get(1, []):
