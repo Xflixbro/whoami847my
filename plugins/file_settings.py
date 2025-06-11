@@ -13,7 +13,7 @@ MESSAGE_EFFECT_IDS = [
     5104841245755180586,  # 🔥
     5107584321108051014,  # 👍
     5044134455711629726,  # ❤️
-    5046509860389126442,  # 🎉
+    504650986038912ì6442,  # 🎉
     5104858069142078462,  # 👎
     5046589136895476101,  # 💩
 ]
@@ -99,7 +99,7 @@ async def toggle_hide_caption(client, callback_query):
     logger.info(f"Toggle hide caption triggered by user {callback_query.from_user.id}")
     await update_setting("HIDE_CAPTION", not get_settings()["HIDE_CAPTION"])
     await show_settings_message(client, callback_query, is_callback=True)
-    await callback_query.answer("Hɪᴅᴇ Cᴀᴪᴛɪᴏɴ ᴛᴏɢɢʲʟᴇᴅ!")
+    await callback_query.answer("Hɪᴅᴇ Cᴀᴪᴛɪᴏɴ ᴛᴏɢɢʟᴇᴅ!")
 
 @Client.on_callback_query(filters.regex(r"^toggle_channel_button$"))
 async def toggle_channel_button(client, callback_query):
@@ -128,6 +128,8 @@ async def set_button_start(client, callback_query):
     logger.info(f"Set Button callback triggered for user {user_id}")
 
     try:
+        # Log callback reception
+        logger.debug(f"Processing set_button callback for user {user_id}")
         # Set state to wait for button name
         await db.set_temp_state(user_id, SET_BUTTON_NAME)
         # Send reply message with force reply to ensure user input
