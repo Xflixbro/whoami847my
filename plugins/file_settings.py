@@ -18,7 +18,8 @@ MESSAGE_EFFECT_IDS = [
 ]
 
 # States for conversation handler
-SET_BUTTON_NAME, SET_BUTTON_LINK = range(2)
+SET_BUTTON_NAME = "SET_BUTTON_NAME"
+SET_BUTTON_LINK = "SET_BUTTON_LINK"
 
 async def show_settings_message(client, message_or_callback, is_callback=False):
     settings = get_settings()
@@ -118,36 +119,21 @@ async def go_back(client, callback_query):
     await callback_query.message.delete()
     await callback_query.answer("Bᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ!")
 
+from database.database import set_temp_state, get_temp_state  # Import database functions
+
 @Client.on_callback_query(filters.regex(r"^set_button$"))
 async def set_button_start(client, callback_query):
     user_id = callback_query.from_user.id
     logger.info(f"Set Button callback triggered for user {user_id}")
 
     try:
-        # Send request for button name
+        # Set state to wait for button name
+        await set_temp_state(user_id, SET_BUTTON_NAME)
         await callback_query.message.reply_text(
             "Give me the button name:",
             quote=True
         )
         logger.info(f"Sent 'Give me the button name' message to user {user_id}")
-
-        # Remove any existing message handlers for this user to avoid conflicts
-        try:
-            for handler in client.handlers.get(MessageHandler, []):
-                if handler.filters and isinstance(handler.filters, filters.User) and user_id in handler.filters.users:
-                    client.remove_handler(handler)
-                    logger.debug(f"Removed existing handler for user {user_id}")
-        except Exception as e:
-            logger.error(f"Error removing handlers for user {user_id}: {e}")
-
-        # Add handler for button name
-        client.add_handler(
-            MessageHandler(
-                set_button_name,
-                filters=filters.private & filters.user(user_id)
-            )
-        )
-        logger.debug(f"Added MessageHandler for set_button_name for user {user_id}")
         await callback_query.answer("Please provide the button name.")
     except Exception as e:
         logger.error(f"Error in set_button_start for user {user_id}: {e}")
@@ -157,80 +143,55 @@ async def set_button_start(client, callback_query):
         )
         await callback_query.answer("Error occurred!", show_alert=True)
 
-async def set_button_name(client, message):
+async def button_input_filter(_, __, message):
+    """Filter for messages based on user state."""
     user_id = message.from_user.id
-    new_button_name = message.text.strip()
-    logger.info(f"Received button name '{new_button_name}' from user {user_id}")
+    state = await get_temp_state(user_id)
+    logger.info(f"Checking button_input_filter for user {user_id}: state={state}")
+    return state in [SET_BUTTON_NAME, SET_BUTTON_LINK] and message.text
 
-    # Update button name in settings
+@Client.on_message(filters.private & filters.create(button_input_filter))
+async def handle_button_input(client, message):
+    user_id = message.from_user.id
+    state = await get_temp_state(user_id)
+    logger.info(f"Handling button input for user {user_id} in state {state}")
+
     try:
-        await update_setting("BUTTON_NAME", new_button_name)
-        logger.debug(f"Updated BUTTON_NAME to '{new_button_name}' for user {user_id}")
+        if state == SET_BUTTON_NAME:
+            # Process button name
+            new_button_name = message.text.strip()
+            logger.info(f"Received button name '{new_button_name}' from user {user_id}")
+            await update_setting("BUTTON_NAME", new_button_name)
+            logger.debug(f"Updated BUTTON_NAME to '{new_button_name}' for user {user_id}")
+
+            # Move to next state
+            await set_temp_state(user_id, SET_BUTTON_LINK)
+            await message.reply_text(
+                "Give me the button link:",
+                quote=True
+            )
+            logger.info(f"Sent 'Give me the button link' message to user {user_id}")
+
+        elif state == SET_BUTTON_LINK:
+            # Process button link
+            new_button_link = message.text.strip()
+            logger.info(f"Received button link '{new_button_link}' from user {user_id}")
+            await update_setting("BUTTON_LINK", new_button_link)
+            logger.debug(f"Updated BUTTON_LINK to '{new_button_link}' for user {user_id}")
+
+            # Clear state and send confirmation
+            await set_temp_state(user_id, "")
+            await message.reply_text(
+                "Bᴜᴛᴛᴏɴ Lɪɴᴋ ᴜᴪᴅᴀᴛᴇᴅ! Uꜱᴇ /fsettings ᴛᴏ sᴇᴇ ᴛʜᴇ ᴜᴪᴅᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs.",
+                quote=True
+            )
+            logger.info(f"Sent confirmation message to user {user_id}")
+
     except Exception as e:
-        logger.error(f"Error updating BUTTON_NAME for user {user_id}: {e}")
-        await message.reply_text("Error updating button name. Please try again.")
-        return
-
-    # Remove existing handler for button name
-    try:
-        for handler in client.handlers.get(MessageHandler, []):
-            if handler.filters and isinstance(handler.filters, filters.User) and user_id in handler.filters.users:
-                client.remove_handler(handler)
-                logger.debug(f"Removed set_button_name handler for user {user_id}")
-    except Exception as e:
-        logger.error(f"Error removing set_button_name handler for user {user_id}: {e}")
-
-    # Send request for button link
-    try:
+        logger.error(f"Error handling button input for user {user_id} in state {state}: {e}")
         await message.reply_text(
-            "Give me the button link:",
+            "An error occurred. Please try again or use /fsettings to restart.",
             quote=True
         )
-        logger.info(f"Sent 'Give me the button link' message to user {user_id}")
-    except Exception as e:
-        logger.error(f"Error sending 'Give me the button link' message to user {user_id}: {e}")
-        await message.reply_text("Error occurred. Please try again.")
-        return
-
-    # Add handler for button link
-    client.add_handler(
-        MessageHandler(
-            set_button_link,
-            filters=filters.private & filters.user(user_id)
-        )
-    )
-    logger.debug(f"Added MessageHandler for set_button_link for user {user_id}")
-
-async def set_button_link(client, message):
-    user_id = message.from_user.id
-    new_button_link = message.text.strip()
-    logger.info(f"Received button link '{new_button_link}' from user {user_id}")
-
-    # Update button link in settings
-    try:
-        await update_setting("BUTTON_LINK", new_button_link)
-        logger.debug(f"Updated BUTTON_LINK to '{new_button_link}' for user {user_id}")
-    except Exception as e:
-        logger.error(f"Error updating BUTTON_LINK for user {user_id}: {e}")
-        await message.reply_text("Error updating button link. Please try again.")
-        return
-
-    # Send confirmation message
-    try:
-        await message.reply_text(
-            "Bᴜᴛᴛᴏɴ Lɪɴᴋ ᴜᴪᴅᴀᴛᴇᴅ! Uꜱᴇ /fsettings ᴛᴏ sᴇᴇ ᴛʜᴇ ᴜᴪᴅᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs.",
-            quote=True
-        )
-        logger.info(f"Sent confirmation message to user {user_id}")
-    except Exception as e:
-        logger.error(f"Error sending confirmation message to user {user_id}: {e}")
-        await message.reply_text("Error occurred. Please try again.")
-
-    # Remove all handlers for this user
-    try:
-        for handler in client.handlers.get(MessageHandler, []):
-            if handler.filters and isinstance(handler.filters, filters.User) and user_id in handler.filters.users:
-                client.remove_handler(handler)
-                logger.debug(f"Removed set_button_link handler for user {user_id}")
-    except Exception as e:
-        logger.error(f"Error removing set_button_link handler for user {user_id}: {e}")
+        await set_temp_state(user_id, "")  # Clear state on error
+    
