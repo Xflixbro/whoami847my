@@ -1,5 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
+from pyrogram.errors import FloodWait
+import asyncio
 from config import PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK, update_setting, get_settings, RANDOM_IMAGES, START_PIC
 import random
 import logging
@@ -97,7 +99,7 @@ async def toggle_hide_caption(client, callback_query):
     logger.info(f"Toggle hide caption triggered by user {callback_query.from_user.id}")
     await update_setting("HIDE_CAPTION", not get_settings()["HIDE_CAPTION"])
     await show_settings_message(client, callback_query, is_callback=True)
-    await callback_query.answer("Hɪᴅᴇ Cᴀᴪᴛɪᴏɴ ᴛᴏɢɢʟᴇᴅ!")
+    await callback_query.answer("Hɪᴅᴇ Cᴀᴪᴛɪᴏɴ ᴛᴏɢɢʲʟᴇᴅ!")
 
 @Client.on_callback_query(filters.regex(r"^toggle_channel_button$"))
 async def toggle_channel_button(client, callback_query):
@@ -128,22 +130,37 @@ async def set_button_start(client, callback_query):
     try:
         # Set state to wait for button name
         await db.set_temp_state(user_id, SET_BUTTON_NAME)
+        # Send reply message with force reply to ensure user input
         await callback_query.message.reply_text(
-            "Give me the button name:",
+            "বাটনের নাম দিন:",
             quote=True,
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("• Cᴀɴᴄᴇʟ •", callback_data="cancel_button_input")]
+                [InlineKeyboardButton("• বাতিল •", callback_data="cancel_button_input")]
             ])
         )
         logger.info(f"Sent 'Give me the button name' message to user {user_id}")
-        await callback_query.answer("Please provide the button name.")
+        await callback_query.answer("দয়া করে বাটনের নাম দিন।")  # Pop-up notification
+    except FloodWait as e:
+        logger.warning(f"FloodWait error for user {user_id}: Waiting for {e.x} seconds")
+        await asyncio.sleep(e.x)
+        await callback_query.message.reply_text(
+            "বাটনের নাম দিন:",
+            quote=True,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("• বাতিল •", callback_data="cancel_button_input")]
+            ])
+        )
+        await callback_query.answer("দয়া করে বাটনের নাম দিন।")
     except Exception as e:
         logger.error(f"Error in set_button_start for user {user_id}: {e}")
+        # Ensure user sees an error message
         await callback_query.message.reply_text(
-            "An error occurred while processing your request. Please try again.",
+            "একটি ত্রুটি ঘটেছে। দয়া করে আবার চেষ্টা করুন বা /fsettings কমান্ড ব্যবহার করুন।",
             quote=True
         )
-        await callback_query.answer("Error occurred!", show_alert=True)
+        await callback_query.answer("ত্রুটি ঘটেছে!", show_alert=True)
+        # Reset state to avoid being stuck
+        await db.set_temp_state(user_id, "")
 
 @Client.on_callback_query(filters.regex(r"^cancel_button_input$"))
 async def cancel_button_input(client, callback_query):
@@ -151,15 +168,15 @@ async def cancel_button_input(client, callback_query):
     logger.info(f"Cancel button input triggered by user {user_id}")
     try:
         await db.set_temp_state(user_id, "")
-        await callback_query.message.reply_text("Aᴄᴛɪᴏɴ ᴄᴀɴᴄᴇʟʟᴇᴅ!")
-        await callback_query.answer("Cancelled!")
+        await callback_query.message.reply_text("অ্যাকশন বাতিল করা হয়েছে!")
+        await callback_query.answer("বাতিল করা হয়েছে!")
     except Exception as e:
         logger.error(f"Error in cancel_button_input for user {user_id}: {e}")
         await callback_query.message.reply_text(
-            "An error occurred while cancelling. Please try again.",
+            "বাতিল করার সময় ত্রুটি ঘটেছে। দয়া করে আবার চেষ্টা করুন।",
             quote=True
         )
-        await callback_query.answer("Error occurred!", show_alert=True)
+        await callback_query.answer("ত্রুটি ঘটেছে!", show_alert=True)
 
 async def button_input_filter(_, __, message):
     """Filter for messages based on user state."""
@@ -185,10 +202,10 @@ async def handle_button_input(client, message):
             # Move to next state
             await db.set_temp_state(user_id, SET_BUTTON_LINK)
             await message.reply_text(
-                "Give me the button link:",
+                "বাটনের লিঙ্ক দিন:",
                 quote=True,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("• Cᴀɴᴄᴇʟ •", callback_data="cancel_button_input")]
+                    [InlineKeyboardButton("• বাতিল •", callback_data="cancel_button_input")]
                 ])
             )
             logger.info(f"Sent 'Give me the button link' message to user {user_id}")
@@ -203,7 +220,7 @@ async def handle_button_input(client, message):
             # Clear state and send confirmation
             await db.set_temp_state(user_id, "")
             await message.reply_text(
-                "Bᴜᴛᴛᴏɴ Lɪɴᴋ ᴜᴪᴅᴀᴛᴇᴅ! Uꜱᴇ /fsettings ᴛᴏ sᴇᴇ ᴛʜᴇ ᴜᴪᴅᴀᴛᴇᴅ sᴇᴛᴛɪɴɢs.",
+                "বাটন লিঙ্ক আপডেট করা হয়েছে! /fsettings কমান্ড ব্যবহার করে আপডেট দেখুন।",
                 quote=True
             )
             logger.info(f"Sent confirmation message to user {user_id}")
@@ -211,7 +228,7 @@ async def handle_button_input(client, message):
     except Exception as e:
         logger.error(f"Error handling button input for user {user_id} in state {state}: {e}")
         await message.reply_text(
-            "An error occurred. Please try again or use /fsettings to restart.",
+            "একটি ত্রুটি ঘটেছে। দয়া করে আবার চেষ্টা করুন বা /fsettings কমান্ড ব্যবহার করুন।",
             quote=True
         )
         await db.set_temp_state(user_id, "")  # Clear state on error
