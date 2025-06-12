@@ -22,15 +22,6 @@ default_verify = {
     'link': ""
 }
 
-default_settings = {
-    'PROTECT_CONTENT': False,
-    'HIDE_CAPTION': False,
-    'DISABLE_CHANNEL_BUTTON': True,
-    'BUTTON_NAME': None,
-    'BUTTON_LINK': None,
-    'FORCE_SUB_ENABLED': True  # New field for enabling/disabling force-sub system
-}
-
 class Mehedi:
     def __init__(self, DB_URI, DB_NAME):
         self.client = motor.motor_asyncio.AsyncIOMotorClient(DB_URI)
@@ -47,7 +38,6 @@ class Mehedi:
         self.fsub_data = self.db['fsub']
         self.rqst_fsub_data = self.db['request_forcesub']
         self.rqst_fsub_Channel_data = self.db['request_forcesub_channel']
-        self.settings_data = self.db['settings_data']
 
     async def present_user(self, user_id: int):
         found = await self.user_data.find_one({'_id': user_id})
@@ -282,20 +272,6 @@ class Mehedi:
         pipeline = [{"$group": {"_id": None, "total": {"$sum": "$verify_count"}}}]
         result = await self.sex_data.aggregate(pipeline).to_list(length=1)
         return result[0]["total"] if result else 0
-
-    async def get_settings(self):
-        data = await self.settings_data.find_one({'_id': 'bot_settings'})
-        return data.get('settings', default_settings) if data else default_settings
-
-    async def update_setting(self, setting_name, value):
-        current_settings = await self.get_settings()
-        current_settings[setting_name] = value
-        await self.settings_data.update_one(
-            {'_id': 'bot_settings'},
-            {'$set': {'settings': current_settings}},
-            upsert=True
-        )
-        logger.info(f"Updated setting {setting_name} to {value}")
 
 # Initialize db with environment variables directly
 db = Mehedi(os.environ.get("DATABASE_URL", ""), os.environ.get("DATABASE_NAME", "animelord"))
