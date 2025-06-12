@@ -185,31 +185,7 @@ DISABLE_CHANNEL_BUTTON = True
 BUTTON_NAME = None
 BUTTON_LINK = None
 
-# Function to update settings (used by file_settings.py)
-async def update_setting(setting_name, value):
-    await db.update_setting(setting_name, value)
-    # Update local variables (optional, for immediate use)
-    global PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK
-    if setting_name == "PROTECT_CONTENT":
-        PROTECT_CONTENT = value
-    elif setting_name == "HIDE_CAPTION":
-        HIDE_CAPTION = value
-    elif setting_name == "DISABLE_CHANNEL_BUTTON":
-        DISABLE_CHANNEL_BUTTON = value
-    elif setting_name == "BUTTON_NAME":
-        BUTTON_NAME = value
-    elif setting_name == "BUTTON_LINK":
-        BUTTON_LINK = value
 
-# Function to get all settings (used to display in /fsettings)
-def get_settings():
-    return {
-        "PROTECT_CONTENT": PROTECT_CONTENT,
-        "HIDE_CAPTION": HIDE_CAPTION,
-        "DISABLE_CHANNEL_BUTTON": DISABLE_CHANNEL_BUTTON,
-        "BUTTON_NAME": BUTTON_NAME,
-        "BUTTON_LINK": BUTTON_LINK
-    }
 
 LOG_FILE_NAME = "animelordbot.txt"
 
