@@ -125,26 +125,19 @@ async def start_command(client: Client, message: Message):
             print(f"ᴇʀʀɪʀ ɢᴇᴛᴛɪɴɢ ᴍᴇssᴀɢᴇs: {e}")
             return
         animelord_msgs = []
-        # Load settings dynamically before copying messages
-        settings = await db.get_settings()
-        PROTECT_CONTENT = settings.get('PROTECT_CONTENT', False)
-        HIDE_CAPTION = settings.get('HIDE_CAPTION', False)
-        DISABLE_CHANNEL_BUTTON = settings.get('DISABLE_CHANNEL_BUTTON', False)
-        BUTTON_NAME = settings.get('BUTTON_NAME', None)
-        BUTTON_LINK = settings.get('BUTTON_LINK', None)
-        print(f"Copying message with PROTECT_CONTENT={PROTECT_CONTENT}, HIDE_CAPTION={HIDE_CAPTION}, DISABLE_CHANNEL_BUTTON={DISABLE_CHANNEL_BUTTON}")
+        # Use static settings from config.py
+        reply_markup = None if DISABLE_CHANNEL_BUTTON or not msg.reply_markup else msg.reply_markup
+        # Add custom button if BUTTON_NAME and BUTTON_LINK are set
+        if BUTTON_NAME and BUTTON_LINK and not DISABLE_CHANNEL_BUTTON:
+            custom_button = InlineKeyboardMarkup([[InlineKeyboardButton(BUTTON_NAME, url=BUTTON_LINK)]])
+            reply_markup = custom_button if not reply_markup else InlineKeyboardMarkup(
+                reply_markup.inline_keyboard + custom_button.inline_keyboard
+            )
         for msg in messages:
             caption = "" if HIDE_CAPTION else (
                 CUSTOM_CAPTION.format(previouscaption="" if not msg.caption else msg.caption.html,
                                       filename=msg.document.file_name) if bool(CUSTOM_CAPTION) and bool(msg.document)
                 else ("" if not msg.caption else msg.caption.html))
-            reply_markup = None if DISABLE_CHANNEL_BUTTON or not msg.reply_markup else msg.reply_markup
-            # Add custom button if BUTTON_NAME and BUTTON_LINK are set
-            if BUTTON_NAME and BUTTON_LINK and not DISABLE_CHANNEL_BUTTON:
-                custom_button = InlineKeyboardMarkup([[InlineKeyboardButton(BUTTON_NAME, url=BUTTON_LINK)]])
-                reply_markup = custom_button if not reply_markup else InlineKeyboardMarkup(
-                    reply_markup.inline_keyboard + custom_button.inline_keyboard
-                )
             try:
                 copied_msg = await msg.copy(chat_id=user_id, caption=caption, parse_mode=ParseMode.HTML, 
                                             reply_markup=reply_markup, protect_content=PROTECT_CONTENT)
@@ -241,11 +234,10 @@ async def not_joined(client: Client, message: Message):
     temp = await message.reply("<blockquote><b>ᴄʜᴇᴄᴋɪɴɢ sᴜʙsᴄʀɪᴪᴛɪɪɴ...</b></blockquote>")
     user_id = message.from_user.id
     buttons = []
-    settings = await db.get_settings()
     count = 0
     try:
         all_channels = await db.show_channels()
-        if not settings.get('FORCE_SUB_ENABLED', True) or not all_channels:
+        if not FORCE_SUB_ENABLED or not all_channels:
             await temp.delete()
             return await start_command(client, message)  # Bypass if force-sub disabled or no channels
 
