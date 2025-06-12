@@ -50,15 +50,6 @@ class Bot(Client):
         usr_bot_me = await self.get_me()
         self.uptime = datetime.now()
 
-        # Load settings from database
-        global PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK
-        settings = await db.get_settings()
-        PROTECT_CONTENT = settings.get('PROTECT_CONTENT', False)
-        HIDE_CAPTION = settings.get('HIDE_CAPTION', False)
-        DISABLE_CHANNEL_BUTTON = settings.get('DISABLE_CHANNEL_BUTTON', True)
-        BUTTON_NAME = settings.get('BUTTON_NAME', None)
-        BUTTON_LINK = settings.get('BUTTON_LINK', None)
-
         try:
             db_channel = await self.get_chat(CHANNEL_ID)
             self.db_channel = db_channel
