@@ -69,7 +69,6 @@ async def start_command(client: Client, message: Message):
     user_id = message.from_user.id
     is_premium = await is_premium_user(user_id)
     if EMOJI_MODE:
-        await message.react(emoji=random.choice(REACTIONS), big=True)
     banned_users = await db.get_ban_users()
     if user_id in banned_users:
         return await message.reply_text(
