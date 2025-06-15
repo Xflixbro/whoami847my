@@ -19,18 +19,18 @@ from database.database import db  # Updated import
 # --------------------------------------------
 # Bot token @Botfather
 TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "")
-APP_ID = int(os.environ.get("APP_ID", "0"))
-API_HASH = os.environ.get("API_HASH", "")
+APP_ID = int(os.environ.get("APP_ID", "15529802"))
+API_HASH = os.environ.get("API_HASH", "92bcb6aa798a6f1feadbc917fccb54d3")
 #--------------------------------------------
 
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002170811388"))  # Your db channel Id
-OWNER = os.environ.get("OWNER", "MehediYT69")  # Owner username without @
-OWNER_ID = int(os.environ.get("OWNER_ID", "7328629001"))  # Owner id
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002162795137"))  # Your db channel Id
+OWNER = os.environ.get("OWNER", "Mrxeontg")  # Owner username without @
+OWNER_ID = int(os.environ.get("OWNER_ID", "821215952"))  # Owner id
 #--------------------------------------------
 PORT = os.environ.get("PORT", "8080")
 #--------------------------------------------
-DB_URI = os.environ.get("DATABASE_URL", "")
-DB_NAME = os.environ.get("DATABASE_NAME", "animelord")
+DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://SeriesXeonbot:SeriesXeonbot@cluster0.sxdov5x.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+DB_NAME = os.environ.get("DATABASE_NAME", "XFLIX")
 # --------------------------------------------
 FSUB_LINK_EXPIRY = int(getenv("FSUB_LINK_EXPIRY", "10"))  # 0 means no expiry
 BAN_SUPPORT = os.environ.get("BAN_SUPPORT", "https://t.me/CodeflixSupport")
@@ -64,8 +64,8 @@ RANDOM_IMAGES = [
     "https://i.postimg.cc/j5ZqKv09/1c847bb6.jpg",
 ]
 
-SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "linkshortify.com")
-SHORTLINK_API = os.environ.get("SHORTLINK_API", "")
+SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "http://publicearn.online")
+SHORTLINK_API = os.environ.get("SHORTLINK_API", "de08290b12d9e34191f3a057070a50a18187fff3")
 TUT_VID = os.environ.get("TUT_VID", "https://t.me/hwdownload/3")
 SHORT_MSG = "<b>⌯ Here is Your Download Link, Must Watch Tutorial Before Clicking On Download...</b>"
 
