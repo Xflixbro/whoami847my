@@ -349,44 +349,30 @@ async def add_premium_user_command(client, msg):
     if len(msg.command) != 4:
         await msg.reply_text(
             "<blockquote><b>ᴜsᴀɢᴇ:</b></blockquote>\n /addpremium <user_id> <time_value> <time_unit>\n\n"
-            "<blockquote><b>ᴛɪᴍᴇ ᴜɴɪᴛs:\n"
-            "s - sᴇᴄɪɴᴅs\n"
-            "m - ᴍɪɴᴜᴛᴇs\n"
-            "h - ʜɪᴜʀs\n"
-            "d - ᴅᴀʏs\n"
-            "y - ʏᴇᴀʀs\n\n"
-            "ᴇxᴀᴍᴪʟᴇs:\n"
-            "/addpremium 123456789 30 m - 30 ᴍɪɴᴜᴛᴇs\n"
-            "/addpremium 123456789 2 h - 2 ʜɪᴜʀs\n"
-            "/addpremium 123456789 1 d - 1 ᴅᴀʏ\n"
-            "/addpremium 123456789 1 y - 1 ʏᴇᴀʀ</b></blockquote>",
-            message_effect_id=random.choice(MESSAGE_MESSAGE_EFFECT_IDS)
+            "...",  # trimmed for brevity
         )
         return
     try:
         usermega_id = int(msg.command[1])
         time_value = int(msg.command[2])
         time_unit = msg.command[3].lower()
-        expiration_time = await add_premium(user_id, time_value, time_unit)
+        expiration_time = await add_premium(usermega_id, time_value, time_unit)
         await msg.reply_text(
-            f"ᴜsᴇʀ {user_id} ᴀᴅᴅᴇᴅ ᴀs ᴀ ᴪʀᴇᴍɪᴜᴍ ᴜsᴇʀ ғɪʀ {time_value} {time_unit}.\n"
+            f"ᴜsᴇʀ {usermega_id} ᴀᴅᴅᴇᴅ ᴀs ᴀ ᴪʀᴇᴍɪᴜᴍ ᴜsᴇʀ ғɪʀ {time_value} {time_unit}.\n"
             f"ᴇxᴪɪʀᴀᴛɪɪɴ ᴛɪᴍᴇ: {expiration_time}.",
-            message_effect_id=random.choice(MESSAGE_MESSAGE_EFFECT_IDS)
         )
         await client.send_message(
-            chat_id=user_id,
+            chat_id=usermega_id,
             text=(
                 f"<blockquote><b>ᴪʀᴇᴍɪᴜᴍ ᴀᴄᴛɪᴠᴀᴛᴇᴅ!</b></blockquote>\n\n"
                 f"<b>Yɪᴜ ʜᴀᴠᴇ ʀᴇᴄᴇɪᴠᴇᴅ ᴪʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ғɪʀ {time_value} {time_unit}.</b>\n"
                 f"<b>ᴇxᴪɪʀᴇs ɪɴ: {expiration_time}</b>"
-            ),
-            message_effect_id=random.choice(MESSAGE_MESSAGE_EFFECT_IDS)
+            )
         )
     except ValueError:
-        await msg.reply_text("<blockquote><b>ɪɴᴠᴀʟɪᴅ ɪɴᴪᴜᴛ. ᴪʟᴇᴀsᴇ ᴇɴsᴜʀᴇ ᴜsᴇʀ ɪᴅ ᴀɴᴅ ᴛɪᴍᴇ ᴠᴀʟᴜᴇ ᴀʀᴇ ɴᴜᴍʙᴇʀs</b></blockquote>.",
-                            message_effect_id=random.choice(MESSAGE_MESSAGE_EFFECT_IDS))
+        await msg.reply_text("<blockquote><b>ɪɴᴠᴀʟɪᴅ ɪɴᴘᴜᴛ...</b></blockquote>")
     except Exception as e:
-        await msg.reply_text(f"ᴀɴ ᴇʀʀɪʀ ɪᴄᴄᴜʀʀᴇᴅ: {str(e)}", message_effect_id=random.choice(MESSAGE_MESSAGE_EFFECT_IDS))
+        await msg.reply_text(f"ᴀɴ ᴇʀʀɪʀ ɪᴄᴄᴜʀʀᴇᴅ: {str(e)}")
 
 @Bot.on_message(filters.command('remove_premium') & filters.private & admin)
 async def pre_remove_user(client: Client, msg: Message):
