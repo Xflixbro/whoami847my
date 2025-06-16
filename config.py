@@ -19,18 +19,18 @@ from database.database import db  # Updated import
 # --------------------------------------------
 # Bot token @Botfather
 TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "")
-APP_ID = int(os.environ.get("APP_ID", "0"))
-API_HASH = os.environ.get("API_HASH", "")
+APP_ID = int(os.environ.get("APP_ID", "15529802"))
+API_HASH = os.environ.get("API_HASH", "92bcb6aa798a6f1feadbc917fccb54d3")
 #--------------------------------------------
 
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002170811388"))  # Your db channel Id
-OWNER = os.environ.get("OWNER", "MehediYT69")  # Owner username without @
-OWNER_ID = int(os.environ.get("OWNER_ID", "7328629001"))  # Owner id
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002162795137"))  # Your db channel Id
+OWNER = os.environ.get("OWNER", "MrXeonTg")  # Owner username without @
+OWNER_ID = int(os.environ.get("OWNER_ID", "821215952"))  # Owner id
 #--------------------------------------------
 PORT = os.environ.get("PORT", "8080")
 #--------------------------------------------
-DB_URI = os.environ.get("DATABASE_URL", "")
-DB_NAME = os.environ.get("DATABASE_NAME", "animelord")
+DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://SeriesXeonbot:SeriesXeonbot@cluster0.sxdov5x.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+DB_NAME = os.environ.get("DATABASE_NAME", "XFLIX")
 # --------------------------------------------
 FSUB_LINK_EXPIRY = int(getenv("FSUB_LINK_EXPIRY", "10"))  # 0 means no expiry
 BAN_SUPPORT = os.environ.get("BAN_SUPPORT", "https://t.me/CodeflixSupport")
@@ -42,92 +42,9 @@ FORCE_PIC = os.environ.get("FORCE_PIC", "https://telegra.ph/file/e292b12890b8b4b
 # --------------------------------------------
 # List of images for random selection in /start, /help, /about
 RANDOM_IMAGES = [
-    "https://i.postimg.cc/13pMdkmg/d356bdfb.jpg",
-    "https://i.postimg.cc/Qt6fbcX0/b8d54419.jpg",
-    "https://i.postimg.cc/yY3LmJ2y/8b9e5ade.jpg",
-    "https://i.postimg.cc/wjK00qp8/49813b4a.jpg",
-    "https://i.postimg.cc/qB5m6cD7/6c576e92.jpg",
-    "https://i.postimg.cc/BQRwk52z/76033dd9.jpg",
-    "https://i.postimg.cc/wjJbptVj/7d964bb9.jpg",
-    "https://i.postimg.cc/SR3D0qY9/19b6b471.jpg",
-    "https://i.postimg.cc/G23MGX14/866e109c.jpg",
-    "https://i.postimg.cc/FKVWY2wt/79c62968.jpg",
-    "https://i.postimg.cc/hvfp3hvg/c8da71f2.jpg",
-    "https://i.postimg.cc/LsKwYkXP/a4fcfce8.jpg",
-    "https://i.postimg.cc/hv53ST6f/69679b9e.jpg",
-    "https://i.postimg.cc/CMm3PfPy/2042520a.jpg",
-    "https://i.postimg.cc/W4GKMDFH/6d48d1b1.jpg",
-    "https://i.postimg.cc/mDV550S3/4ca7b67e.jpg",
-    "https://i.postimg.cc/nLJScHRY/4447ce15.jpg",
-    "https://i.postimg.cc/mZXnNWkB/c5f3b6b9.jpg",
-    "https://i.postimg.cc/rFDPfZRW/b537ef3d.jpg",
-    "https://i.postimg.cc/vTBNF3PJ/f7cf3c04.jpg",
-    "https://i.postimg.cc/8zrxzX1D/e2aab718.jpg",
-    "https://i.postimg.cc/pTvw7QMv/62881630.jpg",
-    "https://i.postimg.cc/2y8Pjz5X/6feaaca3.jpg",
-    "https://i.postimg.cc/zXv99X6y/88ed9df7.jpg",
-    "https://i.postimg.cc/cHcpNKdn/c5c90314.jpg",
-    "https://i.postimg.cc/8cKxjqJk/b8a8fe75.jpg",
-    "https://i.postimg.cc/ncLJp1jc/bbb0f2ae.jpg",
-    "https://i.postimg.cc/W1FcJbwB/1be60ed8.jpg",
-    "https://i.postimg.cc/Nj3q8qN5/4375233f.jpg",
-    "https://i.postimg.cc/BZLzgwKF/ae14ca6d.jpg",
-    "https://i.postimg.cc/wxCGbcXG/41f94fb2.jpg",
-    "https://i.postimg.cc/YqQscG8q/d72690c2.jpg",
-    "https://i.postimg.cc/htg3KD38/3853b95b.jpg",
-    "https://i.postimg.cc/rwJZmBvB/71102c42.jpg",
-    "https://i.postimg.cc/CKxPfv0z/a2a9b463.jpg",
-    "https://i.postimg.cc/W4Y9mMpS/57a48500.jpg",
-    "https://i.postimg.cc/sXBTTvvz/effd6748.jpg",
-    "https://i.postimg.cc/tTL2wpxx/67483d60.jpg",
-    "https://i.postimg.cc/XqdQ0mfD/f622366f.jpg",
-    "https://i.postimg.cc/3w2MnS69/c4cb7967.jpg",
-    "https://i.postimg.cc/bNFjJ2k0/2a4839f6.jpg",
-    "https://i.postimg.cc/wjZHWsBx/acfe005d.jpg",
-    "https://i.postimg.cc/mkmW7Pqs/433d7985.jpg",
-    "https://i.postimg.cc/90mj4dLb/f6f20b4d.jpg",
-    "https://i.postimg.cc/mDG44fM0/bbf42737.jpg",
-    "https://i.postimg.cc/Xv5Wt7Zf/03d91930.jpg",
-    "https://i.postimg.cc/cHMS49B6/703f1491.jpg",
-    "https://i.postimg.cc/bN6qt5ct/51d7ef57.jpg",
-    "https://i.postimg.cc/RFcMJV4S/a64e9d8d.jpg",
-    "https://i.postimg.cc/qBxJkR1Q/c5c76509.jpg",
-    "https://i.postimg.cc/KjfxQq1C/543bef60.jpg",
-    "https://i.postimg.cc/c4cr5Tqx/ef20762f.jpg",
-    "https://i.postimg.cc/g2nmqKmB/251e6076.jpg",
-    "https://i.postimg.cc/tgqdM7vf/ec2b82f2.jpg",
-    "https://i.postimg.cc/0jP9YRyp/1e732953.jpg",
-    "https://i.postimg.cc/pXV2yH7v/421d28be.jpg",
-    "https://i.postimg.cc/1RGtfM3G/8764426c.jpg",
-    "https://i.postimg.cc/yN36ByGS/503cbd75.jpg",
-    "https://i.postimg.cc/0yQ2Xsdn/6c60b12f.jpg",
-    "https://i.postimg.cc/v8grjJXQ/c12da0bb.jpg",
-    "https://i.postimg.cc/sXFj2ZFH/0552f2c8.jpg",
-    "https://i.postimg.cc/vm07FMpm/3b557384.jpg",
-    "https://i.postimg.cc/C5gxcnmn/ac7ac5cd.jpg",
-    "https://i.postimg.cc/tT739wjN/97974e38.jpg",
-    "https://i.postimg.cc/P5rPGZhm/2ff5d9e0.jpg",
-    "https://i.postimg.cc/g2d3xnpJ/95b264c0.jpg",
-    "https://i.postimg.cc/zDsC1xPT/34715973.jpg",
-    "https://i.postimg.cc/PJw1wDNL/c97b2ca2.jpg",
-    "https://i.postimg.cc/kXWxMWkz/25881c5f.jpg",
-    "https://i.postimg.cc/nrbCNPcz/2101537a.jpg",
-    "https://i.postimg.cc/L6msffJr/5a10499e.jpg",
-    "https://i.postimg.cc/d0g1TxCB/382a3ccc.jpg",
-    "https://i.postimg.cc/Y2WF81q0/4c9fd376.jpg",
-    "https://i.postimg.cc/MpFZhF9S/308acd05.jpg",
-    "https://i.postimg.cc/TPNbN0DL/0d7f49fc.jpg",
-    "https://i.postimg.cc/d3jtpQxH/33fd9789.jpg",
-    "https://i.postimg.cc/GpmYjVHn/651d6af3.jpg",
-    "https://i.postimg.cc/NjJLQMfZ/79231686.jpg",
-    "https://i.postimg.cc/qvLyy4BG/1c111b46.jpg",
-    "https://i.postimg.cc/vB64qsyk/9afa42bf.jpg",
-    "https://i.postimg.cc/3RpwjFCH/0e73df87.jpg",
-    "https://i.postimg.cc/qqyCRdZy/99b50b8e.jpg",
-    "https://i.postimg.cc/tJ3YbNYz/53d24df2.jpg",
-    "https://i.postimg.cc/63DvtQzB/8f8f759b.jpg",
-    "https://i.postimg.cc/2jhqnr2B/a1e31adf.jpg",
-    "https://i.postimg.cc/VLPChddR/b7dcd4a1.jpg"
+    "https://envs.sh/XPc.jpg",
+    "https://envs.sh/XPZ.jpg",
+    "https://envs.sh/XPL.jpg"
 ]
 
 MESSAGE_EFFECT_IDS = [
@@ -140,8 +57,8 @@ MESSAGE_EFFECT_IDS = [
 ]
 
 
-SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "linkshortify.com")
-SHORTLINK_API = os.environ.get("SHORTLINK_API", "")
+SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "http://publicearn.online")
+SHORTLINK_API = os.environ.get("SHORTLINK_API", "de08290b12d9e34191f3a057070a50a18187fff3")
 TUT_VID = os.environ.get("TUT_VID", "https://t.me/hwdownload/3")
 SHORT_MSG = "<b>⌯ Here is Your Download Link, Must Watch Tutorial Before Clicking On Download...</b>"
 
