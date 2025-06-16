@@ -18,7 +18,6 @@ import random
 import logging
 from config import OWNER_ID, RANDOM_IMAGES, START_PIC
 from database.database import db
-from database.db_premium import is_premium
 from asyncio import TimeoutError
 from typing import Dict
 
