@@ -26,7 +26,7 @@ CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002162795137"))  # Your db chan
 OWNER = os.environ.get("OWNER", "Mrxeontg")  # Owner username without @
 OWNER_ID = int(os.environ.get("OWNER_ID", "821215952"))  # Owner id
 # List of admin user IDs who can change file settings
-ADMINS = [int(OWNER_ID)]  # Default is just the owner, add more like [821215952, 123456789]
+ADMINS = [821215952, 7475545668]  # Default is just the owner, add more like [821215952, 123456789]
 #--------------------------------------------
 PORT = os.environ.get("PORT", "8080")
 #--------------------------------------------
