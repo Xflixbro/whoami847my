@@ -15,16 +15,6 @@ from bot import Bot
 from config import *
 from database.database import db
 
-# List of message effect IDs for random selection (Converted to integers)
-MESSAGE_EFFECT_IDS = [
-    5104841245755180586,  # 🔥
-    5107584321108051014,  # 👍
-    5044134455711629726,  # ❤️
-    5046509860389126442,  # 🎉
-    5104858069142078462,  # 👎
-    5046589136895476101,  # 💩
-]
-
 @Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|rfs_ch_|rfs_toggle_|fsub_back|set_|remove_)"))
 async def cb_handler(client: Bot, query: CallbackQuery):
     data = query.data
