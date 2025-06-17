@@ -32,15 +32,6 @@ EMOJI_MODE = True
 REACTIONS = ["👍", "😍", "🔥", "🎉", "❤️", "⚡"]
 STICKER_ID = "CAACAgUAAxkBAAJFeWd037UWP-vgb_dWo55DCPZS9zJzAAJpEgACqXaJVxBrhzahNnwSHgQ"
 
-# List of message effect IDs for random selection (Converted to integers)
-MESSAGE_MESSAGE_EFFECT_IDS = [
-    5104841245755180586,  5107584321108051014,
-    5044134455711629726,
-    5046509860389126642,
-    5104858069142078462,
-    5046589136895476101
-]
-
 BAN_SUPPORT = f"{BAN_SUPPORT}"
 TUT_VID = f"{TUT_VID}"
 
