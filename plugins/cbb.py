@@ -90,35 +90,35 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         await query.answer()
 
     elif data == "premium":
-        await query.message.delete()
-        await client.send_photo(
-            chat_id=query.message.chat.id,
-            photo=QR_PIC,
-            caption=(
-                f"👋 {query.from_user.username if query.from_user.username else 'user'}\n\n"
-                f"🎖️ Aᴠᴀɪʟᴀʙʟᴇ ᴘʟᴀɴs:\n\n"
-                f"● {PRICE1} ғᴏʀ 0 ᴅᴀʏs ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
-                f"● {PRICE2} ғᴏʀ 1 ᴍᴏɴᴛʜ ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
-                f"● {PRICE3} ғᴏʀ 3 ᴍᴏɴᴛʜs ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
-                f"● {PRICE4} ғᴏʀ 6 ᴍᴏɴᴛʜs ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
-                f"● {PRICE5} ғᴏʀ 1 ʏᴇᴀʀ ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n\n"
-                f"💵 Aʙsᴋ ᴜᴘɪ ɪᴅ ᴛᴏ ᴀᴅᴍɪɴ ᴀɴᴅ ᴘᴀʏ ᴛʜᴇʀᴇ - <code>{UPI_ID}</code>\n\n\n"
-                f"♻️ Pᴀʏᴍᴇɴᴛ ʏᴏᴜ ᴡɪʟʟ ɢᴇᴛ ɪɴsᴛᴀɴᴛ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n\n"
-                f"‼️ Mᴜsᴛ sᴇɴᴅ sᴄʀᴇᴇɴsʜᴏᴛ ᴀғᴛᴇʀ ᴘᴀʏᴍᴇɴᴛ & ɪғ ᴀɴʏᴏɴᴇ ᴡᴀɴᴛ ᴄᴜsᴛᴏᴍ ᴛɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ ᴛʜᴇɴ ᴀsᴋ ᴀᴅᴍɪɴ"
-            ),
-            reply_markup=InlineKeyboardMarkup(
+    await query.message.delete()
+    await client.send_photo(
+        chat_id=query.message.chat.id,
+        photo=QR_PIC,
+        caption=(
+            f"👋 {query.from_user.username if query.from_user.username else 'user'}\n\n"
+            f"🎖️ Aᴠᴀɪʟᴀʙʟᴇ ᴘʟᴀɴs:\n\n"
+            f"● {PRICE1} ғᴏʀ 0 ᴅᴀʏs ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
+            f"● {PRICE2} ғᴏʀ 1 ᴍᴏɴᴛʜ ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
+            f"● {PRICE3} ғᴏʀ 3 ᴍᴏɴᴛʜs ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
+            f"● {PRICE4} ғᴏʀ 6 ᴍᴏɴᴛʜs ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n"
+            f"● {PRICE5} ғᴏʀ 1 ʏᴇᴀʀ ᴘʀɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n\n"
+            f"💵 Aʙsᴋ ᴜᴘɪ ɪᴅ ᴛᴏ ᴀᴅᴍɪɴ ᴀɴᴅ ᴘᴀʏ ᴛʜᴇʀᴇ - <code>{UPI_ID}</code>\n\n\n"
+            f"♻️ Pᴀʏᴍᴇɴᴛ ʏᴏᴜ ᴡɪʟʟ ɢᴇᴛ ɪɴsᴛᴀɴᴛ ᴍᴇᴍʙᴇʀsʜɪᴘ\n\n\n"
+            f"‼️ Mᴜsᴛ sᴇɴᴅ sᴄʀᴇᴇɴsʜᴏᴛ ᴀғᴛᴇʀ ᴘᴀʏᴍᴇɴᴛ & ɪғ ᴀɴʏᴏɴᴇ ᴡᴀɴᴛ ᴄᴜsᴛᴏᴍ ᴛɪᴍᴇ ᴍᴇᴍʙᴇʀsʜɪᴘ ᴛʜᴇɴ ᴀsᴋ ᴀᴅᴍɪɴ"
+        ),
+        reply_markup=InlineKeyboardMarkup(
+            [
                 [
-                    [
-                        InlineKeyboardButton(
-                            "Aᴅᴍɪɴ 24/7", url=(SCREENSHOT_URL)
-                        )
-                    ],
-                    [InlineKeyboardButton("Cʟᴏsᴇ", callback_data="close")],
-                ]
-            ),
-            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
+                    InlineKeyboardButton(
+                        "Aᴅᴍɪɴ 24/7", url=(SCREENSHOT_URL)
+                    )
+                ],
+                [InlineKeyboardButton("Cʟᴏsᴇ", callback_data="close")],
+            ]
         )
-        await query.answer()
+        # Removed message_effect_id
+    )
+    await query.answer()
 
     elif data == "close":
         try:
