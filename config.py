@@ -18,7 +18,7 @@ from database.database import db # Updated import
 # MehediYT69
 # --------------------------------------------
 # Bot token @Botfather
-TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "")
+TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "7409495927:AAGKBgFblvis9-OFhLu6cxuIz3y7hNy7D5I")
 APP_ID = int(os.environ.get("APP_ID", "15529802"))
 API_HASH = os.environ.get("API_HASH", "92bcb6aa798a6f1feadbc917fccb54d3")
 #--------------------------------------------
