@@ -2,7 +2,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from pyrogram.errors import FloodWait
 import asyncio
-from config import PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK, update_setting, get_settings, RANDOM_IMAGES, START_PIC
+from config import PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK, update_setting, get_settings, RANDOM_IMAGES, START_PIC, ADMINS
 import random
 import logging
 
@@ -21,6 +21,10 @@ MESSAGE_EFFECT_IDS = [
 # States for conversation handler
 SET_BUTTON_NAME = "SET_BUTTON_NAME"
 SET_BUTTON_LINK = "SET_BUTTON_LINK"
+
+async def is_admin(user_id):
+    """Check if user is admin"""
+    return user_id in ADMINS
 
 async def show_settings_message(client, message_or_callback, is_callback=False):
     settings = get_settings()
@@ -41,7 +45,7 @@ async def show_settings_message(client, message_or_callback, is_callback=False):
         ],
         [
             InlineKeyboardButton("•ᴄʙ", callback_data="toggle_channel_button"),
-            InlineKeyboardButton("sʙ•", callback_data="set_button"),  # callback_data অবশ্যই 'set_button'
+            InlineKeyboardButton("sʙ•", callback_data="set_button"),
         ],
         [
             InlineKeyboardButton("•ʀᴇꜰᴇʀsʜ•", callback_data="refresh_settings"),
@@ -88,21 +92,36 @@ async def fsettings_command(client, message):
 
 @Client.on_callback_query(filters.regex(r"^toggle_protect_content$"))
 async def toggle_protect_content(client, callback_query):
-    logger.info(f"Toggle protect content triggered by user {callback_query.from_user.id}")
+    user_id = callback_query.from_user.id
+    if not await is_admin(user_id):
+        await callback_query.answer("You need to be an admin to change this setting!", show_alert=True)
+        return
+    
+    logger.info(f"Toggle protect content triggered by user {user_id}")
     await update_setting("PROTECT_CONTENT", not get_settings()["PROTECT_CONTENT"])
     await show_settings_message(client, callback_query, is_callback=True)
     await callback_query.answer("Pʀᴏᴛᴇᴄᴛ Cᴏɴᴛᴇɴᴛ ᴛᴏɢɢʟᴇᴅ!")
 
 @Client.on_callback_query(filters.regex(r"^toggle_hide_caption$"))
 async def toggle_hide_caption(client, callback_query):
-    logger.info(f"Toggle hide caption triggered by user {callback_query.from_user.id}")
+    user_id = callback_query.from_user.id
+    if not await is_admin(user_id):
+        await callback_query.answer("You need to be an admin to change this setting!", show_alert=True)
+        return
+    
+    logger.info(f"Toggle hide caption triggered by user {user_id}")
     await update_setting("HIDE_CAPTION", not get_settings()["HIDE_CAPTION"])
     await show_settings_message(client, callback_query, is_callback=True)
     await callback_query.answer("Hɪᴅᴇ Cᴀᴪᴛɪᴏɴ ᴛᴏɢɢʟᴇᴅ!")
 
 @Client.on_callback_query(filters.regex(r"^toggle_channel_button$"))
 async def toggle_channel_button(client, callback_query):
-    logger.info(f"Toggle channel button triggered by user {callback_query.from_user.id}")
+    user_id = callback_query.from_user.id
+    if not await is_admin(user_id):
+        await callback_query.answer("You need to be an admin to change this setting!", show_alert=True)
+        return
+    
+    logger.info(f"Toggle channel button triggered by user {user_id}")
     await update_setting("DISABLE_CHANNEL_BUTTON", not get_settings()["DISABLE_CHANNEL_BUTTON"])
     await show_settings_message(client, callback_query, is_callback=True)
     await callback_query.answer("Cʜᴀɴɴᴇʟ Bᴜᴛᴛᴏɴ ᴛᴏɢɢʟᴇᴅ!")
@@ -124,6 +143,10 @@ from database.database import db  # Import the db instance
 @Client.on_callback_query(filters.regex(r"^set_button$"))
 async def set_button_start(client, callback_query):
     user_id = callback_query.from_user.id
+    if not await is_admin(user_id):
+        await callback_query.answer("You need to be an admin to change button settings!", show_alert=True)
+        return
+    
     logger.info(f"Set Button callback triggered for user {user_id}")
 
     try:
@@ -190,6 +213,12 @@ async def button_input_filter(_, __, message):
 async def handle_button_input(client, message):
     user_id = message.from_user.id
     state = await db.get_temp_state(user_id)
+    
+    if not await is_admin(user_id):
+        await message.reply_text("You need to be an admin to change button settings!", quote=True)
+        await db.set_temp_state(user_id, "")
+        return
+    
     logger.info(f"Handling button input for user {user_id} in state {state}")
 
     try:
