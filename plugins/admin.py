@@ -23,7 +23,7 @@ from config import *
 from helper_func import *
 from database.database import *
 
-# Function to show user settings with user list, buttons, and message effects
+# Function to show user settings with user list, buttons
 async def show_user_settings(client: Client, chat_id: int, message_id: int = None):
     settings_text = "<b>›› Uꜱᴇʀ Sᴇᴛᴛɪɴɢꜱ:</b>\n\n"
     user_ids = await db.full_userbase()
@@ -59,9 +59,7 @@ async def show_user_settings(client: Client, chat_id: int, message_id: int = Non
         ]
     )
 
-    # Select random image and effect
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
 
     if message_id:
         try:
@@ -82,8 +80,7 @@ async def show_user_settings(client: Client, chat_id: int, message_id: int = Non
                 photo=selected_image,
                 caption=settings_text,
                 reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                message_effect_id=selected_effect
+                parse_mode=ParseMode.HTML
             )
         except Exception as e:
             logger.error(f"Failed to send user settings with photo: {e}")
@@ -93,11 +90,10 @@ async def show_user_settings(client: Client, chat_id: int, message_id: int = Non
                 text=settings_text,
                 reply_markup=buttons,
                 parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True,
-                message_effect_id=selected_effect
+                disable_web_page_preview=True
             )
 
-# Function to show admin settings with admin list, buttons, and message effects
+# Function to show admin settings with admin list, buttons
 async def show_admin_settings(client: Client, chat_id: int, message_id: int = None, is_owner: bool = False):
     settings_text = "<b>›› Aᴅᴍɪɴ Sᴇᴛᴛɪɴɢꜱ:</b>\n\n"
     admin_ids = await db.get_all_admins()
@@ -146,9 +142,7 @@ async def show_admin_settings(client: Client, chat_id: int, message_id: int = No
             ]
         )
 
-    # Select random image and effect
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-    selected_effect = random.choice(MESSAGE_EFFECT_IDS) if MESSAGE_EFFECT_IDS else None
 
     if message_id:
         try:
@@ -169,8 +163,7 @@ async def show_admin_settings(client: Client, chat_id: int, message_id: int = No
                 photo=selected_image,
                 caption=settings_text,
                 reply_markup=buttons,
-                parse_mode=ParseMode.HTML,
-                message_effect_id=selected_effect
+                parse_mode=ParseMode.HTML
             )
         except Exception as e:
             logger.error(f"Failed to send admin settings with photo: {e}")
@@ -180,8 +173,7 @@ async def show_admin_settings(client: Client, chat_id: int, message_id: int = No
                 text=settings_text,
                 reply_markup=buttons,
                 parse_mode=ParseMode.HTML,
-                disable_web_page_preview=True,
-                message_effect_id=selected_effect
+                disable_web_page_preview=True
             )
 
 # Command to show admin settings (accessible to all users)
