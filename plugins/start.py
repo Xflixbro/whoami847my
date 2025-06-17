@@ -27,9 +27,7 @@ from helper_func import *
 from database.database import *
 from database.db_premium import *
 
-# Define emoji reactions and sticker
-EMOJI_MODE = True
-REACTIONS = ["рҹ‘Қ", "рҹҳҚ", "рҹ”Ҙ", "рҹҺү", "вқӨпёҸ", "вҡЎ"]
+# Define sticker
 STICKER_ID = "CAACAgUAAxkBAAJFeWd037UWP-vgb_dWo55DCPZS9zJzAAJpEgACqXaJVxBrhzahNnwSHgQ"
 
 BAN_SUPPORT = f"{BAN_SUPPORT}"
@@ -58,8 +56,6 @@ async def short_url(client: Client, message: Message, base64_string):
 async def start_command(client: Client, message: Message):
     user_id = message.from_user.id
     is_premium = await is_premium_user(user_id)
-    if EMOJI_MODE:
-        await message.react(emoji=random.choice(REACTIONS), big=True)
     banned_users = await db.get_ban_users()
     if user_id in banned_users:
         return await message.reply_text(
@@ -208,6 +204,22 @@ async def start_command(client: Client, message: Message):
             ),
             reply_markup=reply_markup
         )
+    except Exception as e:
+        print(f"бҙҮКҖКҖЙӘКҖ sбҙҮЙҙбҙ…ЙӘЙҙЙў sбҙӣбҙҖКҖбҙӣ бҙӘКңЙӘбҙӣЙӘ: {e}")
+        await asyncio.sleep(0.5)
+        await message.reply_photo(
+            photo=START_PIC,
+            caption=START_MSG.format(
+                first=message.from_user.first_name,
+                last=message.from_user.last_name if message.from_user.last_name else "",
+                username=None if not message.from_user.username else '@' + message.from_user.username,
+                mention=message.from_user.mention,
+                id=message.from_user.id
+            ),
+            reply_markup=reply_markup
+        )
+
+# [Rest of the file remains unchanged...]
     except Exception as e:
         print(f"бҙҮКҖКҖЙӘКҖ sбҙҮЙҙбҙ…ЙӘЙҙЙў sбҙӣбҙҖКҖбҙӣ бҙӘКңЙӘбҙӣЙӘ: {e}")
         await asyncio.sleep(0.5)
