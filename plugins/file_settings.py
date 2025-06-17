@@ -2,11 +2,18 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 from pyrogram.errors import FloodWait
 import asyncio
-from config import PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK, update_setting, get_settings, RANDOM_IMAGES, START_PIC, ADMINS
+from config import PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK, update_setting, get_settings, RANDOM_IMAGES, START_PIC
 import random
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Try to import ADMINS, fallback to empty list if not found
+try:
+    from config import ADMINS
+except ImportError:
+    ADMINS = []
+    logger.warning("ADMINS not found in config.py, defaulting to empty list")
 
 # Define message effect IDs (used only for /fsettings initial message)
 MESSAGE_EFFECT_IDS = [
@@ -84,6 +91,9 @@ async def show_settings_message(client, message_or_callback, is_callback=False):
                 text=settings_text,
                 reply_markup=InlineKeyboardMarkup(buttons)
             )
+
+# [Rest of the code remains exactly the same as in your previous version]
+# [All the handler functions with admin checks remain unchanged]
 
 @Client.on_message(filters.command("fsettings") & filters.private)
 async def fsettings_command(client, message):
