@@ -187,22 +187,22 @@ async def start_command(client: Client, message: Message):
 
     # Send start message
     reply_markup = InlineKeyboardMarkup([
-        [InlineKeyboardButton("ᴍɪʀᴇ ᴄʜᴀɴɴᴇʟs", url="https://t.me/Anime_Lord_List")],
-        [InlineKeyboardButton("ᴀʙᴏᴜᴛ", callback_data="about"), InlineKeyboardButton("КңбҙҮКҹбҙӘ", callback_data="help")]
-    ])
-    try:
-        await asyncio.sleep(0.5)
-        selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-        await message.reply_photo(
-            photo=selected_image,
-            caption=START_MSG.format(
-                first=message.from_user.first_name,
-                last=message.from_user.last_name if message.from_user.last_name else "",
-                username=None if not message.from_user.username else '@' + message.from_user.username,
-                mention=message.from_user.mention,
-                id=message.from_user.id
-            ),
-            reply_markup=reply_markup
+    [InlineKeyboardButton("Help", callback_data="help"), InlineKeyboardButton("About", callback_data="about")],
+    [InlineKeyboardButton("Channels", callback_data="channels"), InlineKeyboardButton("Premium", callback_data="seeplans")]
+])
+try:
+    await asyncio.sleep(0.5)
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    await message.reply_photo(
+        photo=selected_image,
+        caption=START_MSG.format(
+            first=message.from_user.first_name,
+            last=message.from_user.last_name if message.from_user.last_name else "",
+            username=None if not message.from_user.username else '@' + message.from_user.username,
+            mention=message.from_user.mention,
+            id=message.from_user.id
+        ),
+        reply_markup=reply_markup
         )
     except Exception as e:
         print(f"ᴇʀʀɪʀ sᴇɴᴅɪɴɢ sᴛᴀʀᴛ ᴪʜɪᴛɪ: {e}")
