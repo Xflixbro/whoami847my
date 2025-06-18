@@ -67,6 +67,98 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             await query.message.edit_text("Aɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴜᴘᴅᴀᴛɪɴɢ ᴛʜᴇ ᴀʙᴏᴜᴛ ᴍᴇssᴀɢᴇ.")
         await query.answer()
 
+    elif data == "seeplans":
+        try:
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [InlineKeyboardButton('ʜᴏᴍᴇ', callback_data='home'),
+                 InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data='close')]
+            ])
+            caption = PREPLANSS_TXT.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await query.message.edit_media(
+                media=InputMediaPhoto(media=selected_image, caption=caption),
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            print(f"ᴇʀʀᴏʀ ɪɴ seeplans ᴄᴀʟʟʙᴀᴄᴋ: {e}")
+            await query.message.edit_text("Aɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴜᴘᴅᴀᴛɪɴɢ ᴛʜᴇ seeplans ᴍᴇssᴀɢᴇ.")
+        await query.answer()
+
+    elif data == "info":
+        try:
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [InlineKeyboardButton('ʜᴏᴍᴇ', callback_data='home'),
+                 InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data='close')]
+            ])
+            caption = CREDIT_INFO.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await query.message.edit_media(
+                media=InputMediaPhoto(media=selected_image, caption=caption),
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            print(f"ᴇʀʀᴏʀ ɪɴ info ᴄᴀʟʟʙᴀᴄᴋ: {e}")
+            await query.message.edit_text("Aɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴜᴘᴅᴀᴛɪɴɢ ᴛʜᴇ info ᴍᴇssᴀɢᴇ.")
+        await query.answer()
+
+    elif data == "source":
+        try:
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [InlineKeyboardButton('ʜᴏᴍᴇ', callback_data='home'),
+                 InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data='close')]
+            ])
+            caption = SOURCE_TXT.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await query.message.edit_media(
+                media=InputMediaPhoto(media=selected_image, caption=caption),
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            print(f"ᴇʀʀᴏʀ ɪɴ source ᴄᴀʟʟʙᴀᴄᴋ: {e}")
+            await query.message.edit_text("Aɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴜᴘᴅᴀᴛɪɴɢ ᴛʜᴇ source ᴍᴇssᴀɢᴇ.")
+        await query.answer()
+
+    elif data == "channels":
+        try:
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [InlineKeyboardButton('ʜᴏᴍᴇ', callback_data='home'),
+                 InlineKeyboardButton("ᴄʟᴏsᴇ", callback_data='close')]
+            ])
+            caption = ABOUT_TXT.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await query.message.edit_media(
+                media=InputMediaPhoto(media=selected_image, caption=caption),
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            print(f"ᴇʀʀᴏʀ ɪɴ channels ᴄᴀʟʟʙᴀᴄᴋ: {e}")
+            await query.message.edit_text("Aɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴜᴘᴅᴀᴛɪɴɢ ᴛʜᴇ channels ᴍᴇssᴀɢᴇ.")
+        await query.answer()
+
     elif data == "home":
         try:
             selected_image = random.choice(RANDOM_IMAGES)
