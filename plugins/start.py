@@ -42,6 +42,7 @@ async def short_url(client: Client, message: Message, base64_string):
             photo=SHORTENER_PIC,
             caption=SHORT_MSG.format(),
             reply_markup=InlineKeyboardMarkup(buttons)
+        )
     except IndexError:
         pass
 
