@@ -21,7 +21,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
     data = query.data
     user = query.from_user
 
-    async def edit_media_with_fallback(image, caption, markup):
+    async def safe_edit_media(image, caption, markup):
         try:
             await query.message.edit_media(
                 media=InputMediaPhoto(media=image, caption=caption),
@@ -54,7 +54,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             mention=user.mention,
             id=user.id
         )
-        await edit_media_with_fallback(selected_image, caption, reply_markup)
+        await safe_edit_media(selected_image, caption, reply_markup)
         await query.answer()
 
     elif data == "about":
@@ -76,7 +76,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             mention=user.mention,
             id=user.id
         )
-        await edit_media_with_fallback(selected_image, caption, reply_markup)
+        await safe_edit_media(selected_image, caption, reply_markup)
         await query.answer()
 
     elif data == "info":
@@ -97,7 +97,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             mention=user.mention,
             id=user.id
         )
-        await edit_media_with_fallback(selected_image, caption, reply_markup)
+        await safe_edit_media(selected_image, caption, reply_markup)
         await query.answer()
 
     elif data == "channels":
@@ -112,7 +112,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 InlineKeyboardButton('Series Channel', url='https://t.me/AnimeLord_Series')
             ],
             [
-                InlineKeyboardButton('🏠 Start', callback_data='home'),
+                InlineKeyboardButton('🏠 Home', callback_data='home'),
                 InlineKeyboardButton('❌ Close', callback_data='close')
             ]
         ])
@@ -123,7 +123,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             mention=user.mention,
             id=user.id
         )
-        await edit_media_with_fallback(selected_image, caption, reply_markup)
+        await safe_edit_media(selected_image, caption, reply_markup)
         await query.answer()
 
     elif data == "home":
@@ -145,7 +145,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             mention=user.mention,
             id=user.id
         )
-        await edit_media_with_fallback(selected_image, caption, reply_markup)
+        await safe_edit_media(selected_image, caption, reply_markup)
         await query.answer()
 
     elif data == "premium":
@@ -197,7 +197,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             mention=user.mention,
             id=user.id
         )
-        await edit_media_with_fallback(selected_image, caption, reply_markup)
+        await safe_edit_media(selected_image, caption, reply_markup)
         await query.answer()
 
     elif data == "source":
@@ -215,7 +215,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             "• <b>License:</b> MIT\n\n"
             "Feel free to contribute or fork the project!"
         )
-        await edit_media_with_fallback(selected_image, caption, reply_markup)
+        await safe_edit_media(selected_image, caption, reply_markup)
         await query.answer()
 
     elif data == "close":
@@ -228,8 +228,8 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         await query.answer()
 
     elif data.startswith("rfs_ch_"):
-        cid = int(data.split("_")[2])
         try:
+            cid = int(data.split("_")[2])
             chat = await client.get_chat(cid)
             mode = await db.get_channel_mode(cid)
             status = "✅ On" if mode == "on" else "❌ Off"
@@ -246,10 +246,10 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             await query.answer("Failed to get channel info", show_alert=True)
 
     elif data.startswith("rfs_toggle_"):
-        cid, action = data.split("_")[2:]
-        cid = int(cid)
-        mode = "on" if action == "on" else "off"
         try:
+            cid, action = data.split("_")[2:]
+            cid = int(cid)
+            mode = "on" if action == "on" else "off"
             await db.set_channel_mode(cid, mode)
             await query.answer(f"Force-sub set to {'on' if mode == 'on' else 'off'}")
             chat = await client.get_chat(cid)
