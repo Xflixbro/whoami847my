@@ -36,7 +36,7 @@ async def short_url(client: Client, message: Message, base64_string: str) -> Non
         buttons = [
             [InlineKeyboardButton("ᴏᴘᴇɴ ʟɪɴᴋ", url=short_link), 
              InlineKeyboardButton("ᴛᴜᴛᴏʀɪᴀʟ", url=TUT_VID)],
-            [InlineKeyboardButton("ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", callback_data="premium")]
+            [InlineKeyboardButton("ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", callback_data="seeplans")]
         ]
         await message.reply_photo(
             photo=SHORTENER_PIC,
