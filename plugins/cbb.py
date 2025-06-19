@@ -41,12 +41,8 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton('Official Channel', url='https://t.me/Anime_Lord_List'),
-                    InlineKeyboardButton('Support Group', url='https://t.me/AnimeLord_Support')
-                ],
-                [
-                    InlineKeyboardButton('Home', callback_data='home'),
-                    InlineKeyboardButton("Close", callback_data='close')
+                    InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home'),
+                    InlineKeyboardButton("• ᴄʟᴏꜱᴇ •", callback_data='close')
                 ]
             ])
             caption = HELP_TXT.format(
@@ -62,12 +58,12 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton('Our Channels', callback_data='channels'),
-                    InlineKeyboardButton("Bot Info", callback_data='info')
+                    InlineKeyboardButton('ᴄʜᴀɴɴᴇʟꜱ', callback_data='channels'),
+                    InlineKeyboardButton("ᴄʀᴇᴅɪᴛ", callback_data='info')
                 ],
                 [
-                    InlineKeyboardButton('Source Code', callback_data='source'),
-                    InlineKeyboardButton("Go Back", callback_data='home')
+                    InlineKeyboardButton('ꜱᴏᴜʀᴄᴇ', callback_data='source'),
+                    InlineKeyboardButton("ʜᴏᴍᴇ", callback_data='home')
                 ]
             ])
             caption = ABOUT_TXT.format(
@@ -83,11 +79,8 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton('Official Channel', url='https://t.me/Anime_Lord_List'),
-                    InlineKeyboardButton('Support Group', url='https://t.me/AnimeLord_Support')
-                ],
-                [
-                    InlineKeyboardButton('Close', callback_data='close')
+                    InlineKeyboardButton('ᴏᴡɴᴇʀ', url='https://t.me/MrXeonTG'),
+                    InlineKeyboardButton('ʜᴏᴍᴇ', callback_data='home')
                 ]
             ])
             caption = CREDIT_INFO.format(
@@ -103,16 +96,16 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton('Anime Channel 1', url='https://t.me/Anime_Lord_List'),
-                    InlineKeyboardButton('Anime Channel 2', url='https://t.me/AnimeLord_Updates')
+                    InlineKeyboardButton('ᴍᴏᴠɪᴇꜱ', url='http://t.me/MovieNationSpot'),
+                    InlineKeyboardButton('ꜱᴇʀɪᴇꜱ', url='https://t.me/SeriesNationSpot')
                 ],
                 [
-                    InlineKeyboardButton('Movie Channel', url='https://t.me/AnimeLord_Movies'),
-                    InlineKeyboardButton('Series Channel', url='https://t.me/AnimeLord_Series')
+                    InlineKeyboardButton('ᴀɴɪᴍᴇꜱ', url='https://t.me/AnimeXeon'),
+                    InlineKeyboardButton('ᴀᴅᴜʟᴛ', url='https://t.me/CornXvilla')
                 ],
                 [
-                    InlineKeyboardButton('🏠 Home', callback_data='home'),
-                    InlineKeyboardButton('❌ Close', callback_data='close')
+                    InlineKeyboardButton('ʜᴏᴍᴇ', callback_data='home'),
+                    InlineKeyboardButton('ᴄʟᴏꜱᴇ', callback_data='close')
                 ]
             ])
             caption = ABOUT_TXT.format(
@@ -128,12 +121,12 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("Help", callback_data="help"),
-                    InlineKeyboardButton("About", callback_data="about")
+                    InlineKeyboardButton("ʜᴇʟᴘ", callback_data="help"),
+                    InlineKeyboardButton("ᴀʙᴏᴜᴛ", callback_data="about")
                 ],
                 [
-                    InlineKeyboardButton("Our Channel", url="https://t.me/Anime_Lord_List"),
-                    InlineKeyboardButton("Premium Plans", callback_data="seeplans")
+                    InlineKeyboardButton("ᴄʜᴀɴɴᴇʟꜱ", url="https://t.me/CornXvilla"),
+                    InlineKeyboardButton("ᴘʀᴇᴍɪᴜᴍ", callback_data="seeplans")
                 ]
             ])
             caption = START_MSG.format(
@@ -182,8 +175,8 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton('Buy Now', url='https://t.me/Anime_Lord_List'),
-                    InlineKeyboardButton('Close', callback_data='close')
+                    InlineKeyboardButton('ʙᴜʏ ɴᴏᴡ', url='https://t.me/Xeonflixadmin'),
+                    InlineKeyboardButton('ᴄʟᴏꜱᴇ', callback_data='close')
                 ]
             ])
             caption = PREPLANSS_TXT.format(
@@ -199,16 +192,16 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton('GitHub Repository', url='https://github.com/AnimeLord-Bots/FileStore'),
-                    InlineKeyboardButton('🏠 Home', callback_data='home')
+                    InlineKeyboardButton('ᴏᴡɴᴇʀ', url='https://t.me/MrXeonTG'),
+                    InlineKeyboardButton('ᴄʟᴏꜱᴇ', callback_data='close')
                 ]
             ])
-            caption = (
-                "📦 <b>Source Code Information</b>\n\n"
-                "• <b>Repository:</b> FileStore\n"
-                "• <b>Developer:</b> AnimeLord-Bots\n"
-                "• <b>License:</b> MIT\n\n"
-                "Feel free to contribute or fork the project!"
+            caption = SOURCE_TXT.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
             )
             await safe_edit_media(selected_image, caption, reply_markup)
 
