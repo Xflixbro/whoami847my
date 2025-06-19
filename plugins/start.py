@@ -21,7 +21,7 @@ from database.database import *
 from database.db_premium import *
 
 # Constants
-STICKER_ID = "CAACAgUAAxkBAAJFeWd037UWP-vgb_dWo55DCPZS9zJzAAJpEgACqXaJVxBrhzahNnwSHgQ"
+STICKER_ID = "CAACAgUAAxkBAAIE8mgq9m8MiaFWYUeppQiXveQBAZaYAAKrBAACvu-4V0dQs1WLoficHgQ"
 BAN_SUPPORT = f"{BAN_SUPPORT}"
 TUT_VID = f"{TUT_VID}"
 
@@ -244,10 +244,10 @@ async def send_welcome_message(client: Client, message: Message) -> None:
             print(f"Error sending sticker: {e}")
 
     reply_markup = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Help", callback_data="help"), 
-         InlineKeyboardButton("About", callback_data="about")],
-        [InlineKeyboardButton("Channels", callback_data="channels"), 
-         InlineKeyboardButton("Premium", callback_data="seeplans")]
+        [InlineKeyboardButton("• ʜᴇʟᴘ •", callback_data="help"), 
+         InlineKeyboardButton("• ᴀʙᴏᴜᴛ •", callback_data="about")],
+        [InlineKeyboardButton("• ᴄʜᴀɴɴᴇʟꜱ •", callback_data="channels"), 
+         InlineKeyboardButton("• ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")]
     ])
     
     try:
