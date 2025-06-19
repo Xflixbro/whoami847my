@@ -88,7 +88,6 @@ async def handle_file_request(client: Client, message: Message, text: str, is_pr
         base64_string = basic[6:] if basic.startswith("yu3elk") else basic
         
         if not is_premium and user_id != OWNER_ID:
-            await message.reply_text("This file is only available for premium users.")
             await short_url(client, message, base64_string)
             return
             
