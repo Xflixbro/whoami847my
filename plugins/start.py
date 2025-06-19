@@ -92,7 +92,7 @@ async def start_command(client: Client, message: Message):
                 return
         elif len(argument) == 2:
             try:
-                ids = [int(int(argument[1]) / abs(client.db_channel.id)]
+                ids = [int(int(argument[1]) / abs(client.db_channel.id))]
             except Exception as e:
                 print(f"Error decoding ID: {e}")
                 return
