@@ -53,6 +53,8 @@ async def start_command(client: Client, message: Message) -> None:
     try:
         user_id = message.from_user.id
         is_premium = await is_premium_user(user_id)
+        print(f"DEBUG: User {user_id} premium status - {is_premium}")  # Debug log
+        
         banned_users = await db.get_ban_users()
         
         if user_id in banned_users:
@@ -64,8 +66,6 @@ async def start_command(client: Client, message: Message) -> None:
         if not await is_subscribed(client, user_id):
             return await not_joined(client, message)
             
-        FILE_AUTO_DELETE = await db.get_del_timer()
-        
         if not await db.present_user(user_id):
             try:
                 await db.add_user(user_id)
@@ -87,22 +87,31 @@ async def handle_file_request(client: Client, message: Message, text: str, is_pr
         basic = text.split(" ", 1)[1]
         base64_string = basic[6:] if basic.startswith("yu3elk") else basic
         
-        # Premium access check - modified to properly enforce premium requirements
+        print(f"DEBUG: Link type - {'premium' if basic.startswith('yu3elk') else 'regular'}")  # Debug log
+        
+        # Strict premium access control
         if not is_premium and user_id != OWNER_ID:
-            if not basic.startswith("yu3elk"):
-                await short_url(client, message, base64_string)
-                return
-            else:
+            if basic.startswith("yu3elk"):
+                print(f"SECURITY: Non-premium user {user_id} tried premium link")  # Debug log
                 await message.reply_text(
-                    "🔒 Premium feature required for direct access.\n\n"
-                    "Upgrade to premium to access files directly without short links.",
+                    "🔒 Premium Access Required\n\n"
+                    "Direct file access is for premium users only.\n\n"
+                    "Free users must use regular links.",
                     reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("Buy Premium", callback_data="premium")]
+                        [InlineKeyboardButton("🌟 Upgrade Now", callback_data="premium")],
+                        [InlineKeyboardButton("How Premium Works", callback_data="premium_info")]
                     ])
                 )
                 return
-            
+            else:
+                await short_url(client, message, base64_string)
+                return
+                
+        # Process file request for premium users/owner
         string = await decode(base64_string)
+        if not string:
+            return await message.reply_text("Invalid file request format")
+            
         argument = string.split("-")
         
         if len(argument) == 3:
@@ -122,12 +131,17 @@ async def handle_file_request(client: Client, message: Message, text: str, is_pr
         else:
             return await message.reply_text("Invalid request format")
         
-        await process_file_request(client, message, ids, is_premium)
+        # Final verification
+        if not is_premium and user_id != OWNER_ID:
+            print(f"SECURITY: User {user_id} bypassed initial checks")  # Debug log
+            return await message.reply_text("Access verification failed. Please contact support.")
+            
+        await process_file_request(client, message, ids)
     except Exception as e:
         print(f"Error handling file request: {e}")
         await message.reply_text("Failed to process your request. Please try again.")
 
-async def process_file_request(client: Client, message: Message, ids: list, is_premium: bool) -> None:
+async def process_file_request(client: Client, message: Message, ids: list) -> None:
     """Process and send requested files"""
     try:
         m = await message.reply_text("<blockquote><b>Checking...</b></blockquote>")
@@ -200,35 +214,6 @@ async def process_file_request(client: Client, message: Message, ids: list, is_p
             
     await handle_auto_delete(client, message, animelord_msgs)
 
-async def handle_auto_delete(client: Client, message: Message, sent_messages: list) -> None:
-    """Handle auto-deletion of sent files if enabled"""
-    try:
-        auto_delete_mode = await db.get_auto_delete_mode()
-        FILE_AUTO_DELETE = await db.get_del_timer()
-        
-        if auto_delete_mode and FILE_AUTO_DELETE > 0:
-            notification_msg = await message.reply(
-                f"This file will be deleted in {get_exp_time(FILE_AUTO_DELETE).lower()}.")
-            await asyncio.sleep(FILE_AUTO_DELETE)
-            
-            for msg in sent_messages:    
-                if msg:
-                    try:    
-                        await msg.delete()  
-                    except Exception as e:
-                        print(f"Error deleting message {msg.id}: {e}")
-                        
-            try:
-                reload_url = f"https://t.me/{client.username}?start={message.command[1]}" if message.command and len(message.command) > 1 else None
-                keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Get file again", url=reload_url)]]) if reload_url else None
-                await notification_msg.edit(
-                    "Your video/file is successfully deleted!\n\nClick below button to get your deleted video/file.",
-                    reply_markup=keyboard)
-            except Exception as e:
-                print(f"Error updating notification: {e}")
-    except Exception as e:
-        print(f"Error in auto-delete process: {e}")
-
 async def send_welcome_message(client: Client, message: Message) -> None:
     """Send welcome message and animations"""
     try:
@@ -277,19 +262,16 @@ async def send_welcome_message(client: Client, message: Message) -> None:
         )
     except Exception as e:
         print(f"Error sending start photo: {e}")
-        try:
-            await message.reply_text(
-                START_MSG.format(
-                    first=message.from_user.first_name,
-                    last=message.from_user.last_name if message.from_user.last_name else "",
-                    username=None if not message.from_user.username else '@' + message.from_user.username,
-                    mention=message.from_user.mention,
-                    id=message.from_user.id
-                ),
-                reply_markup=reply_markup
-            )
-        except Exception as e:
-            print(f"Fallback start message failed: {e}")
+        await message.reply_text(
+            START_MSG.format(
+                first=message.from_user.first_name,
+                last=message.from_user.last_name if message.from_user.last_name else "",
+                username=None if not message.from_user.username else '@' + message.from_user.username,
+                mention=message.from_user.mention,
+                id=message.from_user.id
+            ),
+            reply_markup=reply_markup
+        )
 
 async def not_joined(client: Client, message: Message) -> None:
     """Handle users who haven't joined required channels"""
