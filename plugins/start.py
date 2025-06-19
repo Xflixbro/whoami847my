@@ -87,9 +87,20 @@ async def handle_file_request(client: Client, message: Message, text: str, is_pr
         basic = text.split(" ", 1)[1]
         base64_string = basic[6:] if basic.startswith("yu3elk") else basic
         
-        if not is_premium and user_id != OWNER_ID and not basic.startswith("yu3elk"):
-            await short_url(client, message, base64_string)
-            return
+        # Premium access check - modified to properly enforce premium requirements
+        if not is_premium and user_id != OWNER_ID:
+            if not basic.startswith("yu3elk"):
+                await short_url(client, message, base64_string)
+                return
+            else:
+                await message.reply_text(
+                    "🔒 Premium feature required for direct access.\n\n"
+                    "Upgrade to premium to access files directly without short links.",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("Buy Premium", callback_data="premium")]
+                    ])
+                )
+                return
             
         string = await decode(base64_string)
         argument = string.split("-")
@@ -111,12 +122,12 @@ async def handle_file_request(client: Client, message: Message, text: str, is_pr
         else:
             return await message.reply_text("Invalid request format")
         
-        await process_file_request(client, message, ids)
+        await process_file_request(client, message, ids, is_premium)
     except Exception as e:
         print(f"Error handling file request: {e}")
         await message.reply_text("Failed to process your request. Please try again.")
 
-async def process_file_request(client: Client, message: Message, ids: list) -> None:
+async def process_file_request(client: Client, message: Message, ids: list, is_premium: bool) -> None:
     """Process and send requested files"""
     try:
         m = await message.reply_text("<blockquote><b>Checking...</b></blockquote>")
