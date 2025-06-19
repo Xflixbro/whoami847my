@@ -82,14 +82,12 @@ async def start_command(client: Client, message: Message) -> None:
         await message.reply_text("An error occurred. Please try again later.")
 
 async def handle_file_request(client: Client, message: Message, text: str, is_premium: bool, user_id: int) -> None:
-    """Handle file requests from start command with enhanced premium checks"""
+    """Handle file requests from start command"""
     try:
         basic = text.split(" ", 1)[1]
         base64_string = basic[6:] if basic.startswith("yu3elk") else basic
         
-        # Enhanced premium verification with expiration check
-        current_premium_status = await is_premium_user(user_id)
-        if not current_premium_status and user_id != OWNER_ID:
+        if not is_premium and user_id != OWNER_ID:
             await message.reply_text("This file is only available for premium users.")
             await short_url(client, message, base64_string)
             return
@@ -381,42 +379,14 @@ async def check_sub_callback(client: Client, callback: CallbackQuery) -> None:
 
 @Bot.on_message(filters.command('myplan') & filters.private)
 async def check_plan(client: Client, message: Message) -> None:
-    """Check user's premium plan status with expiration info"""
+    """Check user's premium plan status"""
     user_id = message.from_user.id
-    user_data = await collection.find_one({"user_id": user_id})
-    
-    if not user_data:
-        await message.reply_text("You don't have an active premium subscription.")
-        return
-    
-    try:
-        expiration_time = datetime.fromisoformat(user_data["expiration_timestamp"])
-        current_time = datetime.now()
-        remaining_time = expiration_time - current_time
-        
-        if remaining_time.total_seconds() <= 0:
-            await collection.delete_one({"user_id": user_id})
-            await message.reply_text("Your premium subscription has expired.")
-            return
-        
-        days = remaining_time.days
-        hours, remainder = divmod(remaining_time.seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        
-        status_message = (
-            "✨ <b>Your Premium Status</b> ✨\n\n"
-            f"• <b>Plan Active:</b> Yes\n"
-            f"• <b>Expires in:</b> {days} days, {hours} hours\n"
-            f"• <b>Expiration Date:</b> {expiration_time.strftime('%Y-%m-%d %H:%M:%S')}"
-        )
-        await message.reply_text(status_message)
-    except Exception as e:
-        print(f"Error checking premium plan: {e}")
-        await message.reply_text("Error checking your premium status. Please try again later.")
+    status_message = await check_user_plan(user_id)
+    await message.reply_text(status_message)
 
 @Bot.on_message(filters.command('addPremium') & filters.private & filters.user(ADMINS))
 async def add_premium_user_command(client: Client, msg: Message) -> None:
-    """Add premium user (admin only) with enhanced validation"""
+    """Add premium user (admin only)"""
     if len(msg.command) != 4:
         await msg.reply_text(
             "<blockquote><b>Usage:</b></blockquote>\n /addpremium <user_id> <time_value> <time_unit>\n\n"
@@ -428,127 +398,80 @@ async def add_premium_user_command(client: Client, msg: Message) -> None:
         user_id = int(msg.command[1])
         time_value = int(msg.command[2])
         time_unit = msg.command[3].lower()
-        
-        # Validate time unit
-        valid_units = ['minute', 'hour', 'day', 'week', 'month', 'year']
-        if time_unit not in valid_units:
-            await msg.reply_text(
-                f"Invalid time unit. Please use one of: {', '.join(valid_units)}"
-            )
-            return
-            
-        # Validate time value
-        if time_value <= 0:
-            await msg.reply_text("Time value must be positive")
-            return
-            
         expiration_time = await add_premium(user_id, time_value, time_unit)
         await msg.reply_text(
-            f"✅ User {user_id} added as a premium user for {time_value} {time_unit}(s).\n"
-            f"⏳ Expiration time: {expiration_time}."
+            f"User {user_id} added as a premium user for {time_value} {time_unit}.\n"
+            f"Expiration time: {expiration_time}.",
         )
         await client.send_message(
             chat_id=user_id,
             text=(
-                f"🎉 <b>Premium Activated!</b> 🎉\n\n"
-                f"✨ <b>You have received premium access for {time_value} {time_unit}(s).</b>\n"
-                f"⏳ <b>Expires on: {expiration_time}</b>\n\n"
-                f"Thank you for supporting us!"
+                f"<blockquote><b>Premium Activated!</b></blockquote>\n\n"
+                f"<b>You have received premium access for {time_value} {time_unit}.</b>\n"
+                f"<b>Expires in: {expiration_time}</b>"
             ))
     except ValueError:
-        await msg.reply_text("<blockquote><b>Invalid input. User ID and time must be numbers.</b></blockquote>")
+        await msg.reply_text("<blockquote><b>Invalid input...</b></blockquote>")
     except Exception as e:
-        await msg.reply_text(f"❌ An error occurred: {str(e)}")
+        await msg.reply_text(f"An error occurred: {str(e)}")
 
 @Bot.on_message(filters.command('remove_premium') & filters.private & filters.user(ADMINS))
 async def pre_remove_user(client: Client, msg: Message) -> None:
-    """Remove premium user (admin only) with confirmation"""
+    """Remove premium user (admin only)"""
     if len(msg.command) != 2:
         await msg.reply_text("<blockquote><b>Usage:</b></blockquote> /remove_premium user_id")
         return
         
     try:
         user_id = int(msg.command[1])
-        user_data = await collection.find_one({"user_id": user_id})
-        
-        if not user_data:
-            await msg.reply_text(f"User {user_id} is not a premium user.")
-            return
-            
         await remove_premium(user_id)
-        await msg.reply_text(f"✅ User {user_id} has been removed from premium access.")
-        
-        # Notify the user
-        try:
-            await client.send_message(
-                chat_id=user_id,
-                text="⚠️ <b>Your premium access has been revoked by admin.</b>"
-            )
-        except Exception:
-            pass
+        await msg.reply_text(f"<blockquote><b>User {user_id} has been removed...</b></blockquote>")
     except ValueError:
-        await msg.reply_text("❌ User id must be an integer.")
+        await msg.reply_text("User id must be an integer or not available in database.")
 
 @Bot.on_message(filters.command('premium_users') & filters.private & filters.user(ADMINS))
 async def list_premium_users_command(client: Client, message: Message) -> None:
-    """List all premium users (admin only) with enhanced formatting"""
+    """List all premium users (admin only)"""
     from pytz import timezone
     ist = timezone("Asia/Dhaka")
+    premium_users_cursor = collection.find({})
+    premium_user_list = ['Active premium users in database:']
     current_time = datetime.now(ist)
-    active_users = 0
-    expired_users = 0
     
-    premium_user_list = ['<b>🛡️ Active Premium Users</b>\n']
-    
-    async for user in collection.find({}):
+    async for user in premium_users_cursor:
+        user_id = user["user_id"]
+        expiration_timestamp = user["expiration_timestamp"]
         try:
-            expiration_time = datetime.fromisoformat(user["expiration_timestamp"]).astimezone(ist)
+            expiration_time = datetime.fromisoformat(expiration_timestamp).astimezone(ist)
             remaining_time = expiration_time - current_time
-            
-            # Cleanup expired users
             if remaining_time.total_seconds() <= 0:
-                await collection.delete_one({"_id": user["_id"]})
-                expired_users += 1
+                await collection.delete_one({"user_id": user_id})
                 continue
                 
-            active_users += 1
-            user_info = await client.get_users(user["user_id"])
-            username = f"@{user_info.username}" if user_info.username else "No Username"
+            user_info = await client.get_users(user_id)
+            username = user_info.username if user_info.username else "no username"
             mention = user_info.mention
-            
-            days = remaining_time.days
-            hours, remainder = divmod(remaining_time.seconds, 3600)
-            minutes, seconds = divmod(remainder, 60)
-            
-            premium_user_list.append(
-                f"┌ <b>User:</b> {mention}\n"
-                f"├ <b>ID:</b> <code>{user['user_id']}</code>\n"
-                f"├ <b>Username:</b> {username}\n"
-                f"├ <b>Expires in:</b> {days}d {hours}h\n"
-                f"└ <b>Expiry:</b> {expiration_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                f"────────────────────"
+            days, hours, minutes, seconds = (
+                remaining_time.days,
+                remaining_time.seconds // 3600,
+                (remaining_time.seconds // 60) % 60,
+                remaining_time.seconds % 60,
             )
+            expiry_info = f"{days}d {hours}h {minutes}m {seconds}s left"
+            premium_user_list.append(
+                f"User id: {user_id}\n"
+                f"User: @{username}\n"
+                f"Name: {mention}\n"
+                f"Expiry: {expiry_info}")
         except Exception as e:
             premium_user_list.append(
-                f"┌ <b>User ID:</b> <code>{user['user_id']}</code>\n"
-                f"└ <b>Error:</b> {str(e)[:50]}...\n"
-                f"────────────────────"
-            )
-    
-    stats = (
-        f"\n<b>📊 Premium Stats</b>\n"
-        f"• Active Users: {active_users}\n"
-        f"• Expired/Cleaned: {expired_users}\n"
-        f"• Total in DB: {active_users + expired_users}"
-    )
-    
-    if active_users == 0:
-        await message.reply_text("No active premium users found in database." + stats)
+                f"User id: {user_id}\n"
+                f"Error: Unable to fetch user details ({str(e)})")
+                
+    if len(premium_user_list) == 1:
+        await message.reply_text("No active premium users found in database.")
     else:
-        await message.reply_text(
-            "\n".join(premium_user_list) + stats,
-            parse_mode=ParseMode.HTML
-        )
+        await message.reply_text("\n\n".join(premium_user_list), parse_mode=None)
 
 @Bot.on_message(filters.command("count") & filters.private & filters.user(ADMINS))
 async def total_verify_count_cmd(client: Client, message: Message) -> None:
@@ -566,32 +489,10 @@ async def bcmd(client: Client, message: Message) -> None:
 async def premium_cmd(client: Client, message: Message) -> None:
     """Show premium commands (admin only)"""
     reply_text = (
-        "<blockquote><b>🌟 Premium Management Commands 🌟</b>\n\n"
-        "<b>User Management:</b>\n"
-        "- /addpremium user_id time_value unit - <b>Grant premium access</b>\n"
-        "- /remove_premium user_id - <b>Revoke premium access</b>\n\n"
-        "<b>Information:</b>\n"
-        "- /premium_users - <b>List all premium users</b>\n"
-        "- /myplan - <b>Check your premium status</b></blockquote>"
-    )
+        "<blockquote><b>Use these commands to get premium users related commands.</b>\n\n"
+        "<b>Other commands:</b></blockquote>\n"
+        "- /addpremium - <b>Grant premium access [admin]</b>\n"
+        "- /remove_premium - <b>Revoke premium access [admin]</b>\n"
+        "- /premium_users - <b>List premium users [admin]</b>")
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("close", callback_data="close")]])
     await message.reply_text(reply_text, reply_markup=reply_markup)
-
-# Premium user cleanup task
-async def cleanup_expired_premium_users():
-    """Periodically remove expired premium users from database"""
-    while True:
-        try:
-            current_time = datetime.now()
-            result = await collection.delete_many({
-                "expiration_timestamp": {"$lt": current_time.isoformat()}
-            })
-            if result.deleted_count > 0:
-                print(f"Cleaned up {result.deleted_count} expired premium users")
-            await asyncio.sleep(3600)  # Run every hour
-        except Exception as e:
-            print(f"Error in premium user cleanup: {e}")
-            await asyncio.sleep(600)
-
-# Start the cleanup task when bot starts
-asyncio.create_task(cleanup_expired_premium_users())
