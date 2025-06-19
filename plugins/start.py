@@ -52,9 +52,10 @@ async def start_command(client: Client, message: Message):
     banned_users = await db.get_ban_users()
     
     if user_id in banned_users:
-        return await message.reply_text(
-            "You are Banned from using this bot.\n\nContact support if you think this is a mistake.",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Contact Support", url=BAN_SUPPORT)]])
+    return await message.reply_text(
+        "You are Banned from using this bot.\n\nContact support if you think this is a mistake.",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Contact Support", url=BAN_SUPPORT)]])
+    )
     
     if not await is_subscribed(client, user_id):
         return await not_joined(client, message)
