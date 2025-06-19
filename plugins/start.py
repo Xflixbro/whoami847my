@@ -25,209 +25,173 @@ STICKER_ID = "CAACAgUAAxkBAAJFeWd037UWP-vgb_dWo55DCPZS9zJzAAJpEgACqXaJVxBrhzahNn
 BAN_SUPPORT = f"{BAN_SUPPORT}"
 TUT_VID = f"{TUT_VID}"
 
-# Cache for chat data
-chat_data_cache = {}
+# Debug mode - set to False in production
+DEBUG = True
 
-async def short_url(client: Client, message: Message, base64_string: str) -> None:
-    """Generate and send short URL for file access"""
+def debug_log(message: str):
+    if DEBUG:
+        print(f"DEBUG: {datetime.now()}: {message}")
+
+async def verify_premium(user_id: int) -> bool:
+    """Strict premium verification with expiration check"""
+    try:
+        if user_id == OWNER_ID:
+            return True
+            
+        user_data = await collection.find_one({"user_id": user_id})
+        if not user_data:
+            debug_log(f"User {user_id} not premium")
+            return False
+            
+        ist = timezone("Asia/Dhaka")
+        expiration = user_data.get("expiration_timestamp")
+        if not expiration:
+            return False
+            
+        exp_time = datetime.fromisoformat(expiration).astimezone(ist)
+        if datetime.now(ist) > exp_time:
+            await remove_premium(user_id)
+            return False
+            
+        return True
+    except Exception as e:
+        debug_log(f"Premium check error: {str(e)}")
+        return False
+
+async def create_shortlink(client: Client, base64_string: str) -> str:
+    """Generate shortlink for free users"""
     try:
         prem_link = f"https://t.me/{client.username}?start=yu3elk{base64_string}"
-        short_link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, prem_link)
+        return await get_shortlink(SHORTLINK_URL, SHORTLINK_API, prem_link)
+    except Exception as e:
+        debug_log(f"Shortlink error: {str(e)}")
+        return None
+
+async def handle_free_user(client: Client, message: Message, base64_string: str):
+    """Process file access for free users"""
+    try:
+        short_link = await create_shortlink(client, base64_string)
+        if not short_link:
+            return await message.reply_text("Failed to generate link. Please try again.")
+            
         buttons = [
-            [InlineKeyboardButton("á´á´˜á´‡É´ ÊŸÉªÉ´á´‹", url=short_link), 
-             InlineKeyboardButton("á´›á´œá´›á´Ê€Éªá´€ÊŸ", url=TUT_VID)],
-            [InlineKeyboardButton("Ê™á´œÊ á´˜Ê€á´‡á´Éªá´œá´", callback_data="premium")]
+            [InlineKeyboardButton("🔗 Open Link", url=short_link)],
+            [InlineKeyboardButton("⭐ Upgrade to Premium", callback_data="premium")]
         ]
+        
         await message.reply_photo(
             photo=SHORTENER_PIC,
-            caption=SHORT_MSG.format(),
+            caption="🔒 Premium required for direct access\n\n"
+                   "📎 Your temporary download link:",
             reply_markup=InlineKeyboardMarkup(buttons)
         )
     except Exception as e:
-        print(f"Error in short_url: {e}")
-        await message.reply_text("Failed to generate short URL. Please try again later.")
+        debug_log(f"Free user error: {str(e)}")
+        await message.reply_text("Please use this link (premium required for direct access):")
+
+async def process_files(client: Client, message: Message, ids: list):
+    """Send files to premium users"""
+    try:
+        processing_msg = await message.reply_text("🔄 Processing...")
+        messages = await get_messages(client, ids)
+        if not messages:
+            await processing_msg.delete()
+            return await message.reply_text("No files found")
+            
+        settings = await db.get_settings()
+        protect_content = settings.get('PROTECT_CONTENT', False)
+        
+        for msg in messages:
+            try:
+                await msg.copy(
+                    chat_id=message.from_user.id,
+                    protect_content=protect_content
+                )
+            except FloodWait as e:
+                await asyncio.sleep(e.x)
+                await msg.copy(chat_id=message.from_user.id)
+            except Exception as e:
+                debug_log(f"Send error: {str(e)}")
+        
+        await processing_msg.delete()
+        await message.reply_text("✅ Files sent successfully")
+    except Exception as e:
+        debug_log(f"File process error: {str(e)}")
+        await message.reply_text("Failed to send files")
+
+async def decode_file_request(client: Client, base64_string: str):
+    """Decode and validate file request"""
+    try:
+        string = await decode(base64_string)
+        if not string:
+            return None
+            
+        parts = string.split("-")
+        if len(parts) == 3:  # File range
+            start = int(int(parts[1]) / abs(client.db_channel.id))
+            end = int(int(parts[2]) / abs(client.db_channel.id))
+            return list(range(start, end + 1)) if start <= end else list(range(start, end - 1, -1))
+        elif len(parts) == 2:  # Single file
+            return [int(int(parts[1]) / abs(client.db_channel.id))]
+        return None
+    except Exception as e:
+        debug_log(f"Decode error: {str(e)}")
+        return None
 
 @Bot.on_message(filters.command('start') & filters.private)
-async def start_command(client: Client, message: Message) -> None:
-    """Handle /start command with comprehensive error handling"""
+async def start_command(client: Client, message: Message):
     try:
         user_id = message.from_user.id
-        is_premium = await is_premium_user(user_id)
-        banned_users = await db.get_ban_users()
+        debug_log(f"Start from {user_id}")
         
-        if user_id in banned_users:
+        # Check ban status
+        if user_id in await db.get_ban_users():
             return await message.reply_text(
-                "You are banned from using this bot.\n\nContact support if you think this is a mistake.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Contact Support", url=BAN_SUPPORT)]])
+                "🚫 You are banned",
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("Contact Support", url=BAN_SUPPORT)]]
+                )
             )
         
+        # Check subscription
         if not await is_subscribed(client, user_id):
             return await not_joined(client, message)
             
-        FILE_AUTO_DELETE = await db.get_del_timer()
-        
+        # Add new users
         if not await db.present_user(user_id):
-            try:
-                await db.add_user(user_id)
-            except Exception as e:
-                print(f"Error adding user to database: {e}")
+            await db.add_user(user_id)
 
-        text = message.text
-        if len(text.split()) > 1:
-            await handle_file_request(client, message, text, is_premium, user_id)
+        # Handle file requests
+        if len(message.text.split()) > 1:
+            base64_string = message.text.split()[1]
+            is_premium = await verify_premium(user_id)
+            
+            if is_premium:
+                file_ids = await decode_file_request(client, base64_string)
+                if file_ids:
+                    await process_files(client, message, file_ids)
+                else:
+                    await message.reply_text("❌ Invalid file request")
+            else:
+                await handle_free_user(client, message, base64_string)
         else:
             await send_welcome_message(client, message)
-    except Exception as e:
-        print(f"Critical error in start_command: {e}")
-        await message.reply_text("An error occurred. Please try again later.")
-
-async def handle_file_request(client: Client, message: Message, text: str, is_premium: bool, user_id: int) -> None:
-    """Handle file requests from start command"""
-    try:
-        basic = text.split(" ", 1)[1]
-        base64_string = basic[6:] if basic.startswith("yu3elk") else basic
-        
-        if not is_premium and user_id != OWNER_ID:
-            await short_url(client, message, base64_string)
-            return
             
-        string = await decode(base64_string)
-        argument = string.split("-")
-        
-        if len(argument) == 3:
-            try:
-                start = int(int(argument[1]) / abs(client.db_channel.id))
-                end = int(int(argument[2]) / abs(client.db_channel.id))
-                ids = list(range(int(start), int(end) + 1)) if start <= end else list(range(int(start), int(end) - 1, -1))
-            except (ValueError, ZeroDivisionError, AttributeError) as e:
-                print(f"Error decoding range IDs: {e}")
-                return await message.reply_text("Invalid file range format")
-        elif len(argument) == 2:
-            try:
-                ids = [int(int(argument[1]) / abs(client.db_channel.id))]
-            except (ValueError, ZeroDivisionError, AttributeError) as e:
-                print(f"Error decoding single ID: {e}")
-                return await message.reply_text("Invalid file ID format")
-        else:
-            return await message.reply_text("Invalid request format")
-        
-        await process_file_request(client, message, ids)
     except Exception as e:
-        print(f"Error handling file request: {e}")
-        await message.reply_text("Failed to process your request. Please try again.")
+        debug_log(f"Start error: {str(e)}")
+        await message.reply_text("❌ An error occurred")
 
-async def process_file_request(client: Client, message: Message, ids: list) -> None:
-    """Process and send requested files"""
-    try:
-        m = await message.reply_text("<blockquote><b>Checking...</b></blockquote>")
-        await asyncio.sleep(0.4)
-        await m.edit_text("<blockquote><b>Getting your files...</b></blockquote>")
-        await asyncio.sleep(0.5)
-        await m.delete()
-    except Exception as e:
-        print(f"Error with animation messages: {e}")
-    
-    try:
-        messages = await get_messages(client, ids)
-    except Exception as e:
-        print(f"Error getting messages: {e}")
-        return await message.reply_text("Failed to retrieve files. Please try again later.")
-        
-    animelord_msgs = []
-    try:
-        settings = await db.get_settings()
-        PROTECT_CONTENT = settings.get('PROTECT_CONTENT', False)
-        HIDE_CAPTION = settings.get('HIDE_CAPTION', False)
-        DISABLE_CHANNEL_BUTTON = settings.get('DISABLE_CHANNEL_BUTTON', False)
-        BUTTON_NAME = settings.get('BUTTON_NAME', None)
-        BUTTON_LINK = settings.get('BUTTON_LINK', None)
-    except Exception as e:
-        print(f"Error getting settings: {e}")
-        PROTECT_CONTENT = False
-        HIDE_CAPTION = False
-        DISABLE_CHANNEL_BUTTON = False
-        BUTTON_NAME = None
-        BUTTON_LINK = None
-    
-    for msg in messages:
-        try:
-            caption = "" if HIDE_CAPTION else (
-                CUSTOM_CAPTION.format(
-                    previouscaption="" if not msg.caption else msg.caption.html,
-                    filename=msg.document.file_name
-                ) if bool(CUSTOM_CAPTION) and bool(msg.document)
-                else ("" if not msg.caption else msg.caption.html))
-                
-            reply_markup = None if DISABLE_CHANNEL_BUTTON or not msg.reply_markup else msg.reply_markup
-            
-            if BUTTON_NAME and BUTTON_LINK and not DISABLE_CHANNEL_BUTTON:
-                custom_button = InlineKeyboardMarkup([[InlineKeyboardButton(BUTTON_NAME, url=BUTTON_LINK)]])
-                reply_markup = custom_button if not reply_markup else InlineKeyboardMarkup(
-                    reply_markup.inline_keyboard + custom_button.inline_keyboard)
-                    
-            try:
-                copied_msg = await msg.copy(
-                    chat_id=message.from_user.id, 
-                    caption=caption, 
-                    parse_mode=ParseMode.HTML, 
-                    reply_markup=reply_markup, 
-                    protect_content=PROTECT_CONTENT)
-                animelord_msgs.append(copied_msg)
-            except FloodWait as e:
-                await asyncio.sleep(e.x)
-                copied_msg = await msg.copy(
-                    chat_id=message.from_user.id, 
-                    caption=caption, 
-                    parse_mode=ParseMode.HTML, 
-                    reply_markup=reply_markup, 
-                    protect_content=PROTECT_CONTENT)
-                animelord_msgs.append(copied_msg)
-            except Exception as e:
-                print(f"Failed to send message {msg.id}: {e}")
-        except Exception as e:
-            print(f"Error processing message {msg.id if msg else 'unknown'}: {e}")
-            
-    await handle_auto_delete(client, message, animelord_msgs)
-
-async def handle_auto_delete(client: Client, message: Message, sent_messages: list) -> None:
-    """Handle auto-deletion of sent files if enabled"""
-    try:
-        auto_delete_mode = await db.get_auto_delete_mode()
-        FILE_AUTO_DELETE = await db.get_del_timer()
-        
-        if auto_delete_mode and FILE_AUTO_DELETE > 0:
-            notification_msg = await message.reply(
-                f"This file will be deleted in {get_exp_time(FILE_AUTO_DELETE).lower()}.")
-            await asyncio.sleep(FILE_AUTO_DELETE)
-            
-            for msg in sent_messages:    
-                if msg:
-                    try:    
-                        await msg.delete()  
-                    except Exception as e:
-                        print(f"Error deleting message {msg.id}: {e}")
-                        
-            try:
-                reload_url = f"https://t.me/{client.username}?start={message.command[1]}" if message.command and len(message.command) > 1 else None
-                keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Get file again", url=reload_url)]]) if reload_url else None
-                await notification_msg.edit(
-                    "Your video/file is successfully deleted!\n\nClick below button to get your deleted video/file.",
-                    reply_markup=keyboard)
-            except Exception as e:
-                print(f"Error updating notification: {e}")
-    except Exception as e:
-        print(f"Error in auto-delete process: {e}")
-
-async def send_welcome_message(client: Client, message: Message) -> None:
+# [Keep all other existing functions below unchanged]
+async def send_welcome_message(client: Client, message: Message):
     """Send welcome message and animations"""
     try:
         m = await message.reply_text("<blockquote><b>Welcome to my bot.\nHope you're doing well...</b></blockquote>")
         await asyncio.sleep(0.4)
         await m.edit_text("<blockquote><b>Checking...</b></blockquote>")
         await asyncio.sleep(0.5)
-        await m.edit_text("<blockquote>ðŸŽŠ</blockquote>")
+        await m.edit_text("<blockquote>🎊</blockquote>")
         await asyncio.sleep(0.5)
-        await m.edit_text("<blockquote>âš¡</blockquote>")
+        await m.edit_text("<blockquote>⚡</blockquote>")
         await asyncio.sleep(0.5)
         await m.edit_text("<blockquote><b>Starting...</b></blockquote>")
         await asyncio.sleep(0.4)
@@ -266,21 +230,18 @@ async def send_welcome_message(client: Client, message: Message) -> None:
         )
     except Exception as e:
         print(f"Error sending start photo: {e}")
-        try:
-            await message.reply_text(
-                START_MSG.format(
-                    first=message.from_user.first_name,
-                    last=message.from_user.last_name if message.from_user.last_name else "",
-                    username=None if not message.from_user.username else '@' + message.from_user.username,
-                    mention=message.from_user.mention,
-                    id=message.from_user.id
-                ),
-                reply_markup=reply_markup
-            )
-        except Exception as e:
-            print(f"Fallback start message failed: {e}")
+        await message.reply_text(
+            START_MSG.format(
+                first=message.from_user.first_name,
+                last=message.from_user.last_name if message.from_user.last_name else "",
+                username=None if not message.from_user.username else '@' + message.from_user.username,
+                mention=message.from_user.mention,
+                id=message.from_user.id
+            ),
+            reply_markup=reply_markup
+        )
 
-async def not_joined(client: Client, message: Message) -> None:
+async def not_joined(client: Client, message: Message):
     """Handle users who haven't joined required channels"""
     temp = await message.reply("<blockquote><b>Checking Subscription...</b></blockquote>")
     user_id = message.from_user.id
@@ -303,19 +264,7 @@ async def not_joined(client: Client, message: Message) -> None:
             
             if not await is_sub(client, user_id, chat_id):
                 try:
-                    if chat_id in chat_data_cache:
-                        data = chat_data_cache[chat_id]
-                    else:
-                        try:
-                            data = await client.get_chat(chat_id)
-                            chat_data_cache[chat_id] = data
-                        except Exception as e:
-                            if "USERNAME_NOT_OCCUPIED" in str(e):
-                                await db.rem_channel(chat_id)
-                                continue
-                            else:
-                                raise e
-
+                    data = await client.get_chat(chat_id)
                     name = data.title
 
                     if mode == "on":
@@ -365,7 +314,7 @@ async def not_joined(client: Client, message: Message) -> None:
         await temp.delete()
 
 @Bot.on_callback_query(filters.regex(r"^check_sub"))
-async def check_sub_callback(client: Client, callback: CallbackQuery) -> None:
+async def check_sub_callback(client: Client, callback: CallbackQuery):
     """Check if user has joined required channels"""
     user_id = callback.from_user.id
     message = callback.message
