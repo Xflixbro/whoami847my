@@ -1,84 +1,49 @@
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
+Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
 
-import asyncio
-import random
-from datetime import datetime, timedelta
-from pyrogram import Client, filters
-from pyrogram.enums import ParseMode, ChatAction
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated
-from bot import Bot
-from config import *
-from helper_func import *
-from database.database import *
-from database.db_premium import *
+This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
 
-# Constants
-STICKER_ID = "CAACAgUAAxkBAAJFeWd037UWP-vgb_dWo55DCPZS9zJzAAJpEgACqXaJVxBrhzahNnwSHgQ"
-BAN_SUPPORT = f"{BAN_SUPPORT}"
-TUT_VID = f"{TUT_VID}"
+and is released under the MIT License.
 
-# Cache for chat data
+Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+
+import asyncio import random from datetime import datetime, timedelta from pyrogram import Client, filters from pyrogram.enums import ParseMode, ChatAction from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated from bot import Bot from config import * from helper_func import * from database.database import * from database.db_premium import *
+
+Constants
+
+STICKER_ID = "CAACAgUAAxkBAAJFeWd037UWP-vgb_dWo55DCPZS9zJzAAJpEgACqXaJVxBrhzahNnwSHgQ" BAN_SUPPORT = f"{BAN_SUPPORT}" TUT_VID = f"{TUT_VID}"
+
+Cache for chat data
+
 chat_data_cache = {}
 
-async def short_url(client: Client, message: Message, base64_string: str) -> None:
-    """Generate and send short URL for file access"""
-    try:
-        prem_link = f"https://t.me/{client.username}?start=yu3elk{base64_string}"
-        short_link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, prem_link)
-        buttons = [
-            [InlineKeyboardButton("ᴏᴘᴇɴ ʟɪɴᴋ", url=short_link), 
-             InlineKeyboardButton("ᴛᴜᴛᴏʀɪᴀʟ", url=TUT_VID)],
-            [InlineKeyboardButton("ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", callback_data="premium")]
-        ]
-        await message.reply_photo(
-            photo=SHORTENER_PIC,
-            caption=SHORT_MSG.format(),
-            reply_markup=InlineKeyboardMarkup(buttons)
+@Bot.on_message(filters.command('start') & filters.private) async def start_command(client: Client, message: Message) -> None: try: user_id = message.from_user.id is_premium = await is_premium_user(user_id) banned_users = await db.get_ban_users()
+
+if user_id in banned_users:
+        return await message.reply_text(
+            "You are banned from using this bot.\n\nContact support if you think this is a mistake.",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Contact Support", url=BAN_SUPPORT)]])
         )
-    except Exception as e:
-        print(f"Error in short_url: {e}")
-        await message.reply_text("Failed to generate short URL. Please try again later.")
 
-@Bot.on_message(filters.command('start') & filters.private)
-async def start_command(client: Client, message: Message) -> None:
-    """Handle /start command with comprehensive error handling"""
-    try:
-        user_id = message.from_user.id
-        is_premium = await is_premium_user(user_id)
-        banned_users = await db.get_ban_users()
-        
-        if user_id in banned_users:
-            return await message.reply_text(
-                "You are banned from using this bot.\n\nContact support if you think this is a mistake.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Contact Support", url=BAN_SUPPORT)]])
-        
-        if not await is_subscribed(client, user_id):
-            return await not_joined(client, message)
-            
-        FILE_AUTO_DELETE = await db.get_del_timer()
-        
-        if not await db.present_user(user_id):
-            try:
-                await db.add_user(user_id)
-            except Exception as e:
-                print(f"Error adding user to database: {e}")
+    if not await is_subscribed(client, user_id):
+        return await not_joined(client, message)
 
-        text = message.text
-        if len(text.split()) > 1:
-            await handle_file_request(client, message, text, is_premium, user_id)
-        else:
-            await send_welcome_message(client, message)
-    except Exception as e:
-        print(f"Critical error in start_command: {e}")
-        await message.reply_text("An error occurred. Please try again later.")
+    FILE_AUTO_DELETE = await db.get_del_timer()
+
+    if not await db.present_user(user_id):
+        try:
+            await db.add_user(user_id)
+        except Exception as e:
+            print(f"Error adding user to database: {e}")
+
+    text = message.text
+    if len(text.split()) > 1:
+        await handle_file_request(client, message, text, is_premium, user_id)
+    else:
+        await send_welcome_message(client, message)
+
+except Exception as e:
+    print(f"Critical error in start_command: {e}")
+    await message.reply_text("An error occurred. Please try again later.")
 
 async def handle_file_request(client: Client, message: Message, text: str, is_premium: bool, user_id: int) -> None:
     """Handle file requests from start command"""
