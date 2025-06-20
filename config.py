@@ -6,7 +6,6 @@
 # Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
 # All rights reserved.
-#
 
 import os
 from os import environ, getenv
@@ -113,8 +112,9 @@ CMD_TXT = """<blockquote><b>» ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs:</b></blockqu
 <b>›› /fsettings :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ᴍᴀɴᴀɢᴇ ғᴏʀᴄᴇ sᴜʙsᴄʀɪᴘᴛɪᴏɴs
 <b>›› /premium_cmd :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ᴍᴀɴᴀɢᴇ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs
 <b>›› /broadcast_cmd :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇs
-<b>›› /myplan :</b> ᴄʜᴇᴄᴋ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ sᴛᴀᴛᴜs & �ᴅᴇᴛᴀɪʟs
-<b>›› /count :</b> ᴛʀᴀᴄᴋ sʜᴏʀᴛɴᴇʀ ᴄʟɪᴄᴋs & ᴀɴᴀʟʏᴛɪᴄs"""
+<b>›› /myplan :</b> ᴄʜᴇᴄᴋ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ sᴛᴀᴛᴜs & ᴅᴇᴛᴀɪʟs
+<b>›› /count :</b> ᴛʀᴀᴄᴋ sʜᴏʀᴛɴᴇʀ ᴄʟɪᴄᴋs & ᴀɴᴀʟʏᴛɪᴄs
+<b>›› /shortener :</b> ᴛᴏɢɢʟᴇ ᴜʀʟ sʜᴏʀᴛᴇɴᴇʀ ᴏɴ/ᴏғғ</b>"""
 
 CUSTOM_CAPTION = os.environ.get("CUSTOM_CAPTION", "<b>• ʙʏ @Anime_Lord_Official</b>")
 # --------------------------------------------
@@ -149,12 +149,13 @@ HIDE_CAPTION = False
 DISABLE_CHANNEL_BUTTON = True
 BUTTON_NAME = None
 BUTTON_LINK = None
+SHORTENER_ENABLED = True  # Added for URL shortener toggle
 
 # Function to update settings (used by file_settings.py)
 async def update_setting(setting_name, value):
     await db.update_setting(setting_name, value)
     # Update local variables (optional, for immediate use)
-    global PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK
+    global PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK, SHORTENER_ENABLED
     if setting_name == "PROTECT_CONTENT":
         PROTECT_CONTENT = value
     elif setting_name == "HIDE_CAPTION":
@@ -165,6 +166,8 @@ async def update_setting(setting_name, value):
         BUTTON_NAME = value
     elif setting_name == "BUTTON_LINK":
         BUTTON_LINK = value
+    elif setting_name == "SHORTENER_ENABLED":
+        SHORTENER_ENABLED = value
 
 # Function to get all settings (used to display in /fsettings)
 def get_settings():
@@ -173,7 +176,8 @@ def get_settings():
         "HIDE_CAPTION": HIDE_CAPTION,
         "DISABLE_CHANNEL_BUTTON": DISABLE_CHANNEL_BUTTON,
         "BUTTON_NAME": BUTTON_NAME,
-        "BUTTON_LINK": BUTTON_LINK
+        "BUTTON_LINK": BUTTON_LINK,
+        "SHORTENER_ENABLED": SHORTENER_ENABLED  # Added for URL shortener toggle
     }
 
 LOG_FILE_NAME = "animelordbot.txt"
