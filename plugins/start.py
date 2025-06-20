@@ -61,10 +61,10 @@ async def short_url(client: Client, message: Message, base64_string: str) -> Non
             photo=SHORTENER_PIC,
             caption=SHORT_MSG.format(),
             reply_markup=InlineKeyboardMarkup(buttons)
+        )
     except Exception as e:
         print(f"Error in short_url: {e}")
         await message.reply_text("Failed to generate URL. Please try again later.")
-
 @Bot.on_message(filters.command('start') & filters.private)
 async def start_command(client: Client, message: Message) -> None:
     """Handle /start command with comprehensive error handling"""
