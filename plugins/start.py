@@ -31,7 +31,26 @@ chat_data_cache = {}
 async def short_url(client: Client, message: Message, base64_string: str) -> None:
     """Generate and send short URL for file access"""
     try:
+        settings = await db.get_settings()
+        shortener_enabled = settings.get('SHORTENER_ENABLED', True)
+        
         prem_link = f"https://t.me/{client.username}?start=yu3elk{base64_string}"
+        
+        if not shortener_enabled:
+            # If shortener is disabled, send direct link
+            buttons = [
+                [InlineKeyboardButton("ᴏᴘᴇɴ ʟɪɴᴋ", url=prem_link), 
+                InlineKeyboardButton("ᴛᴜᴛᴏʀɪᴀʟ", url=TUT_VID)],
+                [InlineKeyboardButton("ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", callback_data="seeplans")]
+            ]
+            await message.reply_photo(
+                photo=SHORTENER_PIC,
+                caption=f"<b>Here is your direct link (Shortener disabled):</b>\n\n{prem_link}",
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+            return
+            
+        # Original shortener code
         short_link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, prem_link)
         buttons = [
             [InlineKeyboardButton("ᴏᴘᴇɴ ʟɪɴᴋ", url=short_link), 
@@ -42,10 +61,9 @@ async def short_url(client: Client, message: Message, base64_string: str) -> Non
             photo=SHORTENER_PIC,
             caption=SHORT_MSG.format(),
             reply_markup=InlineKeyboardMarkup(buttons)
-        )
     except Exception as e:
         print(f"Error in short_url: {e}")
-        await message.reply_text("Failed to generate short URL. Please try again later.")
+        await message.reply_text("Failed to generate URL. Please try again later.")
 
 @Bot.on_message(filters.command('start') & filters.private)
 async def start_command(client: Client, message: Message) -> None:
