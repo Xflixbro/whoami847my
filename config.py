@@ -43,9 +43,9 @@ FORCE_PIC = os.environ.get("FORCE_PIC", "https://telegra.ph/file/e292b12890b8b4b
 # --------------------------------------------
 # List of images for random selection in /start, /help, /about
 RANDOM_IMAGES = [
-    "https://envs.sh/E5l.jpg",
-    "https://envs.sh/E58.jpg",
-    "https://envs.sh/E5v.jpg"
+    "https://myappme.shop/img/file_302.jpg",
+    "https://myappme.shop/img/file_303.jpg",
+    "https://myappme.shop/img/file_304.jpg"
 ]
 
 SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "publicearn.online")
