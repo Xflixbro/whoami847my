@@ -28,7 +28,8 @@ default_settings = {
     'DISABLE_CHANNEL_BUTTON': True,
     'BUTTON_NAME': None,
     'BUTTON_LINK': None,
-    'FORCE_SUB_ENABLED': True  # New field for enabling/disabling force-sub system
+    'FORCE_SUB_ENABLED': True,
+    'SHORTENER_ENABLED': True  # New setting for URL shortener toggle
 }
 
 class Mehedi:
@@ -285,11 +286,17 @@ class Mehedi:
 
     async def get_settings(self):
         data = await self.settings_data.find_one({'_id': 'bot_settings'})
-        return data.get('settings', default_settings) if data else default_settings
+        if data:
+            # Merge with default settings to ensure all keys exist
+            settings = default_settings.copy()
+            settings.update(data.get('settings', {}))
+            return settings
+        return default_settings
 
     async def update_setting(self, setting_name, value):
         current_settings = await self.get_settings()
         current_settings[setting_name] = value
+        
         await self.settings_data.update_one(
             {'_id': 'bot_settings'},
             {'$set': {'settings': current_settings}},
