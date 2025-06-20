@@ -6,10 +6,8 @@
 # Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
 # All rights reserved.
-#
 
 import asyncio
-import os
 import random
 import sys
 import time
@@ -425,11 +423,11 @@ async def handle_admin_input(client: Client, message: Message):
             if check == len(admin_ids):
                 for id in admin_ids:
                     await db.add_admin(int(id))
-                await pro.edit(f"<b>✅ Aᴅᴍɪɴ(ꜱ) ᴀᴅᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ:</b>\n\n{admin_list}", reply_markup=reply_markup)
+                await pro.edit(f"<b>✅ Aᴅᴍɪɴ(ꜱ) ᴀᴅᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʯ:</b>\n\n{admin_list}", reply_markup=reply_markup)
             else:
                 await pro.edit(
                     f"<b>❌ Sᴏᴍᴇ ᴇʀʀᴏʀꜱ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴀᴅᴅɪɴɢ ᴀᴅᴍɪɴꜱ:</b>\n\n{admin_list.strip()}\n\n"
-                    "<b><i>Pʟᴇᴀꜱᴇ ᴄʜᴇᴄᴋ ᴀɴᴅ ᴛʀʏ ᴀɢᴀɪɴ.</i></b>",
+                    "<b><i>Pʟᴇᴀꜱᴇ ᴄʜᴇᴄᴋ ᴀɴᴅ ᴛʀʯ ᴀɢᴀɪɴ.</i></b>",
                     reply_markup=reply_markup
                 )
             await db.set_temp_state(chat_id, "")
@@ -572,7 +570,7 @@ async def add_admins(client: Client, message: Message):
             admin_list += f"<b><blockquote>(Iᴅ: <code>{id}</code>) ᴀᴅᴅᴇᴅ.</blockquote></b>\n"
             check += 1
         else:
-            admin_list += f"<blockquote><b>Iɴᴠᴀʟɪᴅ ɪᴅ: <code>{id}</code></b></blockquote>\n"
+            admin_list += f"<blockquote><b>Iɴᴠᴀʟɪᴇᴅ ɪᴅ: <code>{id}</code></b></blockquote>\n"
 
     if check == len(admins):
         for id in admins:
@@ -646,7 +644,7 @@ async def get_admins(client: Client, message: Message):
             InlineKeyboardButton("• Cʟᴏꜱᴇ •", callback_data="admin_close")
         ]
     ])
-    await pro.edit(f"<b>⚡ Cᴜʀʳᴇɴᴛ ᴀᴅᴍɪɴ ʟɪꜱᴛ:</b>\n\n{admin_list}", reply_markup=reply_markup)
+    await pro.edit(f"<b>⚡ Cᴜʀʀᴇɴᴛ ᴀᴅᴍɪɴ ʟɪꜱᴛ:</b>\n\n{admin_list}", reply_markup=reply_markup)
 
 # BAN-USER-SYSTEM
 @Bot.on_message(filters.private & filters.command('ban') & admin)
@@ -678,7 +676,7 @@ async def add_banuser(client: Client, message: Message):
             continue
 
         if uid_int in banuser_ids:
-            report += f"⚠️ Aʟʳᴇᴀᴅʯ: <code>{uid_int}</code>\n"
+            report += f"⚠️ Aʟʀᴇᴀᴅʯ: <code>{uid_int}</code>\n"
             continue
 
         if len(str(uid_int)) == 10:
@@ -686,12 +684,12 @@ async def add_banuser(client: Client, message: Message):
             report += f"✅ Bᴀɴɴᴇᴅ: <code>{uid_int}</code>\n"
             success_count += 1
         else:
-            report += f"⚠️ Iɴᴠᴀʟɪᴅ Tᴇʟᴇɢʳᴀᴍ ID ʟᴇɴɢᴛʜ: <code>{uid_int}</code>\n"
+            report += f"⚠️ Iɴᴠᴀʟɪᴅ Tᴇʟᴇɢʀᴀᴍ ID ʟᴇɴɢᴛʜ: <code>{uid_int}</code>\n"
 
     if success_count:
-        await pro.edit(f"<b>✅ Bᴀɴɴᴇᴅ Uꜱᴇʳꜱ Uᴘᴅᴀᴛᴇᴅ:</b>\n\n{report}", reply_markup=reply_markup)
+        await pro.edit(f"<b>✅ Bᴀɴɴᴇᴅ Uꜱᴇʀꜱ Uᴘᴅᴀᴛᴇᴅ:</b>\n\n{report}", reply_markup=reply_markup)
     else:
-        await pro.edit(f"<b>❌ Nᴏ ᴜꜱᴇʳꜱ ᴡᴇʳᴇ ʙᴀɴɴᴇᴅ.</b>\n\n{report}", reply_markup=reply_markup)
+        await pro.edit(f"<b>❌ Nᴏ ᴜꜱᴇʀꜱ ᴡᴇʀᴇ ʙᴀɴɴᴇᴅ.</b>\n\n{report}", reply_markup=reply_markup)
 
 @Bot.on_message(filters.private & filters.command('unban') & admin)
 async def delete_banuser(client: Client, message: Message):        
@@ -703,27 +701,27 @@ async def delete_banuser(client: Client, message: Message):
 
     if not banusers:
         return await pro.edit(
-            "<b>❗ Pʟᴇᴀꜱᴇ ᴘʳᴏᴠɪᴅᴇ ᴜꜱᴇʳ IDs ᴛᴏ ᴜɴʙᴀɴ.</b>\n\n"
+            "<b>❗ Pʟᴇᴀꜱᴇ ᴘʳᴏᴠɪᴅᴇ ᴜꜱᴇʀ IDs ᴛᴏ ᴜɴʙᴀɴ.</b>\n\n"
             "<b>📌 Uꜱᴀɢᴇ:</b>\n"
-            "<code>/unban [user_id]</code> — Uɴʙᴀɴ ꜱᴘᴇᴄɪғɪᴄ ᴜꜱᴇʳ(ꜱ)\n"
-            "<code>/unban all</code> — Rᴇᴍᴏᴠᴇ ᴀʟʟ ʙᴀɴɴᴇᴅ ᴜꜱᴇʳꜱ",
+            "<code>/unban [user_id]</code> — Uɴʙᴀɴ ꜱᴘᴇᴄɪғɪᴄ ᴜꜱᴇʀ(ꜱ)\n"
+            "<code>/unban all</code> — Rᴇᴍᴏᴠᴇ ᴀʟʟ ʙᴀɴɴᴇᴅ ᴜꜱᴇʀꜱ",
             reply_markup=reply_markup
         )
 
     if banusers[0].lower() == "all":
         if not banuser_ids:
-            return await pro.edit("<b>✅ Nᴏ ᴜꜱᴇʳꜱ ɪɴ ᴛʜᴇ ʙᴀɴ ʟɪꜱᴛ.</b>", reply_markup=reply_markup)
+            return await pro.edit("<b>✅ Nᴏ ᴜꜱᴇʀꜱ ɪɴ ᴛʜᴇ ʙᴀɴ ʟɪꜱᴛ.</b>", reply_markup=reply_markup)
         for uid in banuser_ids:
             await db.del_ban_user(uid)
         listed = "\n".join([f"✅ Uɴʙᴀɴɴᴇᴅ: <code>{uid}</code>" for uid in banuser_ids])
-        return await pro.edit(f"<b>🚫 Cʟᴇᴀʳᴇᴅ Bᴀɴ Lɪꜱᴛ:</b>\n\n{listed}", reply_markup=reply_markup)
+        return await pro.edit(f"<b>🚫 Cʟᴇᴀʀᴇᴅ Bᴀɴ Lɪꜱᴛ:</b>\n\n{listed}", reply_markup=reply_markup)
 
     report = ""
     for uid in banusers:
         try:
             uid_int = int(uid)
         except:
-            report += f"⚠️ Iɴᴠᴀʟɪᴅ ID: <code>{uid}</code>\n"
+            report += f"⚠️ Iɴᴠᴀʟɪᴇᴅ ID: <code>{uid}</code>\n"
             continue
 
         if uid_int in banuser_ids:
@@ -732,7 +730,7 @@ async def delete_banuser(client: Client, message: Message):
         else:
             report += f"⚠️ Nᴏᴛ ɪɴ ʙᴀɴ ʟɪꜱᴛ: <code>{uid_int}</code>\n"
 
-    await pro.edit(f"<b>🚫 Uɴʙᴀɴ Rᴇᴘᴏʳᴛ:</b>\n\n{report}", reply_markup=reply_markup)
+    await pro.edit(f"<b>🚫 Uɴʙᴀɴ Rᴇᴘᴏʀᴛ:</b>\n\n{report}", reply_markup=reply_markup)
 
 @Bot.on_message(filters.private & filters.command('banlist') & admin)
 async def get_banuser_list(client: Client, message: Message):        
@@ -741,7 +739,7 @@ async def get_banuser_list(client: Client, message: Message):
 
     if not banuser_ids:
         return await pro.edit(
-            "<b>✅ Nᴏ ᴜꜱᴇʳꜱ ɪɴ ᴛʜᴇ ʙᴀɴ Lɪꜱᴛ.</b>",
+            "<b>✅ Nᴏ ᴜꜱᴇʀꜱ ɪɴ ᴛʜᴇ ʙᴀɴ Lɪꜱᴛ.</b>",
             reply_markup=InlineKeyboardMarkup([
                 [
                     InlineKeyboardButton("• Bᴀᴄᴋ •", callback_data="user_back"),
@@ -750,7 +748,7 @@ async def get_banuser_list(client: Client, message: Message):
             ])
         )
 
-    result = "<b>🚫 Bᴀɴɴᴇᴅ Uꜱᴇʳꜱ:</b>\n\n"
+    result = "<b>🚫 Bᴀɴɴᴇᴅ Uꜱᴇʀꜱ:</b>\n\n"
     for uid in banuser_ids:
         await message.reply_chat_action(ChatAction.TYPING)
         try:
@@ -775,6 +773,27 @@ async def get_banuser_list(client: Client, message: Message):
 async def user_settings(client: Client, message: Message):
     await show_user_settings(client, message.chat.id)
 
+@Bot.on_message(filters.command('shortener') & filters.private & admin)
+async def toggle_shortener(client: Client, message: Message):
+    """Toggle URL shortener on/off"""
+    try:
+        settings = await db.get_settings()
+        current_status = settings.get('SHORTENER_ENABLED', True)
+        new_status = not current_status
+        
+        await db.update_setting('SHORTENER_ENABLED', new_status)
+        
+        status_text = "enabled" if new_status else "disabled"
+        await message.reply_text(
+            f"<b>URL shortener has been {status_text}.</b>",
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        await message.reply_text(
+            f"<b>Error toggling shortener:</b>\n<code>{e}</code>",
+            parse_mode=ParseMode.HTML
+        )
+
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
 #
@@ -783,4 +802,3 @@ async def user_settings(client: Client, message: Message):
 # Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
 # All rights reserved.
-#
