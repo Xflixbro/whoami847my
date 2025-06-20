@@ -31,31 +31,12 @@ chat_data_cache = {}
 async def short_url(client: Client, message: Message, base64_string: str) -> None:
     """Generate and send short URL for file access"""
     try:
-        settings = await db.get_settings()
-        shortener_enabled = settings.get('SHORTENER_ENABLED', True)
-        
         prem_link = f"https://t.me/{client.username}?start=yu3elk{base64_string}"
-        
-        if not shortener_enabled:
-            # If shortener is disabled, send direct link
-            buttons = [
-                [InlineKeyboardButton("ᴏᴘᴇɴ ʟɪɴᴋ", url=prem_link), 
-                InlineKeyboardButton("ᴛᴜᴛᴏʀɪᴀʟ", url=TUT_VID)],
-                [InlineKeyboardButton("ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", callback_data="seeplans")]
-            ]
-            await message.reply_photo(
-                photo=SHORTENER_PIC,
-                caption=f"<b>Here is your direct link (Shortener disabled):</b>\n\n{prem_link}",
-                reply_markup=InlineKeyboardMarkup(buttons)
-            )
-            return
-            
-        # Original shortener code
         short_link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, prem_link)
         buttons = [
-            [InlineKeyboardButton("ᴏᴘᴇɴ ʟɪɴᴋ", url=short_link), 
-             InlineKeyboardButton("ᴛᴜᴛᴏʀɪᴀʟ", url=TUT_VID)],
-            [InlineKeyboardButton("ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", callback_data="seeplans")]
+            [InlineKeyboardButton("• ᴏᴘᴇɴ ʟɪɴᴋ •", url=short_link), 
+             InlineKeyboardButton("• ᴛᴜᴛᴏʀɪᴀʟ •", url=TUT_VID)],
+            [InlineKeyboardButton("• ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")]
         ]
         await message.reply_photo(
             photo=SHORTENER_PIC,
@@ -64,7 +45,8 @@ async def short_url(client: Client, message: Message, base64_string: str) -> Non
         )
     except Exception as e:
         print(f"Error in short_url: {e}")
-        await message.reply_text("Failed to generate URL. Please try again later.")
+        await message.reply_text("Failed to generate short URL. Please try again later.")
+
 @Bot.on_message(filters.command('start') & filters.private)
 async def start_command(client: Client, message: Message) -> None:
     """Handle /start command with comprehensive error handling"""
@@ -239,7 +221,7 @@ async def handle_auto_delete(client: Client, message: Message, sent_messages: li
 async def send_welcome_message(client: Client, message: Message) -> None:
     """Send welcome message and animations"""
     try:
-        m = await message.reply_text("<blockquote><b>Welcome to my bot.\nHope you're doing well...</b></blockquote>")
+        m = await message.reply_text("<blockquote><b>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...</b></blockquote>")
         await asyncio.sleep(0.4)
         await m.edit_text("<blockquote><b>Checking...</b></blockquote>")
         await asyncio.sleep(0.5)
@@ -262,10 +244,10 @@ async def send_welcome_message(client: Client, message: Message) -> None:
             print(f"Error sending sticker: {e}")
 
     reply_markup = InlineKeyboardMarkup([
-        [InlineKeyboardButton("• ʜᴇʟᴘ •", callback_data="help"), 
-         InlineKeyboardButton("• ᴀʙᴏᴜᴛ •", callback_data="about")],
-        [InlineKeyboardButton("• ᴄʜᴀɴɴᴇʟꜱ •", callback_data="channels"), 
-         InlineKeyboardButton("• ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")]
+        [InlineKeyboardButton("◉ ʜᴇʟᴘ ◉", callback_data="help"), 
+         InlineKeyboardButton("◉ ᴀʙᴏᴜᴛ ◉", callback_data="about")],
+        [InlineKeyboardButton("◉ ᴄʜᴀɴɴᴇʟꜱ ◉", callback_data="channels"), 
+         InlineKeyboardButton("◉ ᴘʀᴇᴍɪᴜᴍ ◉", callback_data="seeplans")]
     ])
     
     try:
