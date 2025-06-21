@@ -189,7 +189,7 @@ async def auto_delete_callback(client: Bot, callback: CallbackQuery):
             await callback.message.reply_photo(
                 photo=selected_image,
                 caption=(
-                    "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
+                    "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴋᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
                     "<blockquote><b>Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)</b></blockquote>"
                 ),
                 parse_mode=ParseMode.HTML
@@ -197,7 +197,7 @@ async def auto_delete_callback(client: Bot, callback: CallbackQuery):
         except Exception as e:
             logger.error(f"Failed to send photo: {e}")
             await callback.message.reply(
-                "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
+                "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴋᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
                 "<blockquote><b>Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)</b></blockquote>",
                 parse_mode=ParseMode.HTML
             )
@@ -254,15 +254,90 @@ async def set_timer(client: Bot, message: Message):
         try:
             await message.reply_photo(
                 photo=selected_image,
-                caption="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b></blockquote>",
+                caption="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴋᴏɴᴅꜱ.</b></blockquote>",
                 parse_mode=ParseMode.HTML
             )
         except Exception as e:
             logger.error(f"Failed to send photo: {e}")
             await message.reply(
-                "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b></blockquote>",
+                "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴋᴏɴᴅꜱ.</b></blockquote>",
                 parse_mode=ParseMode.HTML
             )
+
+# Function to show useless features menu
+async def show_useless_menu(client: Bot, chat_id: int, message_id: int = None):
+    menu_text = (
+        "» <b>Useless Features Menu</b>\n\n"
+        "<blockquote>» <b>Here are some useless features you can play with</b></blockquote>\n\n"
+        "<b>Select an option below:</b>"
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("• User Stats •", callback_data="useless_users"),
+                InlineKeyboardButton("• Bot Stats •", callback_data="useless_stats")
+            ],
+            [
+                InlineKeyboardButton("• Auto Delete •", callback_data="useless_auto_delete"),
+                InlineKeyboardButton("• Close •", callback_data="useless_close")
+            ]
+        ]
+    )
+
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+
+    if message_id:
+        try:
+            await client.edit_message_media(
+                chat_id=chat_id,
+                message_id=message_id,
+                media=InputMediaPhoto(media=selected_image, caption=menu_text),
+                reply_markup=keyboard
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit message with image: {e}")
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=menu_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
+    else:
+        try:
+            await client.send_photo(
+                chat_id=chat_id,
+                photo=selected_image,
+                caption=menu_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
+            await client.send_message(
+                chat_id=chat_id,
+                text=menu_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
+
+# Callback handler for useless menu
+@Bot.on_callback_query(filters.regex(r"^useless_"))
+async def useless_callback(client: Bot, callback: CallbackQuery):
+    data = callback.data
+    chat_id = callback.message.chat.id
+
+    if data == "useless_users":
+        await get_users(client, callback.message)
+    elif data == "useless_stats":
+        await stats(client, callback.message)
+    elif data == "useless_auto_delete":
+        await auto_delete_settings(client, callback.message)
+    elif data == "useless_close":
+        await callback.message.delete()
+    
+    await callback.answer()
 
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
