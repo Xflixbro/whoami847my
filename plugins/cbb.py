@@ -18,7 +18,7 @@ from database.database import db
 from helper_func import get_readable_time
 from datetime import datetime
 
-@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|rfs_ch_|rfs_toggle_|fsub_back|set_|remove_|channels|start|info|seeplans|source|useless_|auto_)"))
+@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|rfs_ch_|rfs_toggle_|fsub_back|set_|remove_|channels|start|info|seeplans|source|useless_|uselessmenu|auto_)"))
 async def cb_handler(client: Bot, query: CallbackQuery):
     data = query.data
     user = query.from_user
@@ -47,7 +47,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     InlineKeyboardButton("• ᴄʟᴏꜱᴇ •", callback_data='close')
                 ],
                 [
-                    InlineKeyboardButton('• Useless Features •', callback_data='useless_menu')
+                    InlineKeyboardButton('• ᴜꜱᴇʟᴇꜱꜱ ꜰᴇᴀᴛᴜʀᴇꜱ •', callback_data='useless_menu')
                 ]
             ])
             caption = HELP_TXT.format(
@@ -134,7 +134,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     InlineKeyboardButton("• ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")
                 ],
                 [
-                    InlineKeyboardButton("• Useless Features •", callback_data="useless_menu")
+                    InlineKeyboardButton("• ᴜꜱᴇʟᴇꜱꜱ ꜰᴇᴀᴛᴜʀᴇꜱ •", callback_data="useless_menu")
                 ]
             ])
             caption = START_MSG.format(
