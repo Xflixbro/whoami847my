@@ -47,7 +47,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     InlineKeyboardButton("• ᴄʟᴏꜱᴇ •", callback_data='close')
                 ],
                 [
-                    InlineKeyboardButton('• ᴜꜱᴇʟᴇꜱꜱ ꜰᴇᴀᴛᴜʀᴇꜱ •', callback_data='useless_menu')
+                    InlineKeyboardButton('• Useless Features •', callback_data='useless_menu')
                 ]
             ])
             caption = HELP_TXT.format(
@@ -134,7 +134,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     InlineKeyboardButton("• ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")
                 ],
                 [
-                    InlineKeyboardButton("• ᴜꜱᴇʟᴇꜱꜱ ꜰᴇᴀᴛᴜʀᴇꜱ •", callback_data="useless_menu")
+                    InlineKeyboardButton("• Useless Features •", callback_data="useless_menu")
                 ]
             ])
             caption = START_MSG.format(
