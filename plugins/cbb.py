@@ -11,14 +11,12 @@ import asyncio
 import random
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto
-from pyrogram.enums import ParseMode
 from bot import Bot
 from config import *
 from database.database import db
-from helper_func import get_readable_time
-from datetime import datetime
 
-@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|rfs_ch_|rfs_toggle_|fsub_back|set_|remove_|channels|start|info|seeplans|source|useless_|uselessmenu|auto_)"))
+
+@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|rfs_ch_|rfs_toggle_|fsub_back|set_|remove_|channels|start|info|seeplans|source|auto_|user_)"))
 async def cb_handler(client: Bot, query: CallbackQuery):
     data = query.data
     user = query.from_user
@@ -38,6 +36,36 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 print(f"Text edit failed: {e}")
                 await query.answer("Operation failed, please try again", show_alert=True)
 
+    async def show_auto_delete_settings():
+        auto_delete_mode = await db.get_auto_delete_mode()
+        delete_timer = await db.get_del_timer()
+        
+        mode_status = "Enabled ✅" if auto_delete_mode else "Disabled ❌"
+        timer_text = get_readable_time(delete_timer)
+
+        settings_text = (
+            "» Auto Delete Settings\n\n"
+            f"» Auto Delete Mode: {mode_status}\n"
+            f"» Delete Timer: {timer_text}\n\n"
+            "Click below buttons to change settings"
+        )
+
+        keyboard = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton("Disable ❌" if auto_delete_mode else "Enable ✅", callback_data="auto_toggle"),
+                    InlineKeyboardButton(" Set Timer ", callback_data="auto_set_timer")
+                ],
+                [
+                    InlineKeyboardButton("Refresh", callback_data="auto_refresh"),
+                    InlineKeyboardButton("Back", callback_data="auto_back")
+                ]
+            ]
+        )
+
+        selected_image = random.choice(RANDOM_IMAGES)
+        await safe_edit_media(selected_image, settings_text, keyboard)
+
     try:
         if data == "help":
             selected_image = random.choice(RANDOM_IMAGES)
@@ -45,9 +73,6 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 [
                     InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home'),
                     InlineKeyboardButton("• ᴄʟᴏꜱᴇ •", callback_data='close')
-                ],
-                [
-                    InlineKeyboardButton('• ᴜꜱᴇʟᴇꜱꜱ ꜰᴇᴀᴛᴜʀᴇꜱ •', callback_data='useless_menu')
                 ]
             ])
             caption = HELP_TXT.format(
@@ -132,9 +157,6 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 [
                     InlineKeyboardButton("• ᴄʜᴀɴɴᴇʟꜱ •", url="https://t.me/CornXvilla"),
                     InlineKeyboardButton("• ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")
-                ],
-                [
-                    InlineKeyboardButton("• ᴜꜱᴇʟᴇꜱꜱ ꜰᴇᴀᴛᴜʀᴇꜱ •", callback_data="useless_menu")
                 ]
             ])
             caption = START_MSG.format(
@@ -303,96 +325,40 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 print(f"Remove image error: {e}")
                 await query.answer("Failed to get image list", show_alert=True)
 
-        # Useless Features Section
-        elif data == "useless_menu":
-            selected_image = random.choice(RANDOM_IMAGES)
-            reply_markup = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("• User Stats •", callback_data="useless_users"),
-                    InlineKeyboardButton("• Bot Stats •", callback_data="useless_stats")
-                ],
-                [
-                    InlineKeyboardButton("• Auto Delete •", callback_data="useless_auto_delete"),
-                    InlineKeyboardButton("• Close •", callback_data="close")
-                ],
-                [
-                    InlineKeyboardButton("• Back •", callback_data="home")
-                ]
-            ])
-            caption = (
-                "» <b>Useless Features Menu</b>\n\n"
-                "<blockquote>» <b>Here are some useless features you can play with</b></blockquote>\n\n"
-                "<b>Select an option below:</b>"
-            )
-            await safe_edit_media(selected_image, caption, reply_markup)
-
-        elif data == "useless_users":
-            selected_image = random.choice(RANDOM_IMAGES)
-            users = await db.full_userbase()
-            reply_markup = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("• Back •", callback_data="useless_menu"),
-                    InlineKeyboardButton("• Close •", callback_data="close")
-                ]
-            ])
-            caption = f"{len(users)} Uꜱᴇʀꜱ ᴀʀᴇ ᴜꜱɪɴɢ ᴛʜɪꜱ ʙᴏᴛ"
-            await safe_edit_media(selected_image, caption, reply_markup)
-
-        elif data == "useless_stats":
-            now = datetime.now()
-            delta = now - client.uptime
-            uptime = get_readable_time(delta.seconds)
-            selected_image = random.choice(RANDOM_IMAGES)
-            reply_markup = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("• Back •", callback_data="useless_menu"),
-                    InlineKeyboardButton("• Close •", callback_data="close")
-                ]
-            ])
-            caption = BOT_STATS_TEXT.format(uptime=uptime)
-            await safe_edit_media(selected_image, caption, reply_markup)
-
-        elif data == "useless_auto_delete":
-            auto_delete_mode = await db.get_auto_delete_mode()
-            delete_timer = await db.get_del_timer()
+        # New auto-delete features from useless.py
+        elif data.startswith("auto_"):
+            if data == "auto_toggle":
+                current_mode = await db.get_auto_delete_mode()
+                new_mode = not current_mode
+                await db.set_auto_delete_mode(new_mode)
+                await show_auto_delete_settings()
+                await query.answer(f"Auto Delete Mode {'Enabled' if new_mode else 'Disabled'}!")
             
-            mode_status = "Eɴᴀʙʟᴇᴅ ✅" if auto_delete_mode else "Dɪsᴀʙʟᴇᴅ ❌"
-            timer_text = get_readable_time(delete_timer)
+            elif data == "auto_set_timer":
+                await db.set_temp_state(query.message.chat.id, "awaiting_timer_input")
+                await query.message.reply(
+                    "Please provide the duration in seconds for the delete timer.\n"
+                    "Example: 300 (for 5 minutes)"
+                )
+                await query.answer("Enter the duration!")
+            
+            elif data == "auto_refresh":
+                await show_auto_delete_settings()
+                await query.answer("Settings refreshed!")
+            
+            elif data == "auto_back":
+                await db.set_temp_state(query.message.chat.id, "")
+                await query.message.delete()
+                await query.answer("Back to previous menu!")
 
-            selected_image = random.choice(RANDOM_IMAGES)
-            reply_markup = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("• Dɪsᴀʙʟᴇᴅ ❌" if auto_delete_mode else "• Eɴᴀʙʟᴇᴅ ✅", callback_data="auto_toggle"),
-                    InlineKeyboardButton(" Sᴇᴛ Tɪᴍᴇʀ •", callback_data="auto_set_timer")
-                ],
-                [
-                    InlineKeyboardButton("• Rᴇғʀᴇꜱʜ", callback_data="useless_auto_delete"),
-                    InlineKeyboardButton("• Back •", callback_data="useless_menu")
-                ]
-            ])
-            caption = (
-                "» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Sᴇᴛᴛɪɴɢꜱ</b>\n\n"
-                f"<blockquote>» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ:</b> {mode_status}</blockquote>\n"
-                f"<blockquote>» <b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ:</b> {timer_text}</blockquote>\n\n"
-                "<b>Cʟɪᴄᴋ Bᴇʟᴏᴡ Bᴜᴛᴛᴏɴꜱ Tᴏ Cʜᴀɴɢᴇ Sᴇᴛᴛɪɴɢꜱ</b>"
-            )
-            await safe_edit_media(selected_image, caption, reply_markup)
-
-        elif data == "auto_toggle":
-            current_mode = await db.get_auto_delete_mode()
-            new_mode = not current_mode
-            await db.set_auto_delete_mode(new_mode)
-            await query.answer(f"Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ {'Eɴᴀʙʟᴇᴅ' if new_mode else 'Dɪꜱᴀʙʟᴇᴅ'}!")
-            # Refresh the auto delete settings
-            await cb_handler(client, CallbackQuery(id=query.id, from_user=user, chat_instance=query.chat_instance, message=query.message, data="useless_auto_delete"))
-
-        elif data == "auto_set_timer":
-            await db.set_temp_state(query.message.chat.id, "awaiting_timer_input")
-            await query.answer("Eɴᴛᴇʀ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ")
-            await query.message.reply_text(
-                "Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.\n"
-                "Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)"
-            )
+        # New user stats features from useless.py
+        elif data.startswith("user_"):
+            if data == "user_back":
+                await query.message.delete()
+            elif data == "user_close":
+                await query.message.delete()
+                if query.message.reply_to_message:
+                    await query.message.reply_to_message.delete()
 
     except Exception as e:
         print(f"Unhandled error in callback handler: {e}")
