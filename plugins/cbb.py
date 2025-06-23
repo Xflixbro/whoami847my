@@ -15,6 +15,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 from bot import Bot
 from config import *
 from database.database import db
+from helper_func import get_readable_time
 
 # Custom filter for timer input
 async def timer_input_filter(_, __, message: Message):
@@ -41,27 +42,29 @@ async def fsub_state_filter(_, __, message: Message):
 async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int = None):
     auto_delete_mode = await db.get_auto_delete_mode()
     delete_timer = await db.get_del_timer()
-    mode_status = "Eɴᴀʙʟᴇᴅ ✅" if auto_delete_mode else "Dɪsᴀʙʟᴇᴅ ❌"
+    mode_status = "Enabled ✅" if auto_delete_mode else "Disabled ❌"
     timer_text = get_readable_time(delete_timer)
+    
     settings_text = (
-        "» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Sᴇᴛᴛɪɴɢꜱ</b>\n\n"
-        f"<blockquote>» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ:</b> {mode_status}</blockquote>\n"
-        f"<blockquote>» <b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ:</b> {timer_text}</blockquote>\n\n"
-        "<b>Cʟɪᴄᴋ Bᴇʟᴏᴡ Bᴜᴛᴛᴏɴꜱ Tᴏ Cʜᴀɴɢᴇ Sᴇᴛᴛɪɴɢꜱ</b>"
+        "» <b>Auto Delete Settings</b>\n\n"
+        f"<blockquote>» <b>Auto Delete Mode:</b> {mode_status}</blockquote>\n"
+        f"<blockquote>» <b>Delete Timer:</b> {timer_text}</blockquote>\n\n"
+        "<b>Click buttons below to change settings</b>"
     )
-    keyboard = InlineKeyboardMarkup(
+    
+    keyboard = InlineKeyboardMarkup([
         [
-            [
-                InlineKeyboardButton("• Dɪsᴀʙʟᴇᴅ ❌" if auto_delete_mode else "• Eɴᴀʙʟᴇᴅ ✅", callback_data="auto_toggle"),
-                InlineKeyboardButton(" Sᴇᴛ Tɪᴍᴇʀ •", callback_data="auto_set_timer")
-            ],
-            [
-                InlineKeyboardButton("• Rᴇғʀᴇꜱʜ", callback_data="auto_refresh"),
-                InlineKeyboardButton("Bᴀᴄᴋ •", callback_data="auto_back")
-            ]
+            InlineKeyboardButton("Toggle Mode", callback_data="auto_toggle"),
+            InlineKeyboardButton("Set Timer", callback_data="auto_set_timer")
+        ],
+        [
+            InlineKeyboardButton("Refresh", callback_data="auto_refresh"),
+            InlineKeyboardButton("Back", callback_data="auto_back")
         ]
-    )
+    ])
+    
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    
     if message_id:
         try:
             await client.edit_message_media(
@@ -96,17 +99,22 @@ async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int =
             )
 
 # Function to show force-sub settings
-async def show_force_sub_settings(client: Client, chat_id: int, message_id: int = None):
+async def show_force_sub_settings(client: Bot, chat_id: int, message_id: int = None):
     settings = await db.get_settings()
     force_sub_enabled = settings.get('FORCE_SUB_ENABLED', True)
     mode_status = "🟢 Enabled" if force_sub_enabled else "🔴 Disabled"
-    settings_text = f"<b>›› Request Fsub Settings:</b>\n\n<blockquote><b>Force Sub Mode: {mode_status}</b></blockquote>\n\n"
+    
+    settings_text = (
+        f"<b>›› Force Sub Settings</b>\n\n"
+        f"<blockquote><b>Force Sub Mode:</b> {mode_status}</blockquote>\n\n"
+    )
+    
     channels = await db.show_channels()
     if not channels:
-        settings_text += "<blockquote><i>No channels configured yet. Use 𖤓 Add Channels 𖤓 to add channels.</i></blockquote>"
+        settings_text += "<blockquote><i>No channels configured yet.</i></blockquote>"
     else:
         settings_text += "<blockquote><b>⚡ Force-sub Channels:</b></blockquote>\n\n"
-        for ch_id in channels[:5]:
+        for ch_id in channels[:5]:  # Show only first 5 channels
             try:
                 chat = await client.get_chat(ch_id)
                 temp_off = await db.get_channel_temp_off(ch_id)
@@ -115,31 +123,33 @@ async def show_force_sub_settings(client: Client, chat_id: int, message_id: int 
                 settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code> ({status})</b></blockquote>\n"
             except Exception:
                 settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
+        
         if len(channels) > 5:
             settings_text += f"<blockquote><i>...and {len(channels) - 5} more.</i></blockquote>\n"
-    buttons = InlineKeyboardMarkup(
+    
+    buttons = InlineKeyboardMarkup([
         [
-            [
-                InlineKeyboardButton("• Add Channels ", callback_data="fsub_add_channel"),
-                InlineKeyboardButton(" Remove Channels •", callback_data="fsub_remove_channel")
-            ],
-            [
-                InlineKeyboardButton("• Toggle Mode •", callback_data="fsub_toggle_mode")
-            ],
-            [
-                InlineKeyboardButton("• Single Off •", callback_data="fsub_single_off"),
-                InlineKeyboardButton(" Fully Off •", callback_data="fsub_fully_off")
-            ],
-            [
-                InlineKeyboardButton(" Channels List •", callback_data="fsub_channels_list")
-            ],
-            [
-                InlineKeyboardButton("• Refresh ", callback_data="fsub_refresh"),
-                InlineKeyboardButton(" Close•", callback_data="fsub_close")
-            ]
+            InlineKeyboardButton("Add Channels", callback_data="fsub_add_channel"),
+            InlineKeyboardButton("Remove Channels", callback_data="fsub_remove_channel")
+        ],
+        [
+            InlineKeyboardButton("Toggle Mode", callback_data="fsub_toggle_mode")
+        ],
+        [
+            InlineKeyboardButton("Single Off", callback_data="fsub_single_off"),
+            InlineKeyboardButton("Fully Off", callback_data="fsub_fully_off")
+        ],
+        [
+            InlineKeyboardButton("Channels List", callback_data="fsub_channels_list")
+        ],
+        [
+            InlineKeyboardButton("Refresh", callback_data="fsub_refresh"),
+            InlineKeyboardButton("Close", callback_data="fsub_close")
         ]
-    )
+    ])
+    
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    
     if message_id:
         try:
             await client.edit_message_text(
@@ -182,7 +192,7 @@ async def auto_delete_settings(client: Bot, message: Message):
     await show_auto_delete_settings(client, message.chat.id)
 
 @Bot.on_message(filters.command('forcesub') & filters.private & admin)
-async def force_sub_settings(client: Client, message: Message):
+async def force_sub_settings(client: Bot, message: Message):
     await show_force_sub_settings(client, message.chat.id)
 
 @Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|rfs_ch_|rfs_toggle_|fsub_|auto_|set_|remove_|channels|start|info|seeplans|source)"))
@@ -209,6 +219,10 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 [
                     InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home'),
                     InlineKeyboardButton("• ᴄʟᴏꜱᴇ •", callback_data='close')
+                ],
+                [
+                    InlineKeyboardButton("• ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ •", callback_data="auto_delete"),
+                    InlineKeyboardButton("• ғᴏʀᴄᴇ ꜱᴜʙ •", callback_data="forcesub")
                 ]
             ])
             caption = HELP_TXT.format(
@@ -219,6 +233,39 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 id=user.id
             )
             await safe_edit_media(selected_image, caption, reply_markup)
+
+        elif data == "home":
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("• ʜᴇʟᴘ •", callback_data="help"),
+                    InlineKeyboardButton("• ᴀʙᴏᴜᴛ •", callback_data="about")
+                ],
+                [
+                    InlineKeyboardButton("• ᴄʜᴀɴɴᴇʟꜱ •", url="https://t.me/CornXvilla"),
+                    InlineKeyboardButton("• ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")
+                ],
+                [
+                    InlineKeyboardButton("• ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ •", callback_data="auto_delete"),
+                    InlineKeyboardButton("• ғᴏʀᴄᴇ ꜱᴜʙ •", callback_data="forcesub")
+                ]
+            ])
+            caption = START_MSG.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await safe_edit_media(selected_image, caption, reply_markup)
+
+        elif data == "auto_delete":
+            await auto_delete_settings(client, query.message)
+            await query.answer("Auto-Delete Settings")
+
+        elif data == "forcesub":
+            await force_sub_settings(client, query.message)
+            await query.answer("Force-Sub Settings")
 
         elif data == "about":
             selected_image = random.choice(RANDOM_IMAGES)
@@ -275,31 +322,6 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 ]
             ])
             caption = ABOUT_TXT.format(
-                first=user.first_name,
-                last=user.last_name if user.last_name else "",
-                username=None if not user.username else '@' + user.username,
-                mention=user.mention,
-                id=user.id
-            )
-            await safe_edit_media(selected_image, caption, reply_markup)
-
-        elif data == "home":
-            selected_image = random.choice(RANDOM_IMAGES)
-            reply_markup = InlineKeyboardMarkup([
-                [
-                InlineKeyboardButton("• ʜᴇʟᴘ •", callback_data="help"),
-                InlineKeyboardButton("• ᴀʙᴏᴜᴛ •", callback_data="about")
-                ],
-                [
-                InlineKeyboardButton("• ᴄʜᴀɴɴᴇʟꜱ •", url="https://t.me/CornXvilla"),
-                InlineKeyboardButton("• ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")
-                ],
-                [
-                InlineKeyboardButton("• ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ •", callback_data="auto_delete"),
-                InlineKeyboardButton("• ғᴏʀᴄᴇ ꜱᴜʙ •", callback_data="forcesub")
-                ]
-            ])
-            caption = START_MSG.format(
                 first=user.first_name,
                 last=user.last_name if user.last_name else "",
                 username=None if not user.username else '@' + user.username,
@@ -388,7 +410,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 new_mode = not current_mode
                 await db.set_auto_delete_mode(new_mode)
                 await show_auto_delete_settings(client, query.message.chat.id, query.message.id)
-                await query.answer(f"<blockquote><b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ {'Eɴᴀʙʟᴇᴅ' if new_mode else 'Dɪꜱᴀʙʟᴇᴅ'}!</b></blockquote>")
+                await query.answer(f"Auto Delete Mode {'Enabled' if new_mode else 'Disabled'}!")
             
             elif data == "auto_set_timer":
                 await db.set_temp_state(query.message.chat.id, "awaiting_timer_input")
@@ -396,27 +418,27 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     await query.message.reply_photo(
                         photo=random.choice(RANDOM_IMAGES),
                         caption=(
-                            "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
-                            "<blockquote><b>Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)</b></blockquote>"
+                            "<blockquote><b>Please provide the duration in seconds for the delete timer.</b></blockquote>\n"
+                            "<blockquote><b>Example: 300 (for 5 minutes)</b></blockquote>"
                         ),
                         parse_mode=ParseMode.HTML
                     )
                 except Exception:
                     await query.message.reply(
-                        "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
-                        "<blockquote><b>Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)</b></blockquote>",
+                        "<blockquote><b>Please provide the duration in seconds for the delete timer.</b></blockquote>\n"
+                        "<blockquote><b>Example: 300 (for 5 minutes)</b></blockquote>",
                         parse_mode=ParseMode.HTML
                     )
-                await query.answer("<blockquote><b>Eɴᴛᴇʀ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ!</b></blockquote>")
+                await query.answer("Enter the duration!")
             
             elif data == "auto_refresh":
                 await show_auto_delete_settings(client, query.message.chat.id, query.message.id)
-                await query.answer("<blockquote><b>Sᴇᴛᴛɪɴɢꜱ ʀᴇꜰʀᴇꜱʜᴇᴅ!</b></blockquote>")
+                await query.answer("Settings refreshed!")
             
             elif data == "auto_back":
                 await db.set_temp_state(query.message.chat.id, "")
                 await query.message.delete()
-                await query.answer("<blockquote><b>Bᴀᴄᴋ ᴛᴏ ᴘʀᴇᴠɪᴏᴜꜱ ᴍᴇɴᴜ!</b></blockquote>")
+                await query.answer("Back to previous menu!")
 
         elif data.startswith("fsub_"):
             if data == "fsub_add_channel":
@@ -427,8 +449,8 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     text="<blockquote><b>Give me the channel IDs (space-separated).</b>\n<b>Example: -1001234567890 -1000987654321</b></blockquote>",
                     reply_markup=InlineKeyboardMarkup([
                         [
-                            InlineKeyboardButton("•Back•", callback_data="fsub_back"),
-                            InlineKeyboardButton("•Close•", callback_data="fsub_close")
+                            InlineKeyboardButton("Back", callback_data="fsub_back"),
+                            InlineKeyboardButton("Close", callback_data="fsub_close")
                         ]
                     ]),
                     parse_mode=ParseMode.HTML,
@@ -444,8 +466,8 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     text="<blockquote><b>Give me the channel IDs (space-separated) or type '<code>all</code>' to remove all channels.</b></blockquote>",
                     reply_markup=InlineKeyboardMarkup([
                         [
-                            InlineKeyboardButton("•Back•", callback_data="fsub_back"),
-                            InlineKeyboardButton("•Close•", callback_data="fsub_close")
+                            InlineKeyboardButton("Back", callback_data="fsub_back"),
+                            InlineKeyboardButton("Close", callback_data="fsub_close")
                         ]
                     ]),
                     parse_mode=ParseMode.HTML,
@@ -479,7 +501,43 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 await query.answer()
 
             elif data == "fsub_channels_list":
-                await show_channels_list(client, query.message.chat.id, query.message.id)
+                channels = await db.show_channels()
+                settings_text = "<b>›› Force-sub Channels List:</b>\n\n"
+                if not channels:
+                    settings_text += "<blockquote><i>No channels configured yet.</i></blockquote>"
+                else:
+                    for ch_id in channels:
+                        try:
+                            chat = await client.get_chat(ch_id)
+                            link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
+                            settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code></b></blockquote>\n"
+                        except Exception:
+                            settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
+
+                buttons = InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("Back", callback_data="fsub_back"),
+                        InlineKeyboardButton("Close", callback_data="fsub_close")
+                    ]
+                ])
+
+                try:
+                    await client.edit_message_text(
+                        chat_id=query.message.chat.id,
+                        message_id=query.message.id,
+                        text=settings_text,
+                        reply_markup=buttons,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True
+                    )
+                except Exception:
+                    await client.send_message(
+                        chat_id=query.message.chat.id,
+                        text=settings_text,
+                        reply_markup=buttons,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True
+                    )
                 await query.answer("Showing channels list!")
 
             elif data == "fsub_single_off":
@@ -508,7 +566,40 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 await query.answer()
 
             elif data == "fsub_fully_off":
-                await show_fully_off_settings(client, query.message.chat.id, query.message.id)
+                settings = await db.get_settings()
+                force_sub_enabled = settings.get('FORCE_SUB_ENABLED', True)
+                mode_status = "🟢 Enabled" if force_sub_enabled else "🔴 Disabled"
+                settings_text = (
+                    f"<b>›› Force Sub Fully Off Settings:</b>\n\n"
+                    f"<blockquote><b>Force Sub Mode: {mode_status}</b></blockquote>\n\n"
+                    "<b>Click below buttons to change settings</b>"
+                )
+                buttons = InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("Disable ❌" if force_sub_enabled else "Enable ✅", callback_data="fsub_toggle_full"),
+                        InlineKeyboardButton("Refresh", callback_data="fsub_full_refresh")
+                    ],
+                    [
+                        InlineKeyboardButton("Back", callback_data="fsub_back"),
+                        InlineKeyboardButton("Close", callback_data="fsub_close")
+                    ]
+                ])
+                selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+                try:
+                    await client.edit_message_media(
+                        chat_id=query.message.chat.id,
+                        message_id=query.message.id,
+                        media=InputMediaPhoto(media=selected_image, caption=settings_text),
+                        reply_markup=buttons
+                    )
+                except Exception:
+                    await client.edit_message_text(
+                        chat_id=query.message.chat.id,
+                        message_id=query.message.id,
+                        text=settings_text,
+                        reply_markup=buttons,
+                        parse_mode=ParseMode.HTML
+                    )
                 await query.answer("Showing fully off settings!")
 
             elif data == "fsub_toggle_full":
@@ -516,11 +607,11 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 current_mode = settings.get('FORCE_SUB_ENABLED', True)
                 new_mode = not current_mode
                 await db.update_setting('FORCE_SUB_ENABLED', new_mode)
-                await show_fully_off_settings(client, query.message.chat.id, query.message.id)
+                await show_force_sub_settings(client, query.message.chat.id, query.message.id)
                 await query.answer(f"Force-sub mode {'enabled' if new_mode else 'disabled'}!")
 
             elif data == "fsub_full_refresh":
-                await show_fully_off_settings(client, query.message.chat.id, query.message.id)
+                await show_force_sub_settings(client, query.message.chat.id, query.message.id)
                 await query.answer("Settings refreshed!")
 
             elif data == "fsub_refresh":
@@ -551,7 +642,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                         f"<blockquote><b>ID:</b> <code>{ch_id}</code></blockquote>\n"
                         f"<blockquote><b>Mode:</b> {status} {'Disabled' if new_temp_off else 'Enabled'}</blockquote>",
                         reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("• Back •", callback_data="fsub_single_off")]
+                            [InlineKeyboardButton("Back", callback_data="fsub_single_off")]
                         ]),
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True
@@ -578,7 +669,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     f"<blockquote><b>ID:</b> <code>{ch_id}</code></blockquote>\n"
                     f"<blockquote><b>Mode:</b> {status} {'Enabled' if new_mode == 'on' else 'Disabled'}</blockquote>",
                     reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("• Back •", callback_data="fsub_toggle_mode")]
+                        [InlineKeyboardButton("Back", callback_data="fsub_toggle_mode")]
                     ]),
                     parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True
@@ -630,17 +721,17 @@ async def set_timer(client: Bot, message: Message):
             try:
                 await message.reply_photo(
                     photo=random.choice(RANDOM_IMAGES),
-                    caption=f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀꜱ ʙᴇᴇɴ ꜱᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>",
+                    caption=f"<blockquote><b>Delete Timer has been set to {get_readable_time(duration)}.</b></blockquote>",
                     parse_mode=ParseMode.HTML
                 )
             except Exception:
                 await message.reply(
-                    f"<blockquote><b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ ʜᴀꜱ ʙᴇᴇɴ ꜱᴇᴛ ᴛᴏ {get_readable_time(duration)}.</b></blockquote>",
+                    f"<blockquote><b>Delete Timer has been set to {get_readable_time(duration)}.</b></blockquote>",
                     parse_mode=ParseMode.HTML
                 )
         else:
             await message.reply(
-                "<blockquote><b>Fᴀɪʟᴇᴅ ᴛᴏ ꜱᴇᴛ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ. Pʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ.</b></blockquote>",
+                "<blockquote><b>Failed to set the delete timer. Please try again.</b></blockquote>",
                 parse_mode=ParseMode.HTML
             )
         await db.set_temp_state(chat_id, "")
@@ -648,12 +739,12 @@ async def set_timer(client: Bot, message: Message):
         try:
             await message.reply_photo(
                 photo=random.choice(RANDOM_IMAGES),
-                caption="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b></blockquote>",
+                caption="<blockquote><b>Please provide a valid positive duration in seconds.</b></blockquote>",
                 parse_mode=ParseMode.HTML
             )
         except Exception:
             await message.reply(
-                "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b></blockquote>",
+                "<blockquote><b>Please provide a valid positive duration in seconds.</b></blockquote>",
                 parse_mode=ParseMode.HTML
             )
 
