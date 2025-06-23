@@ -11,7 +11,7 @@ import asyncio
 import random
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode, ChatMemberStatus, ChatType
-from pyrogram.types import InputMediaPhoto, ChatMemberUpdated, ChatJoinRequest, Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton # Added missing imports
+from pyrogram.types import InputMediaPhoto, ChatMemberUpdated, ChatJoinRequest, Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from bot import Bot
 from config import *
 from database.database import db
@@ -195,10 +195,8 @@ async def auto_delete_settings(client: Bot, message: Message):
 async def force_sub_settings(client: Bot, message: Message):
     await show_force_sub_settings(client, message.chat.id)
 
-# Modify the cb_handler to check for admin status for specific callbacks
 @Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|channels|start|info|seeplans|source)"))
-@Bot.on_callback_query(filters.regex(r"^(rfs_ch_|rfs_toggle_|fsub_|auto_|set_|remove_)") & admin) # Admin-specific callbacks
-async def cb_handler(client: Bot, query: CallbackQuery):
+async def general_cb_handler(client: Bot, query: CallbackQuery):
     data = query.data
     user = query.from_user
 
@@ -212,7 +210,6 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             try:
                 await query.message.edit_text(caption, reply_markup=markup)
             except Exception:
-                # If both edit_media and edit_text fail, provide an answer to prevent hanging.
                 await query.answer("Operation failed, please try again", show_alert=True)
 
     try:
@@ -265,12 +262,17 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             await query.answer()
 
         elif data == "auto_delete":
-            await auto_delete_settings(client, query.message)
-            await query.answer("Auto-Delete Settings")
+            # This is a public button for now, but will be restricted by admin_cb_handler if the user is not admin
+            # The actual settings are handled by admin_cb_handler or specific command handler.
+            # If the user is not an admin, this will not proceed to settings, but might still answer.
+            await query.answer("Access Denied: Only Admins can access Auto-Delete settings.", show_alert=True)
+
 
         elif data == "forcesub":
-            await force_sub_settings(client, query.message)
-            await query.answer("Force-Sub Settings")
+            # Similar to auto_delete, this is a public button.
+            # The actual settings are handled by admin_cb_handler or specific command handler.
+            await query.answer("Access Denied: Only Admins can access Force-Sub settings.", show_alert=True)
+
 
         elif data == "about":
             selected_image = random.choice(RANDOM_IMAGES)
@@ -415,7 +417,16 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 pass
             await query.answer("Menu closed!")
 
-        elif data.startswith("auto_"):
+    except Exception as e:
+        await query.answer("An unexpected error occurred", show_alert=True)
+    
+@Bot.on_callback_query(filters.regex(r"^(rfs_ch_|rfs_toggle_|fsub_|auto_|set_|remove_)") & admin) # Admin-specific callbacks
+async def admin_cb_handler(client: Bot, query: CallbackQuery):
+    data = query.data
+    user = query.from_user
+
+    try:
+        if data.startswith("auto_"):
             if data == "auto_toggle":
                 current_mode = await db.get_auto_delete_mode()
                 new_mode = not current_mode
