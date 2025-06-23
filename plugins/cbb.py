@@ -287,12 +287,16 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("• ʜᴇʟᴘ •", callback_data="help"),
-                    InlineKeyboardButton("• ᴀʙᴏᴜᴛ •", callback_data="about")
+                InlineKeyboardButton("• ʜᴇʟᴘ •", callback_data="help"),
+                InlineKeyboardButton("• ᴀʙᴏᴜᴛ •", callback_data="about")
                 ],
                 [
-                    InlineKeyboardButton("• ᴄʜᴀɴɴᴇʟꜱ •", url="https://t.me/CornXvilla"),
-                    InlineKeyboardButton("• ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")
+                InlineKeyboardButton("• ᴄʜᴀɴɴᴇʟꜱ •", url="https://t.me/CornXvilla"),
+                InlineKeyboardButton("• ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")
+                ],
+                [
+                InlineKeyboardButton("• ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ •", callback_data="auto_delete"),
+                InlineKeyboardButton("• ғᴏʀᴄᴇ ꜱᴜʙ •", callback_data="forcesub")
                 ]
             ])
             caption = START_MSG.format(
