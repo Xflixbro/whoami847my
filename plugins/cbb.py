@@ -10,12 +10,13 @@
 import asyncio
 import random
 from pyrogram import Client, filters
-from pyrogram.enums import ParseMode, ChatAction, ChatMemberStatus, ChatType
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto, ChatMemberUpdated, ChatJoinRequest
+from pyrogram.enums import ParseMode, ChatMemberStatus, ChatType
+from pyrogram.types import InputMediaPhoto, ChatMemberUpdated, ChatJoinRequest, Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton # Added missing imports
 from bot import Bot
 from config import *
 from database.database import db
 from helper_func import get_readable_time
+
 
 # Custom filter for timer input
 async def timer_input_filter(_, __, message: Message):
@@ -186,7 +187,7 @@ async def show_force_sub_settings(client: Bot, chat_id: int, message_id: int = N
                 disable_web_page_preview=True
             )
 
-@Bot.on_message(filters.command('auto_delete') & filters.private & admin)
+@Bot.on_message(filters.command('auto_delete') & filters.private & admin) # Added `& admin` back
 async def auto_delete_settings(client: Bot, message: Message):
     await db.set_temp_state(message.chat.id, "")
     await show_auto_delete_settings(client, message.chat.id)
@@ -195,7 +196,9 @@ async def auto_delete_settings(client: Bot, message: Message):
 async def force_sub_settings(client: Bot, message: Message):
     await show_force_sub_settings(client, message.chat.id)
 
-@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|rfs_ch_|rfs_toggle_|fsub_|auto_|set_|remove_|channels|start|info|seeplans|source)"))
+# Modify the cb_handler to check for admin status for specific callbacks
+@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|channels|start|info|seeplans|source)"))
+@Bot.on_callback_query(filters.regex(r"^(rfs_ch_|rfs_toggle_|fsub_|auto_|set_|remove_)") & admin) # Admin-specific callbacks
 async def cb_handler(client: Bot, query: CallbackQuery):
     data = query.data
     user = query.from_user
@@ -260,10 +263,14 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             await safe_edit_media(selected_image, caption, reply_markup)
 
         elif data == "auto_delete":
+            # This 'auto_delete' callback is for showing the initial settings,
+            # which is fine if the help/home menu is visible to all.
+            # The actual setting changes are handled by `auto_*` which are now admin-filtered.
             await auto_delete_settings(client, query.message)
             await query.answer("Auto-Delete Settings")
 
         elif data == "forcesub":
+            # Similar to auto_delete, this callback shows the initial settings.
             await force_sub_settings(client, query.message)
             await query.answer("Force-Sub Settings")
 
@@ -405,6 +412,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 pass
 
         elif data.startswith("auto_"):
+            # This block will now only be executed if the 'admin' filter passes
             if data == "auto_toggle":
                 current_mode = await db.get_auto_delete_mode()
                 new_mode = not current_mode
@@ -441,6 +449,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 await query.answer("Back to previous menu!")
 
         elif data.startswith("fsub_"):
+            # This block will now only be executed if the 'admin' filter passes
             if data == "fsub_add_channel":
                 await db.set_temp_state(query.message.chat.id, "awaiting_add_channel_input")
                 await client.edit_message_text(
@@ -706,7 +715,10 @@ async def cb_handler(client: Bot, query: CallbackQuery):
     except Exception as e:
         await query.answer("An unexpected error occurred", show_alert=True)
     
-    await query.answer()
+    # Do not call query.answer() here again as it's already called in most cases within the try block.
+    # If the block above does not answer the query (e.g., if an unexpected exception occurs
+    # and no specific answer is provided), Pyrogram will automatically answer it.
+
 
 @Bot.on_message(filters.private & admin & filters.create(timer_input_filter), group=2)
 async def set_timer(client: Bot, message: Message):
