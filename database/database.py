@@ -28,11 +28,10 @@ default_settings = {
     'DISABLE_CHANNEL_BUTTON': True,
     'BUTTON_NAME': None,
     'BUTTON_LINK': None,
-    'FORCE_SUB_ENABLED': True,
-    'SHORTENER_ENABLED': True  # New setting for URL shortener toggle
+    'FORCE_SUB_ENABLED': True
 }
 
-class Mehedi:
+class Database:
     def __init__(self, DB_URI, DB_NAME):
         self.client = motor.motor_asyncio.AsyncIOMotorClient(DB_URI)
         self.db = self.client[DB_NAME]
@@ -49,6 +48,27 @@ class Mehedi:
         self.rqst_fsub_data = self.db['request_forcesub']
         self.rqst_fsub_Channel_data = self.db['request_forcesub_channel']
         self.settings_data = self.db['settings_data']
+        
+        # Create indexes
+        asyncio.create_task(self.create_indexes())
+
+    async def create_indexes(self):
+        try:
+            await self.fsub_data.create_index('_id')
+            await self.rqst_fsub_Channel_data.create_index('_id')
+            await self.rqst_fsub_Channel_data.create_index('user_ids')
+            await self.temp_state_data.create_index('_id')
+            logger.info("Database indexes created successfully")
+        except Exception as e:
+            logger.error(f"Error creating indexes: {e}")
+
+    async def verify_connection(self):
+        try:
+            await self.client.admin.command('ping')
+            return True
+        except Exception as e:
+            logger.error(f"Database connection error: {e}")
+            return False
 
     async def present_user(self, user_id: int):
         found = await self.user_data.find_one({'_id': user_id})
@@ -109,6 +129,9 @@ class Mehedi:
         return [doc['_id'] for doc in users_docs]
 
     async def set_del_timer(self, value: int):
+        if not isinstance(value, int) or value <= 0:
+            raise ValueError("Timer value must be a positive integer")
+            
         existing = await self.del_timer_data.find_one({})
         if existing:
             await self.del_timer_data.update_one({}, {'$set': {'value': value}})
@@ -143,6 +166,13 @@ class Mehedi:
     async def get_temp_state(self, chat_id: int):
         data = await self.temp_state_data.find_one({'_id': chat_id})
         return data.get('state', '') if data else ''
+
+    async def clear_state_safely(self, chat_id: int):
+        try:
+            await self.temp_state_data.delete_one({'_id': chat_id})
+            logger.info(f"Cleared state for chat {chat_id}")
+        except Exception as e:
+            logger.error(f"Error clearing state for chat {chat_id}: {e}")
 
     async def set_temp_data(self, chat_id: int, key: str, value):
         existing = await self.temp_state_data.find_one({'_id': chat_id})
@@ -182,8 +212,12 @@ class Mehedi:
             return
 
     async def show_channels(self):
-        channel_docs = await self.fsub_data.find().to_list(length=None)
-        return [doc['_id'] for doc in channel_docs]
+        try:
+            channel_docs = await self.fsub_data.find().to_list(length=None)
+            return [doc['_id'] for doc in channel_docs]
+        except Exception as e:
+            logger.error(f"Error getting channels: {e}")
+            return []
 
     async def get_channel_mode(self, channel_id: int):
         data = await self.fsub_data.find_one({'_id': channel_id})
@@ -240,10 +274,12 @@ class Mehedi:
             return False
 
     async def reqChannel_exist(self, channel_id: int):
-        channel_ids = await self.show_channels()
-        exists = channel_id in channel_ids
-        logger.debug(f"Checked channel {channel_id} existence: {exists}")
-        return exists
+        try:
+            count = await self.fsub_data.count_documents({'_id': channel_id})
+            return count > 0
+        except Exception as e:
+            logger.error(f"Error checking channel existence: {e}")
+            return False
 
     async def db_verify_status(self, user_id):
         user = await self.user_data.find_one({'_id': user_id})
@@ -286,17 +322,11 @@ class Mehedi:
 
     async def get_settings(self):
         data = await self.settings_data.find_one({'_id': 'bot_settings'})
-        if data:
-            # Merge with default settings to ensure all keys exist
-            settings = default_settings.copy()
-            settings.update(data.get('settings', {}))
-            return settings
-        return default_settings
+        return data.get('settings', default_settings) if data else default_settings
 
     async def update_setting(self, setting_name, value):
         current_settings = await self.get_settings()
         current_settings[setting_name] = value
-        
         await self.settings_data.update_one(
             {'_id': 'bot_settings'},
             {'$set': {'settings': current_settings}},
@@ -304,15 +334,5 @@ class Mehedi:
         )
         logger.info(f"Updated setting {setting_name} to {value}")
 
-# Initialize db with environment variables directly
-db = Mehedi(os.environ.get("DATABASE_URL", ""), os.environ.get("DATABASE_NAME", "animelord"))
-
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-#
+# Initialize db with environment variables
+db = Database(os.environ.get("DATABASE_URL", ""), os.environ.get("DATABASE_NAME", "animelord"))
