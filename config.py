@@ -207,11 +207,7 @@ def LOGGER(name: str) -> logging.Logger:
 
 # Admin filter to check if user is an admin or owner
 async def admin_filter(_, __, message):
-    try:
-        admin_ids = await db.get_all_admins()
-        return message.from_user.id in ADMINS or message.from_user.id in admin_ids or message.from_user.id == OWNER_ID
-    except Exception as e:
-        logger.error(f"Error in admin filter: {e}")
-        return message.from_user.id in ADMINS or message.from_user.id == OWNER_ID
+    admin_ids = await db.get_all_admins()
+    return message.from_user.id in admin_ids or message.from_user.id == OWNER_ID
 
 admin = filters.create(admin_filter)
