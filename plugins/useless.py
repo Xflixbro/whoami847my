@@ -97,138 +97,120 @@ async def get_users(client: Bot, message: Message):
 
 # Function to show the auto-delete settings with inline buttons
 async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int = None):
-    try:
-        auto_delete_mode = await db.get_auto_delete_mode()
-        delete_timer = await db.get_del_timer()
-        
-        mode_status = "Eɴᴀʙʟᴇᴅ ✅" if auto_delete_mode else "Dɪsᴀʙʟᴇᴅ ❌"
-        timer_text = get_readable_time(delete_timer)
+    auto_delete_mode = await db.get_auto_delete_mode()
+    delete_timer = await db.get_del_timer()
+    
+    mode_status = "Eɴᴀʙʟᴇᴅ ✅" if auto_delete_mode else "Dɪsᴀʙʟᴇᴅ ❌"
+    timer_text = get_readable_time(delete_timer)
 
-        settings_text = (
-            "» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Sᴇᴛᴛɪɴɢꜱ</b>\n\n"
-            f"<blockquote>» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ:</b> {mode_status}</blockquote>\n"
-            f"<blockquote>» <b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ:</b> {timer_text}</blockquote>\n\n"
-            "<b>Cʟɪᴄᴋ Bᴇʟᴏᴡ Bᴜᴛᴛᴏɴꜱ Tᴏ Cʜᴀɴɢᴇ Sᴇᴛᴛɪɴɢꜱ</b>"
-        )
+    settings_text = (
+        "» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Sᴇᴛᴛɪɴɢꜱ</b>\n\n"
+        f"<blockquote>» <b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ:</b> {mode_status}</blockquote>\n"
+        f"<blockquote>» <b>Dᴇʟᴇᴛᴇ Tɪᴍᴇʀ:</b> {timer_text}</blockquote>\n\n"
+        "<b>Cʟɪᴄᴋ Bᴇʟᴏᴡ Bᴜᴛᴛᴏɴꜱ Tᴏ Cʜᴀɴɢᴇ Sᴇᴛᴛɪɴɢꜱ</b>"
+    )
 
-        keyboard = InlineKeyboardMarkup(
+    keyboard = InlineKeyboardMarkup(
+        [
             [
-                [
-                    InlineKeyboardButton("• Dɪsᴀʙʟᴇᴅ ❌" if auto_delete_mode else "• Eɴᴀʙʟᴇᴅ ✅", callback_data="auto_toggle"),
-                    InlineKeyboardButton(" Sᴇᴛ Tɪᴍᴇʀ •", callback_data="auto_set_timer")
-                ],
-                [
-                    InlineKeyboardButton("• Rᴇғʀᴇꜱʜ", callback_data="auto_refresh"),
-                    InlineKeyboardButton("Bᴀᴄᴋ •", callback_data="auto_back")
-                ]
+                InlineKeyboardButton("• Dɪsᴀʙʟᴇᴅ ❌" if auto_delete_mode else "• Eɴᴀʙʟᴇᴅ ✅", callback_data="auto_toggle"),
+                InlineKeyboardButton(" Sᴇᴛ Tɪᴍᴇʀ •", callback_data="auto_set_timer")
+            ],
+            [
+                InlineKeyboardButton("• Rᴇғʀᴇꜱʜ", callback_data="auto_refresh"),
+                InlineKeyboardButton("Bᴀᴄᴋ •", callback_data="auto_back")
             ]
-        )
+        ]
+    )
 
-        # Select a random image
-        selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    # Select a random image
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
 
-        if message_id:
-            try:
-                await client.edit_message_media(
-                    chat_id=chat_id,
-                    message_id=message_id,
-                    media=InputMediaPhoto(media=selected_image, caption=settings_text),
-                    reply_markup=keyboard
-                )
-            except Exception as e:
-                logger.error(f"Failed to edit message with image: {e}")
-                await client.edit_message_text(
-                    chat_id=chat_id,
-                    message_id=message_id,
-                    text=settings_text,
-                    reply_markup=keyboard,
-                    parse_mode=ParseMode.HTML
-                )
-        else:
-            try:
-                await client.send_photo(
-                    chat_id=chat_id,
-                    photo=selected_image,
-                    caption=settings_text,
-                    reply_markup=keyboard,
-                    parse_mode=ParseMode.HTML
-                )
-            except Exception as e:
-                logger.error(f"Failed to send photo: {e}")
-                await client.send_message(
-                    chat_id=chat_id,
-                    text=settings_text,
-                    reply_markup=keyboard,
-                    parse_mode=ParseMode.HTML
-                )
-    except Exception as e:
-        logger.error(f"Error in show_auto_delete_settings: {e}")
-        raise
+    if message_id:
+        try:
+            await client.edit_message_media(
+                chat_id=chat_id,
+                message_id=message_id,
+                media=InputMediaPhoto(media=selected_image, caption=settings_text),
+                reply_markup=keyboard
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit message with image: {e}")
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=settings_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
+    else:
+        try:
+            await client.send_photo(
+                chat_id=chat_id,
+                photo=selected_image,
+                caption=settings_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
+            await client.send_message(
+                chat_id=chat_id,
+                text=settings_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
 
 @Bot.on_message(filters.private & filters.command('auto_delete') & admin)
 async def auto_delete_settings(client: Bot, message: Message):
-    try:
-        # Reset state to avoid conflicts with previous operations
-        await db.clear_state_safely(message.chat.id)
-        logger.info(f"Reset state for chat {message.chat.id} before showing auto-delete settings")
-        await show_auto_delete_settings(client, message.chat.id)
-    except Exception as e:
-        logger.error(f"Error in auto_delete_settings: {e}")
-        await message.reply("Failed to show auto-delete settings. Please try again.")
+    # Reset state to avoid conflicts with previous operations
+    await db.set_temp_state(message.chat.id, "")
+    logger.info(f"Reset state for chat {message.chat.id} before showing auto-delete settings")
+    await show_auto_delete_settings(client, message.chat.id)
 
-@Bot.on_callback_query(filters.regex(r"^auto_(toggle|set_timer|refresh|back)$"))
+@Bot.on_callback_query(filters.regex(r"^auto_"))
 async def auto_delete_callback(client: Bot, callback: CallbackQuery):
     data = callback.data
     chat_id = callback.message.chat.id
     selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
 
-    try:
-        if not await is_admin(callback.from_user.id):
-            await callback.answer("You need to be admin to use this!", show_alert=True)
-            return
-
-        if data == "auto_toggle":
-            current_mode = await db.get_auto_delete_mode()
-            new_mode = not current_mode
-            await db.set_auto_delete_mode(new_mode)
-            await show_auto_delete_settings(client, chat_id, callback.message.id)
-            await callback.answer(f"Auto Delete {'Enabled' if new_mode else 'Disabled'}!")
-        
-        elif data == "auto_set_timer":
-            # Set a state to indicate that we are expecting a timer input
-            await db.set_temp_state(chat_id, "awaiting_timer_input")
-            logger.info(f"Set state to 'awaiting_timer_input' for chat {chat_id}")
-            try:
-                await callback.message.reply_photo(
-                    photo=selected_image,
-                    caption=(
-                        "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
-                        "<blockquote><b>Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)</b></blockquote>"
-                    ),
-                    parse_mode=ParseMode.HTML
-                )
-            except Exception as e:
-                logger.error(f"Failed to send photo: {e}")
-                await callback.message.reply(
-                    "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
-                    "<blockquote><b>Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)</b></blockquote>",
-                    parse_mode=ParseMode.HTML
-                )
-            await callback.answer("<blockquote><b>Eɴᴛᴇʀ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ!</b></blockquote>")
-        
-        elif data == "auto_refresh":
-            await show_auto_delete_settings(client, chat_id, callback.message.id)
-            await callback.answer("<blockquote><b>Sᴇᴛᴛɪɴɢꜱ ʀᴇꜰʀᴇꜱʜᴇᴅ!</b></blockquote>")
-        
-        elif data == "auto_back":
-            await db.clear_state_safely(chat_id)
-            await callback.message.delete()
-            await callback.answer("<blockquote><b>Bᴀᴄᴋ ᴛᴏ ᴘʀᴇᴠɪᴏᴜꜱ ᴍᴇɴᴜ!</b></blockquote>")
-
-    except Exception as e:
-        logger.error(f"Error in auto_delete_callback: {e}")
-        await callback.answer("An error occurred!", show_alert=True)
-        await db.clear_state_safely(chat_id)
+    if data == "auto_toggle":
+        current_mode = await db.get_auto_delete_mode()
+        new_mode = not current_mode
+        await db.set_auto_delete_mode(new_mode)
+        await show_auto_delete_settings(client, chat_id, callback.message.id)
+        await callback.answer(f"<blockquote><b>Aᴜᴛᴏ Dᴇʟᴇᴛᴇ Mᴏᴅᴇ {'Eɴᴀʙʟᴇᴅ' if new_mode else 'Dɪꜱᴀʙʟᴇᴅ'}!</b></blockquote>")
+    
+    elif data == "auto_set_timer":
+        # Set a state to indicate that we are expecting a timer input
+        await db.set_temp_state(chat_id, "awaiting_timer_input")
+        logger.info(f"Set state to 'awaiting_timer_input' for chat {chat_id}")
+        try:
+            await callback.message.reply_photo(
+                photo=selected_image,
+                caption=(
+                    "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴋᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
+                    "<blockquote><b>Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)</b></blockquote>"
+                ),
+                parse_mode=ParseMode.HTML
+            )
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
+            await callback.message.reply(
+                "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴋᴏɴᴅꜱ ꜰᴏʀ ᴛʜᴇ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ.</b></blockquote>\n"
+                "<blockquote><b>Eхᴀᴄᴀᴍᴘʟᴇ: 300 (ꜰᴏʀ 5 ᴍɪɴᴜᴛᴇꜱ)</b></blockquote>",
+                parse_mode=ParseMode.HTML
+            )
+        await callback.answer("<blockquote><b>Eɴᴛᴇʀ ᴛʜᴇ ᴅᴜʀᴀᴛɪᴏɴ!</b></blockquote>")
+    
+    elif data == "auto_refresh":
+        await show_auto_delete_settings(client, chat_id, callback.message.id)
+        await callback.answer("<blockquote><b>Sᴇᴛᴛɪɴɢꜱ ʀᴇꜰʀᴇꜱʜᴇᴅ!</b></blockquote>")
+    
+    elif data == "auto_back":
+        await db.set_temp_state(chat_id, "")
+        await callback.message.delete()
+        await callback.answer("<blockquote><b>Bᴀᴄᴋ ᴛᴏ ᴘʀᴇᴠɪᴏᴜꜱ ᴍᴇɴᴜ!</b></blockquote>")
 
 @Bot.on_message(filters.private & admin & filters.create(timer_input_filter), group=2)
 async def set_timer(client: Bot, message: Message):
@@ -238,15 +220,9 @@ async def set_timer(client: Bot, message: Message):
     logger.info(f"Received numeric input: {message.text} from chat {chat_id} in set_timer")
 
     try:
-        current_state = await db.get_temp_state(chat_id)
-        if current_state != "awaiting_timer_input":
-            await message.reply("Please start the timer setting process first!")
-            return
-
         duration = int(message.text)
         if duration <= 0:
             raise ValueError("Duration must be a positive integer")
-        
         await db.set_del_timer(duration)
         # Verify the timer was set
         new_timer = await db.get_del_timer()
@@ -271,29 +247,97 @@ async def set_timer(client: Bot, message: Message):
                 parse_mode=ParseMode.HTML
             )
         # Clear the state after processing
-        await db.clear_state_safely(chat_id)
+        await db.set_temp_state(chat_id, "")
         logger.info(f"Cleared state for chat {chat_id}")
     except ValueError as e:
         logger.error(f"Invalid duration input: {message.text} from chat {chat_id} - {str(e)}")
         try:
             await message.reply_photo(
                 photo=selected_image,
-                caption="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b></blockquote>",
+                caption="<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴋᴏɴᴅꜱ.</b></blockquote>",
                 parse_mode=ParseMode.HTML
             )
         except Exception as e:
             logger.error(f"Failed to send photo: {e}")
             await message.reply(
-                "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴄᴏɴᴅꜱ.</b></blockquote>",
+                "<blockquote><b>Pʟᴇᴀꜱᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ ᴠᴀʟɪᴅ ᴘᴏꜱɪᴛɪᴠᴇ ᴅᴜʀᴀᴛɪᴏɴ ɪɴ ꜱᴇᴋᴏɴᴅꜱ.</b></blockquote>",
                 parse_mode=ParseMode.HTML
             )
-    except Exception as e:
-        logger.error(f"Error in set_timer: {e}")
-        await message.reply(
-            "<blockquote><b>An error occurred while setting the timer. Please try again.</b></blockquote>",
-            parse_mode=ParseMode.HTML
-        )
-        await db.clear_state_safely(chat_id)
+
+# Function to show useless features menu
+async def show_useless_menu(client: Bot, chat_id: int, message_id: int = None):
+    menu_text = (
+        "» <b>Useless Features Menu</b>\n\n"
+        "<blockquote>» <b>Here are some useless features you can play with</b></blockquote>\n\n"
+        "<b>Select an option below:</b>"
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("• User Stats •", callback_data="useless_users"),
+                InlineKeyboardButton("• Bot Stats •", callback_data="useless_stats")
+            ],
+            [
+                InlineKeyboardButton("• Auto Delete •", callback_data="useless_auto_delete"),
+                InlineKeyboardButton("• Close •", callback_data="useless_close")
+            ]
+        ]
+    )
+
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+
+    if message_id:
+        try:
+            await client.edit_message_media(
+                chat_id=chat_id,
+                message_id=message_id,
+                media=InputMediaPhoto(media=selected_image, caption=menu_text),
+                reply_markup=keyboard
+            )
+        except Exception as e:
+            logger.error(f"Failed to edit message with image: {e}")
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=menu_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
+    else:
+        try:
+            await client.send_photo(
+                chat_id=chat_id,
+                photo=selected_image,
+                caption=menu_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
+            await client.send_message(
+                chat_id=chat_id,
+                text=menu_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
+
+# Callback handler for useless menu
+@Bot.on_callback_query(filters.regex(r"^useless_"))
+async def useless_callback(client: Bot, callback: CallbackQuery):
+    data = callback.data
+    chat_id = callback.message.chat.id
+
+    if data == "useless_users":
+        await get_users(client, callback.message)
+    elif data == "useless_stats":
+        await stats(client, callback.message)
+    elif data == "useless_auto_delete":
+        await auto_delete_settings(client, callback.message)
+    elif data == "useless_close":
+        await callback.message.delete()
+    
+    await callback.answer()
 
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
