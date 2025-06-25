@@ -254,15 +254,19 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             )
             await safe_edit_media(selected_image, caption, reply_markup)
         
-        elif data == "auto_delete":
-            # This 'auto_delete' callback is for showing the initial settings,
-            # which is fine if the help/home menu is visible to all.
-            # The actual setting changes are handled by `auto_*` which are now admin-filtered.
-            await auto_delete_settings(client, query.message)
-            await query.answer("Auto-Delete Settings")
+        elif data == "forcesub":
+            member = await client.get_chat_member(query.message.chat.id, user.id)
+            if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+            await query.answer("❌ Only admins can use this feature.", show_alert=True)
+            return
+            await force_sub_settings(client, query.message)
+            await query.answer("Force-Sub Settings")
 
         elif data == "forcesub":
-            # Similar to auto_delete, this callback shows the initial settings.
+            member = await client.get_chat_member(query.message.chat.id, user.id)
+            if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+            await query.answer("❌ Only admins can use this feature.", show_alert=True)
+            return
             await force_sub_settings(client, query.message)
             await query.answer("Force-Sub Settings")
 
@@ -929,4 +933,4 @@ async def add_force_sub(client: Client, message: Message):
 # and is released under the MIT License.
 # Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
-# All rights reserved. 
+# All rights reserved.
