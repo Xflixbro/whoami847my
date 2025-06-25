@@ -237,12 +237,15 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home'),
-                    InlineKeyboardButton("• ᴄʟᴏꜱᴇ •", callback_data='close')
+                    InlineKeyboardButton('• ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ •', callback_data='auto_delete'),
+                    InlineKeyboardButton('• ꜰɪʟᴇ ꜱᴇᴛᴛɪɴɢꜱ •', callback_data='fsettings')
                 ],
                 [
-                    InlineKeyboardButton("• ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ •", callback_data="auto_delete"),
-                    InlineKeyboardButton("• ғᴏʀᴄᴇ ꜱᴜʙ •", callback_data="forcesub")
+                    InlineKeyboardButton('• ғᴏʀᴄᴇ ꜱᴜʙ •', callback_data='forcesub')
+                ],
+                [
+                    InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home'),
+                    InlineKeyboardButton('• ᴄʟᴏꜱᴇ •', callback_data='close')
                 ]
             ])
             caption = START_MSG.format(
@@ -257,16 +260,16 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         elif data == "auto_delete":
             member = await client.get_chat_member(query.message.chat.id, user.id)
             if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-            await query.answer("❌ Only admins can use this feature.", show_alert=True)
-            return
+                   await query.answer("❌ Only admins can use this feature.", show_alert=True)
+                   return
             await auto_delete_settings(client, query.message)
             await query.answer("Auto-Delete Settings")
 
         elif data == "forcesub":
             member = await client.get_chat_member(query.message.chat.id, user.id)
             if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-            await query.answer("❌ Only admins can use this feature.", show_alert=True)
-            return
+                    await query.answer("❌ Only admins can use this feature.", show_alert=True)
+                    return
             await force_sub_settings(client, query.message)
             await query.answer("Force-Sub Settings")
 
