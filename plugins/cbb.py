@@ -197,7 +197,7 @@ async def force_sub_settings(client: Bot, message: Message):
     await show_force_sub_settings(client, message.chat.id)
 
 # Modify the cb_handler to check for admin status for specific callbacks
-@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|channels|start|info|forcesub|extramenu|seeplans|source)"))
+@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|channels|start|info|auto_delete|forcesub|extramenu|seeplans|source)"))
 @Bot.on_callback_query(filters.regex(r"^(rfs_ch_|rfs_toggle_|fsub_|auto_|set_|remove_)") & admin)  # Ensure admin filter is applied
 async def cb_handler(client: Bot, query: CallbackQuery):
     data = query.data
@@ -929,4 +929,4 @@ async def add_force_sub(client: Client, message: Message):
 # and is released under the MIT License.
 # Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
 #
-# All rights reserved.
+# All rights reserved. 
