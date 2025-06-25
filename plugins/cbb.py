@@ -254,13 +254,13 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             )
             await safe_edit_media(selected_image, caption, reply_markup)
         
-        elif data == "forcesub":
+        elif data == "auto_delete":
             member = await client.get_chat_member(query.message.chat.id, user.id)
             if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
             await query.answer("❌ Only admins can use this feature.", show_alert=True)
             return
-            await force_sub_settings(client, query.message)
-            await query.answer("Force-Sub Settings")
+            await auto_delete_settings(client, query.message)
+            await query.answer("Auto-Delete Settings")
 
         elif data == "forcesub":
             member = await client.get_chat_member(query.message.chat.id, user.id)
