@@ -11,7 +11,7 @@ import asyncio
 import random
 from pyrogram import Client, filters
 from pyrogram.enums import ParseMode, ChatMemberStatus, ChatType
-from pyrogram.types import InputMediaPhoto, ChatMemberUpdated, ChatJoinRequest, Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton # Added missing imports
+from pyrogram.types import InputMediaPhoto, ChatMemberUpdated, ChatJoinRequest, Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from bot import Bot
 from config import *
 from database.database import db
@@ -187,7 +187,7 @@ async def show_force_sub_settings(client: Bot, chat_id: int, message_id: int = N
                 disable_web_page_preview=True
             )
 
-@Bot.on_message(filters.command('auto_delete') & filters.private & admin) # Added `& admin` back
+@Bot.on_message(filters.command('auto_delete') & filters.private & admin)
 async def auto_delete_settings(client: Bot, message: Message):
     await db.set_temp_state(message.chat.id, "")
     await show_auto_delete_settings(client, message.chat.id)
@@ -196,9 +196,8 @@ async def auto_delete_settings(client: Bot, message: Message):
 async def force_sub_settings(client: Bot, message: Message):
     await show_force_sub_settings(client, message.chat.id)
 
-# Modify the cb_handler to check for admin status for specific callbacks
-@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|channels|start|info|auto_delete|forcesub|extramenu|seeplans|source)"))
-@Bot.on_callback_query(filters.regex(r"^(rfs_ch_|rfs_toggle_|fsub_|auto_|set_|remove_)") & admin)  # Ensure admin filter is applied
+@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|channels|start|info|auto_delete|force_sub|extramenu|seeplans|source)"))
+@Bot.on_callback_query(filters.regex(r"^(rfs_ch_|rfs_toggle_|fsub_|auto_|set_|remove_)") & admin)
 async def cb_handler(client: Bot, query: CallbackQuery):
     data = query.data
     user = query.from_user
@@ -241,7 +240,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     InlineKeyboardButton('• ꜰɪʟᴇ ꜱᴇᴛᴛɪɴɢꜱ •', callback_data='fsettings')
                 ],
                 [
-                    InlineKeyboardButton('• ғᴏʀᴄᴇ ꜱᴜʙ •', callback_data='forcesub')
+                    InlineKeyboardButton('• ғᴏʀᴄᴇ ꜱᴜʙ •', callback_data='force_sub')
                 ],
                 [
                     InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home'),
@@ -260,17 +259,17 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         elif data == "auto_delete":
             member = await client.get_chat_member(query.message.chat.id, user.id)
             if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-            await query.answer("❌ Only admins can use this feature.", show_alert=True)
-            return
-            await auto_delete_settings(client, query.message)
+                await query.answer("❌ Only admins can use this feature.", show_alert=True)
+                return
+            await show_auto_delete_settings(client, query.message.chat.id, query.message.id)
             await query.answer("Auto-Delete Settings")
 
-        elif data == "forcesub":
+        elif data == "force_sub":
             member = await client.get_chat_member(query.message.chat.id, user.id)
             if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
-            await query.answer("❌ Only admins can use this feature.", show_alert=True)
-            return
-            await force_sub_settings(client, query.message)
+                await query.answer("❌ Only admins can use this feature.", show_alert=True)
+                return
+            await show_force_sub_settings(client, query.message.chat.id, query.message.id)
             await query.answer("Force-Sub Settings")
 
         elif data == "home":
@@ -435,7 +434,6 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 pass
 
         elif data.startswith("auto_"):
-            # This block will now only be executed if the 'admin' filter passes
             if data == "auto_toggle":
                 current_mode = await db.get_auto_delete_mode()
                 new_mode = not current_mode
@@ -472,7 +470,6 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 await query.answer("Back to previous menu!")
 
         elif data.startswith("fsub_"):
-            # This block will now only be executed if the 'admin' filter passes
             if data == "fsub_add_channel":
                 await db.set_temp_state(query.message.chat.id, "awaiting_add_channel_input")
                 await client.edit_message_text(
@@ -737,11 +734,6 @@ async def cb_handler(client: Bot, query: CallbackQuery):
 
     except Exception as e:
         await query.answer("An unexpected error occurred", show_alert=True)
-    
-    # Do not call query.answer() here again as it's already called in most cases within the try block.
-    # If the block above does not answer the query (e.g., if an unexpected exception occurs
-    # and no specific answer is provided), Pyrogram will automatically answer it.
-
 
 @Bot.on_message(filters.private & admin & filters.create(timer_input_filter), group=2)
 async def set_timer(client: Bot, message: Message):
