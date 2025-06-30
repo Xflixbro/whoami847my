@@ -16,7 +16,6 @@ from config import *
 from database.database import db
 from helper_func import get_readable_time
 from datetime import datetime, timedelta
-from config import REFERRAL_REWARD_DAYS, REFERRAL_REQUIREMENT, REFERRAL_PREMIUM_HOURS
 
 
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
