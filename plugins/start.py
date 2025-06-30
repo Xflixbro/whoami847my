@@ -25,51 +25,7 @@ from datetime import datetime, timedelta
 
 # Add this new command handler
 @Bot.on_message(filters.command('ref') & filters.private)
-async def referral_command(client: Client, message: Message):
-    """Handle referral commands"""
-    user_id = message.from_user.id
-    referral_link = f"https://t.me/{client.username}?start=ref_{user_id}"
-    
-    # Check if user has active referral reward
-    reward_expiry = await db.get_referral_reward(user_id)
-    has_reward = reward_expiry and reward_expiry > datetime.utcnow()
-    
-    # Get referral count
-    referrals = await db.get_referrals(user_id)
-    ref_count = len(referrals)
-    
-    reply_text = (
-        f"<b>🎁 Your Referral Link:</b>\n<code>{referral_link}</code>\n\n"
-        f"<b>📊 Stats:</b>\n"
-        f"• Total Referrals: {ref_count}\n"
-        f"• Required for Reward: {REFERRAL_REQUIREMENT}\n\n"
-    )
-    
-    if has_reward:
-        remaining_time = reward_expiry - datetime.utcnow()
-        days = remaining_time.days
-        hours = remaining_time.seconds // 3600
-        minutes = (remaining_time.seconds % 3600) // 60
-        reply_text += (
-            f"<b>⭐ Active Reward:</b>\n"
-            f"• Premium benefits active\n"
-            f"• Time remaining: {days}d {hours}h {minutes}m\n\n"
-            f"<i>You currently bypass all link shorteners!</i>"
-        )
-    elif ref_count >= REFERRAL_REQUIREMENT:
-        reply_text += (
-            "<b>⚠️ You have enough referrals but no active reward!</b>\n"
-            "<i>Complete one more referral to renew your reward period.</i>"
-        )
-    else:
-        needed = REFERRAL_REQUIREMENT - ref_count
-        reply_text += (
-            f"<b>🔹 You need {needed} more referral(s) to get premium benefits</b>\n\n"
-            "<i>Each successful referral gives you premium benefits for a limited time!</i>"
-        )
-    
-    await message.reply_text(
-        reply_text,
+async de reply_text,vdhchdhfhfgdgdgdhdhchfhf
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("Share Link", url=f"https://t.me/share/url?url={referral_link}")]
         ])
