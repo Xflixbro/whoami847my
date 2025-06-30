@@ -15,194 +15,196 @@ from logging.handlers import RotatingFileHandler
 from pyrogram import filters
 from database.database import db
 
-# --------------------------------------------
-# Bot token @Botfather
+# ====================== BOT CONFIGURATION ======================
 TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "")
 APP_ID = int(os.environ.get("APP_ID", "15529802"))
 API_HASH = os.environ.get("API_HASH", "92bcb6aa798a6f1feadbc917fccb54d3")
-#--------------------------------------------
 
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002162795137"))  # Your db channel Id
-OWNER = os.environ.get("OWNER", "Mrxeontg")  # Owner username without @
-OWNER_ID = int(os.environ.get("OWNER_ID", "821215952"))  # Owner id
-# List of admin user IDs who can change file settings
-ADMINS = [821215952, 7475545668]  # Default is just the owner, add more like [821215952, 123456789]
-#--------------------------------------------
+# ====================== CHANNEL & OWNER INFO ======================
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002162795137"))
+OWNER = os.environ.get("OWNER", "Mrxeontg")
+OWNER_ID = int(os.environ.get("OWNER_ID", "821215952"))
+ADMINS = [821215952, 7475545668]  # Add more admin IDs as needed
+
+# ====================== SERVER CONFIG ======================
 PORT = os.environ.get("PORT", "8080")
-#--------------------------------------------
+
+# ====================== DATABASE CONFIG ======================
 DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://SeriesXeonbot:SeriesXeonbot@cluster0.sxdov5x.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 DB_NAME = os.environ.get("DATABASE_NAME", "XFLIX")
-# --------------------------------------------
-FSUB_LINK_EXPIRY = int(getenv("FSUB_LINK_EXPIRY", "10"))  # 0 means no expiry
+
+# ====================== BOT SETTINGS ======================
+FSUB_LINK_EXPIRY = int(getenv("FSUB_LINK_EXPIRY", "10"))
 BAN_SUPPORT = os.environ.get("BAN_SUPPORT", "https://t.me/CodeflixSupport")
 TG_BOT_WORKERS = int(os.environ.get("TG_BOT_WORKERS", "200"))
-# --------------------------------------------
+
+# ====================== MEDIA FILES ======================
 START_PIC = os.environ.get("START_PIC", "https://telegra.ph/file/ec17880d61180d3312d6a.jpg")
 FORCE_PIC = os.environ.get("FORCE_PIC", "https://telegra.ph/file/e292b12890b8b4b9dcbd1.jpg")
 
-# --------------------------------------------
-# List of images for random selection in /start, /help, /about
 RANDOM_IMAGES = [
     "https://myappme.shop/img/file_302.jpg",
     "https://myappme.shop/img/file_303.jpg",
     "https://myappme.shop/img/file_304.jpg"
 ]
 
+# ====================== SHORTLINK CONFIG ======================
 SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "publicearn.online")
 SHORTLINK_API = os.environ.get("SHORTLINK_API", "de08290b12d9e34191f3a057070a50a18187fff3")
 TUT_VID = os.environ.get("TUT_VID", "https://t.me/hwdownload/3")
 SHORT_MSG = "<b>⌯ Here is Your Download Link, Must Watch Tutorial Before Clicking On Download...</b>"
-
 SHORTENER_PIC = os.environ.get("SHORTENER_PIC", "https://telegra.ph/file/ec17880d61180d3312d6a.jpg")
-# --------------------------------------------
 
-# Referral System Configuration
-REFERRAL_REWARD_HOURS = 24  # Hours of premium per successful referral
-REFERRAL_REQUIREMENT = 5    # Number of referrals needed for reward
-REFERRAL_BONUS_DAYS = 2     # Bonus days for special promotions
+# ====================== REFERRAL SYSTEM ======================
+REFERRAL_REWARD_HOURS = 24
+REFERRAL_REQUIREMENT = 5
+REFERRAL_BONUS_DAYS = 2
 
-START_MSG = os.environ.get("START_MESSAGE", """<blockquote><b>ʜᴇʟʟᴏ {first}</b></blockquote>
+START_MSG = os.environ.get("START_MESSAGE", """<b>Hello {first}!</b>
 
-<blockquote><b>ɪ ᴀᴍ ᴘʀᴇᴍɪᴜᴍ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ, ɪ ᴄᴀɴ ᴘʀᴏᴠɪᴅᴇ ᴘʀɪᴠᴀᴛᴇ ꜰɪʟᴇꜱ ᴛʜʀᴏᴜɢʜ ᴀ ꜱᴘᴇᴄɪꜰɪᴄ ʟɪɴᴋ..!</b></blockquote>
+<b>I am a Premium File Store Bot, I can provide private files through a specific link!</b>
 
-<blockquote><b>🎁 ʀᴇꜰᴇʀʀᴀʟ ʙᴏɴᴜꜱ:</b>
-• ɢᴇᴛ {hours} ʜᴏᴜʀꜱ ᴏꜰ ᴘʀᴇᴍɪᴜᴍ ꜰᴏʀ ᴇᴠᴇʀʏ {req} ꜰʀɪᴇɴᴅꜱ ʏᴏᴜ ʀᴇꜰᴇʀ
-• ɴᴏ ʟɪɴᴋ ꜱʜᴏʀᴛᴇɴᴇʀꜱ ᴅᴜʀɪɴɢ ʀᴇᴡᴀʀᴅ ᴘᴇʀɪᴏᴅ</blockquote>
+<b>🎁 Referral Bonus:</b>
+• Get {hours} hours of premium for every {req} friends you refer
+• No link shorteners during reward period
 
-<b>ᴜꜱᴇ /ref ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ʀᴇꜰᴇʀʀᴀʟ ʟɪɴᴋ</b>""".format(
+<b>Use /ref to get your referral link</b>""").format(
+    first="{first}",
     hours=REFERRAL_REWARD_HOURS,
     req=REFERRAL_REQUIREMENT
-))
+)
 
 REFERRAL_MSG = """<b>🎁 <u>Referral Program</u></b>
 
-<blockquote>🔹 <b>How it works:</b>
+<b>How it works:</b>
 • Share your referral link with friends
 • When they join using your link, you get credit
 • Every {required} successful referrals = {hours} hours of premium benefits
-• Premium benefits bypass all link shorteners</blockquote>
+• Premium benefits bypass all link shorteners
 
-<blockquote>✨ <b>Your Referral Link:</b>
-<code>{referral_link}</code></blockquote>
+<b>Your Referral Link:</b>
+<code>{referral_link}</code>
 
-<blockquote>📊 <b>Your Stats:</b>
+<b>Your Stats:</b>
 • Total Referrals: {ref_count}
-• Next Reward: {remaining_refs} more referrals needed</blockquote>
+• Next Reward: {remaining_refs} more referrals needed
 
-<blockquote>⏳ <b>Current Status:</b>
-{reward_status}</blockquote>
+<b>Current Status:</b>
+{reward_status}
 
 <b>Click below to share your link easily!</b>"""
 
-PREPLANSS_TXT = """<b>👋 ʜᴇʏ {first}
+PREPLANSS_TXT = """<b>👋 Hey {first}!</b>
     
-<blockquote>🎁 ᴘʀᴇᴍɪᴜᴍ ʙᴇɴɪꜰɪᴛꜱ
+<b>🎁 Premium Benefits:</b>
+• No link shorteners
+• Get direct files
+• Ad-free experience
+• Unlimited movies and series
+• Full admin support
+• Best value for money
+• Priority content
+• Exclusive discounts
 
-❏ ɴᴏ ʟɪɴᴋ ꜱʜᴏʀᴛᴇɴᴇʀ
-❏ ɢᴇᴛ ᴅɪʀᴇᴄᴛ ғɪʟᴇs   
-❏ ᴀᴅ-ғʀᴇᴇ ᴇxᴘᴇʀɪᴇɴᴄᴇ                                        
-❏ ᴜɴʟɪᴍɪᴛᴇᴅ ᴍᴏᴠɪᴇs ᴀɴᴅ sᴇʀɪᴇs                                                                        
-❏ ꜰᴜʟʟ ᴀᴅᴍɪɴ sᴜᴘᴘᴏʀᴛ
-❏ ʙᴇꜱᴛ ᴠᴀʟᴜᴇ ꜰᴏʀ ᴍᴏɴᴇʏ
-❏ ᴘʀɪᴏʀɪᴛʏ ᴄᴏɴᴛᴇɴᴛ
-❏ ᴇxᴄʟᴜꜱɪᴠᴇ ᴅɪꜱᴄᴏᴜɴᴛꜱ </blockquote>
+<b>🎖️ Premium Plans:</b>
+• 01 Month ➠ INR 249/$7
+• 02 Month ➠ INR 349/$15
+• 03 Month ➠ INR 449/$39
+• 06 Month ➠ INR 649/$49
+• 09 Month ➠ INR 899/$79
 
-<blockquote>🎖️ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴꜱ 
-
-❏ 𝟶𝟷 ᴍᴏɴᴛʜ ➠ INR 249/$7
-❏ 𝟶𝟸 ᴍᴏɴᴛʜ ➠ INR 349/$15
-❏ 𝟶𝟹 ᴍᴏɴᴛʜ ➠ INR 449/$39
-❏ 𝟶𝟼 ᴍᴏɴᴛʜ ➠ INR 649/$49
-❏ 09 ᴍᴏɴᴛʜ ➠ INR 899/$79 </blockquote>
-
-<blockquote>🌟 <b>Referral Program</b>
+<b>🌟 Referral Program</b>
 • Get {ref_hours} hours premium for every {ref_req} friends you refer
 • No link shorteners during reward period
-• Unlimited referral bonuses</blockquote>
+• Unlimited referral bonuses
 
-🏷️ <a href="https://t.me/Xeonflixadmin_bot">𝗖𝗹𝗶𝗰𝗸 𝗛𝗲𝗿𝗲 𝗧𝗼 𝗕𝘂𝘆 𝗣𝗿𝗲𝗺𝗶𝘂𝗺</a>
+<b>🏷️ <a href="https://t.me/Xeonflixadmin_bot">Click Here To Buy Premium</a></b>
 
-ɴᴏᴛᴇ: ᴜꜱᴅ ʀᴀᴛᴇꜱ ᴀʀᴇ ꜱᴇᴛ ꜱʟɪɢʜᴛʟʏ ʜɪɢʜᴇʀ ᴅᴜᴇ ᴛᴏ ɪɴᴛᴇʀɴᴀᴛɪᴏɴᴀʟ ᴛʀᴀɴꜱᴀᴄᴛɪᴏɴ ᴀɴᴅ ꜱᴇʀᴠɪᴄᴇ ꜰᴇᴇꜱ.</b>""".format(
+<b>Note:</b> USD rates are set slightly higher due to international transaction and service fees.""".format(
     first="{first}",
     ref_hours=REFERRAL_REWARD_HOURS,
     ref_req=REFERRAL_REQUIREMENT
 )
 
-SOURCE_TXT = """<b>
-⚠️ ᴛʜɪꜱ ɪꜱ ɴᴏᴛ ᴀɴ ᴏᴘᴇɴ sᴏᴜʀᴄᴇ ᴘʀᴏᴊᴇᴄᴛ
-- ꜱᴏᴜʀᴄᴇ ᴄᴏᴅᴇ - <a href="https://t.me/+y6mFtiS5JQFkNThl">ʜᴇʀᴇ</a></b>"""
+# ====================== OTHER MESSAGES ======================
+SOURCE_TXT = """<b>⚠️ This is not an open source project
+- Source code - <a href="https://t.me/+y6mFtiS5JQFkNThl">Here</a></b>"""
     
 CREDIT_INFO = """
-<b>⍟───[ ᴍʏ ᴄʀᴇᴅɪᴛꜱ ]───⍟
-➥ ᴏᴡɴᴇʀ : <a href='t.me/Xeonflixadmin'>xᴇᴏɴ</a>
-➥ ʙᴀꜱᴇ ᴄᴏᴅᴇ : <a href='t.me/cosmic_freak'>ʏᴀᴛᴏ</a>
-➥ ᴇxᴛʀᴀ ꜰᴇᴀᴛᴜʀᴇꜱ ᴄᴏᴅᴇ : <a href='t.me/MrXeonTG'>ɢᴏᴊᴏ ꜱᴀᴛᴏʀᴜ</a>
-➥ ᴛʜᴀɴᴋꜱ ᴛᴏ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a>​</b>"""
+<b>⍟───[ My Credits ]───⍟
+➥ Owner : <a href='t.me/Xeonflixadmin'>Xeon</a>
+➥ Base Code : <a href='t.me/cosmic_freak'>Yato</a>
+➥ Extra Features Code : <a href='t.me/MrXeonTG'>Gojo Satoru</a>
+➥ Thanks to : <a href='tg://settings'>This Person</a></b>"""
 
-# --------------------------------------------
-HELP_TXT = os.environ.get("HELP_TXT","<blockquote><b>ʜᴇʟʟᴏ {first}<b/></blockquote>\n\n<b><blockquote>◈ ᴛʜɪs ɪs ᴀɴ ғɪʟᴇ ᴛᴏ ʟɪɴᴋ ʙᴏᴛ ᴡᴏʀᴋ ғᴏʀ @MehediYT69\n\n❏ ʙᴏᴛ ᴄᴏᴍᴍᴀɴᴅs\n├/start : sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ\n├/about : ᴏᴜʀ Iɴғᴏʀᴍᴀᴛɪᴏɴ\n├/commands : ꜰᴏʀ ɢᴇᴛ ᴀʟʟ ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs ʟɪꜱᴛ\n└/help : ʜᴇʟᴘ ʀᴇʟᴀᴛᴇᴅ ʙᴏᴛ\n\n sɪᴍᴘʟʏ ᴄʟɪᴄᴋ ᴏɴ ʟɪɴᴋ ᴀɴᴅ sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ ᴊᴏɪɴ ʙᴏᴛʜ ᴄʜᴀɴɴᴇʟs ᴀɴᴅ ᴛʀʏ ᴀɢᴀɪɴ ᴛʜᴀᴛs ɪᴛ.....!\n\n ᴅᴇᴠᴇʟᴏᴘᴇᴅ ʙʏ <a href=https://t.me/Anime_Lord_Bots>Aɴɪᴍᴇ Lᴏʀᴅ</a></blockquote></b>")
+HELP_TXT = os.environ.get("HELP_TXT", """<b>Hello {first}!</b>
 
-ABOUT_TXT = """<blockquote expandable>★ Dᴇᴠᴇʟᴏᴘᴇʀ : <a href="https://t.me/MrXeonTg">ᴍʀ xᴇᴏɴ</a>
-★ ᴍʏ ʙᴇsᴛ ғʀɪᴇɴᴅ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a>
-★ ʟɪʙʀᴀʀʏ : <a href='https://docs.pyrogram.org/'>Pʏʀᴏɢʀᴀᴍ ᴠ2</a>
-★ ʟᴀɴɢᴜᴀɢᴇ : <a href='https://docs.python.org/3/'>Pʏᴛʜᴏɴ 3</a>
-★ ᴅᴀᴛᴀʙᴀsᴇ : <a href='https://www.mongodb.com/docs/'>Mᴏɴɢᴏ ᴅʙ</a>
-★ ʙᴏᴛ sᴇʀᴠᴇʀ : <a href='https://heroku.com'>ʜᴇʀᴏᴋᴜ</a>
-★ ʙᴜɪʟᴅ ꜱᴛᴀᴛᴜꜱ : ᴠ5.4.1 [ᴀᴅᴠᴀɴᴄᴇ ғᴇᴀᴛᴜʀᴇs]</blockquote>"""
+<b>This is a File to Link bot working for @MehediYT69</b>
 
-# --------------------------------------------
-FORCE_MSG = os.environ.get("FORCE_SUB_MESSAGE", "<blockquote><b>ʜᴇʟʟᴏ {first}</b></blockquote>\n\n<blockquote><b>ᴊᴏɪɴ ᴏᴜʀ ᴄʜᴀɴɴᴇʟs ᴀɴᴅ ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ ʀᴇʟᴏᴀᴅ button ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ʀᴇǫᴜᴇꜱᴛᴇᴅ ꜰɪʟᴇ.</b></blockquote>")
+<b>Bot Commands:</b>
+/start : Start the bot
+/about : Our Information
+/commands : For get all admin commands list
+/help : Help related bot
 
-CMD_TXT = """<blockquote><b>» ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs:</b></blockquote>
+Simply click on link and start the bot join both channels and try again that's it!
 
-<b>›› /start :</b> sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ & ɢᴇᴛ ᴘᴏsᴛs
-<b>›› /batch :</b> ᴄʀᴇᴀᴛᴇ ʟɪɴᴋs ғᴏʀ ᴍᴜʟᴛɪᴘʟᴇ ᴘᴏsᴛs
-<b>›› /custom_batch :</b> ᴄʀᴇᴀᴛᴇ ᴄᴜsᴛᴏᴍ ʙᴀᴛᴄʜ ғʀᴏᴍ ᴄʜᴀɴɴᴇʟ/ɢʀᴏᴜᴘ
-<b>›› /genlink :</b> ᴄʀᴇᴀᴛᴇ ʟɪɴᴋ ғᴏʀ ᴀ sɪɴɢʟᴇ ᴘᴏsᴛ
-<b>›› /flink :</b> ꜱᴇᴛ ᴀᴜᴛᴏ ʙᴀᴛᴄʜ ꜰᴏʀᴍᴀᴛ
-<b>›› /forcesub :</b> ɢᴇᴛ ᴀʟʟ ғᴏʀᴄᴇ sᴜʙ sᴇᴛᴛɪɴɢs
-<b>›› /admin :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ᴍᴀɴᴀɢᴇ ᴀᴅᴍɪɴs (ᴀᴅᴅ/ʀᴇᴍᴏᴠᴇ/ʟɪsᴛ)
-<b>›› /user :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ɢᴇᴛ ᴜsᴇʀ-ʀᴇʟᴀᴛᴇᴅ ᴛᴏᴏʟs
-<b>›› /auto_delete :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ sᴇᴛ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ
-<b>›› /fsettings :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ᴍᴀɴᴀɢᴇ ғᴏʀᴄᴇ sᴜʙsᴄʀɪᴘᴛɪᴏɴs
-<b>›› /premium_cmd :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ᴍᴀɴᴀɢᴇ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs
-<b>›› /broadcast_cmd :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀᴢᴇs
-<b>›› /myplan :</b> ᴄʜᴇᴄᴋ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ sᴛᴀᴛᴜs & ᴅᴇᴛᴀɪʟs
-<b>›› /count :</b> ᴛʀᴀᴄᴋ sʜᴏʀᴛɴᴇʀ ᴄʟɪᴄᴋs & ᴀɴᴀʟʏᴛɪᴄs
-<b>›› /ref :</b> ɢᴇᴛ ʏᴏᴜʀ ʀᴇꜰᴇʀʀᴀʟ ʟɪɴᴋ ᴀɴᴅ sᴛᴀᴛs
-<b>›› /referral_stats :</b> ᴠɪᴇᴡ ʀᴇꜰᴇʀʀᴀʟ sᴛᴀᴛɪsᴛɪᴄs (ᴀᴅᴍɪɴ ᴏɴʟʏ)"""
+Developed by <a href="https://t.me/Anime_Lord_Bots">Anime Lord</a>""")
 
-CUSTOM_CAPTION = os.environ.get("CUSTOM_CAPTION", "<b>• ʙʏ @Anime_Lord_Official</b>")
+ABOUT_TXT = """<b>★ Developer : <a href="https://t.me/MrXeonTg">Mr Xeon</a>
+★ My best friend : <a href='tg://settings'>This Person</a>
+★ Library : <a href='https://docs.pyrogram.org/'>Pyrogram v2</a>
+★ Language : <a href='https://docs.python.org/3/'>Python 3</a>
+★ Database : <a href='https://www.mongodb.com/docs/'>Mongo DB</a>
+★ Bot Server : <a href='https://heroku.com'>Heroku</a>
+★ Build Status : v5.4.1 [Advance Features]</b>"""
 
-# ==========================(BUY PREMIUM)====================#
-OWNER_TAG = os.environ.get("OWNER_TAG", "Aɴɪᴍᴇ Lᴏʀᴅ")
-UPI_ID = os.environ.get("UPI_ID", "yourname@upi")  # Replace with your valid UPI ID
+FORCE_MSG = os.environ.get("FORCE_SUB_MESSAGE", """<b>Hello {first}!</b>
+
+<b>Join our channels and then click on reload button to get your requested file.</b>""")
+
+CMD_TXT = """<b>» Admin Commands:</b>
+
+<b>›› /start :</b> Start the bot & get posts
+<b>›› /batch :</b> Create links for multiple posts
+<b>›› /custom_batch :</b> Create custom batch from channel/group
+<b>›› /genlink :</b> Create link for a single post
+<b>›› /flink :</b> Set auto batch format
+<b>›› /forcesub :</b> Get all force sub settings
+<b>›› /admin :</b> Manage admins (add/remove/list)
+<b>›› /user :</b> Get user-related tools
+<b>›› /auto_delete :</b> Set auto-delete timer
+<b>›› /fsettings :</b> Manage force subscriptions
+<b>›› /premium_cmd :</b> Manage premium users
+<b>›› /broadcast_cmd :</b> Broadcast messages
+<b>›› /myplan :</b> Check your premium status & details
+<b>›› /count :</b> Track shortener clicks & analytics
+<b>›› /ref :</b> Get your referral link and stats
+<b>›› /referral_stats :</b> View referral statistics (admin only)"""
+
+CUSTOM_CAPTION = os.environ.get("CUSTOM_CAPTION", "<b>• By @Anime_Lord_Official</b>")
+
+# ====================== PREMIUM CONFIG ======================
+OWNER_TAG = os.environ.get("OWNER_TAG", "Anime Lord")
+UPI_ID = os.environ.get("UPI_ID", "yourname@upi")
 QR_PIC = os.environ.get("QR_PIC", "https://telegra.ph/file/3e83c69804826b3cba066.jpg")
 SCREENSHOT_URL = os.environ.get("SCREENSHOT_URL", "t.me/mehediyt69")
 
-# Time and its price
-# 7 Days
 PRICE1 = os.environ.get("PRICE1", "0 rs")
-# 1 Month
 PRICE2 = os.environ.get("PRICE2", "60 rs")
-# 3 Month
 PRICE3 = os.environ.get("PRICE3", "150 rs")
-# 6 Month
 PRICE4 = os.environ.get("PRICE4", "280 rs")
-# 1 Year
 PRICE5 = os.environ.get("PRICE5", "550 rs")
 
-# Default settings (loaded dynamically in bot.py)
+# ====================== BOT SETTINGS ======================
 PROTECT_CONTENT = False
 HIDE_CAPTION = False
 DISABLE_CHANNEL_BUTTON = True
 BUTTON_NAME = None
 BUTTON_LINK = None
 
-# Function to update settings (used by file_settings.py)
 async def update_setting(setting_name, value):
     await db.update_setting(setting_name, value)
-    # Update local variables (optional, for immediate use)
     global PROTECT_CONTENT, HIDE_CAPTION, DISABLE_CHANNEL_BUTTON, BUTTON_NAME, BUTTON_LINK
     if setting_name == "PROTECT_CONTENT":
         PROTECT_CONTENT = value
@@ -215,7 +217,6 @@ async def update_setting(setting_name, value):
     elif setting_name == "BUTTON_LINK":
         BUTTON_LINK = value
 
-# Function to get all settings (used to display in /fsettings)
 def get_settings():
     return {
         "PROTECT_CONTENT": PROTECT_CONTENT,
@@ -225,6 +226,7 @@ def get_settings():
         "BUTTON_LINK": BUTTON_LINK
     }
 
+# ====================== LOGGING CONFIG ======================
 LOG_FILE_NAME = "animelordbot.txt"
 
 logging.basicConfig(
@@ -245,8 +247,10 @@ logging.getLogger("pyrogram").setLevel(logging.WARNING)
 def LOGGER(name: str) -> logging.Logger:
     return logging.getLogger(name)
 
-# Admin filter to check if user is an admin or owner
+# ====================== ADMIN FILTER ======================
 async def admin_filter(_, __, message):
+    if not message.from_user:
+        return False
     admin_ids = await db.get_all_admins()
     return message.from_user.id in admin_ids or message.from_user.id == OWNER_ID
 
