@@ -1,4 +1,3 @@
-#
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
 #
 # This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
@@ -9,49 +8,102 @@
 
 import asyncio
 import random
-from datetime import datetime, timedelta
 from pyrogram import Client, filters
-from pyrogram.enums import ParseMode, ChatAction
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated
+from pyrogram.enums import ParseMode, ChatMemberStatus, ChatType
+from pyrogram.types import InputMediaPhoto, ChatMemberUpdated, ChatJoinRequest, Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton # Added missing imports
 from bot import Bot
 from config import *
-from helper_func import *
-from database.database import *
-from database.db_premium import *
+from database.database import db
+from helper_func import get_readable_time
+from datetime import datetime, timedelta
+from config import REFERRAL_REWARD_DAYS, REFERRAL_REQUIREMENT, REFERRAL_PREMIUM_HOURS
 
-# Constants
-STICKER_ID = "CAACAgUAAxkBAAIE8mgq9m8MiaFWYUeppQiXveQBAZaYAAKrBAACvu-4V0dQs1WLoficHgQ"
-BAN_SUPPORT = f"{BAN_SUPPORT}"
-TUT_VID = f"{TUT_VID}"
 
-# Cache for chat data
-chat_data_cache = {}
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+# All rights reserved.
+#=====================================================================================#
 
-async def short_url(client: Client, message: Message, base64_string: str) -> None:
-    """Generate and send short URL for file access"""
-    try:
-        prem_link = f"https://t.me/{client.username}?start=yu3elk{base64_string}"
-        short_link = await get_shortlink(SHORTLINK_URL, SHORTLINK_API, prem_link)
-        buttons = [
-            [InlineKeyboardButton("• ᴏᴘᴇɴ ʟɪɴᴋ •", url=short_link), 
-             InlineKeyboardButton("• ᴛᴜᴛᴏʀɪᴀʟ •", url=TUT_VID)],
-            [InlineKeyboardButton("• ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")]
-        ]
-        await message.reply_photo(
-            photo=SHORTENER_PIC,
-            caption=SHORT_MSG.format(),
-            reply_markup=InlineKeyboardMarkup(buttons)
+
+# Add this new command handler
+@Bot.on_message(filters.command('ref') & filters.private)
+async def referral_command(client: Client, message: Message):
+    """Handle referral commands"""
+    user_id = message.from_user.id
+    referral_link = f"https://t.me/{client.username}?start=ref_{user_id}"
+    
+    # Check if user has active referral reward
+    reward_expiry = await db.get_referral_reward(user_id)
+    has_reward = reward_expiry and reward_expiry > datetime.utcnow()
+    
+    # Get referral count
+    referrals = await db.get_referrals(user_id)
+    ref_count = len(referrals)
+    
+    reply_text = (
+        f"<b>🎁 Your Referral Link:</b>\n<code>{referral_link}</code>\n\n"
+        f"<b>📊 Stats:</b>\n"
+        f"• Total Referrals: {ref_count}\n"
+        f"• Required for Reward: {REFERRAL_REQUIREMENT}\n\n"
+    )
+    
+    if has_reward:
+        remaining_time = reward_expiry - datetime.utcnow()
+        days = remaining_time.days
+        hours = remaining_time.seconds // 3600
+        minutes = (remaining_time.seconds % 3600) // 60
+        reply_text += (
+            f"<b>⭐ Active Reward:</b>\n"
+            f"• Premium benefits active\n"
+            f"• Time remaining: {days}d {hours}h {minutes}m\n\n"
+            f"<i>You currently bypass all link shorteners!</i>"
         )
-    except Exception as e:
-        print(f"Error in short_url: {e}")
-        await message.reply_text("Failed to generate short URL. Please try again later.")
+    elif ref_count >= REFERRAL_REQUIREMENT:
+        reply_text += (
+            "<b>⚠️ You have enough referrals but no active reward!</b>\n"
+            "<i>Complete one more referral to renew your reward period.</i>"
+        )
+    else:
+        needed = REFERRAL_REQUIREMENT - ref_count
+        reply_text += (
+            f"<b>🔹 You need {needed} more referral(s) to get premium benefits</b>\n\n"
+            "<i>Each successful referral gives you premium benefits for a limited time!</i>"
+        )
+    
+    await message.reply_text(
+        reply_text,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("Share Link", url=f"https://t.me/share/url?url={referral_link}")]
+        ])
+    )
 
-@Bot.on_message(filters.command('start') & filters.private)
+# Modify the start_command to handle referral links
 async def start_command(client: Client, message: Message) -> None:
     """Handle /start command with comprehensive error handling"""
     try:
         user_id = message.from_user.id
+        text = message.text
+        
+        # Check if this is a referral link
+        if len(text.split()) > 1 and text.split()[1].startswith('ref_'):
+            referrer_id = int(text.split('_')[1])
+            if referrer_id != user_id:  # Prevent self-referral
+                await db.add_referral(referrer_id, user_id)
+                
+                # Check if referrer qualifies for reward
+                referrals = await db.get_referrals(referrer_id)
+                if len(referrals) % REFERRAL_REQUIREMENT == 0:
+                    reward_expiry = datetime.utcnow() + timedelta(hours=REFERRAL_PREMIUM_HOURS)
+                    await db.set_referral_reward(referrer_id, reward_expiry)
+                    try:
+                        await client.send_message(
+                            chat_id=referrer_id,
+                            text=f"🎉 Congratulations! You've received {REFERRAL_PREMIUM_HOURS} hours of premium benefits from your referral!\n\n"
+                                 f"Your reward will expire at {reward_expiry.strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                        )
+                    except Exception:
+                        pass
+        
+        # Rest of your existing start_command code...
         is_premium = await is_premium_user(user_id)
         banned_users = await db.get_ban_users()
         
@@ -60,6 +112,13 @@ async def start_command(client: Client, message: Message) -> None:
                 "You are banned from using this bot.\n\nContact support if you think this is a mistake.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Contact Support", url=BAN_SUPPORT)]])
             )
+        
+        # Check for referral reward status
+        reward_expiry = await db.get_referral_reward(user_id)
+        has_reward = reward_expiry and reward_expiry > datetime.utcnow()
+        
+        # Modified premium check to include referral rewards
+        effective_premium = is_premium or has_reward
         
         if not await is_subscribed(client, user_id):
             return await not_joined(client, message)
@@ -72,14 +131,18 @@ async def start_command(client: Client, message: Message) -> None:
             except Exception as e:
                 print(f"Error adding user to database: {e}")
 
-        text = message.text
         if len(text.split()) > 1:
-            await handle_file_request(client, message, text, is_premium, user_id)
+            await handle_file_request(client, message, text, effective_premium, user_id)
         else:
             await send_welcome_message(client, message)
     except Exception as e:
         print(f"Critical error in start_command: {e}")
         await message.reply_text("An error occurred. Please try again later.")
+
+
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+# All rights reserved.
+#=====================================================================================#
 
 async def handle_file_request(client: Client, message: Message, text: str, is_premium: bool, user_id: int) -> None:
     """Handle file requests from start command"""
@@ -87,7 +150,14 @@ async def handle_file_request(client: Client, message: Message, text: str, is_pr
         basic = text.split(" ", 1)[1]
         base64_string = basic[6:] if basic.startswith("yu3elk") else basic
         
-        if not is_premium and user_id != OWNER_ID:
+        # Check for referral reward
+        reward_expiry = await db.get_referral_reward(user_id)
+        has_reward = reward_expiry and reward_expiry > datetime.utcnow()
+        
+        # Modified premium check to include referral rewards
+        effective_premium = is_premium or has_reward
+        
+        if not effective_premium and user_id != OWNER_ID:
             await short_url(client, message, base64_string)
             return
             
@@ -116,382 +186,961 @@ async def handle_file_request(client: Client, message: Message, text: str, is_pr
         print(f"Error handling file request: {e}")
         await message.reply_text("Failed to process your request. Please try again.")
 
-async def process_file_request(client: Client, message: Message, ids: list) -> None:
-    """Process and send requested files"""
-    try:
-        m = await message.reply_text("<blockquote><b>Checking...</b></blockquote>")
-        await asyncio.sleep(0.4)
-        await m.edit_text("<blockquote><b>Getting your files...</b></blockquote>")
-        await asyncio.sleep(0.5)
-        await m.delete()
-    except Exception as e:
-        print(f"Error with animation messages: {e}")
+
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+# All rights reserved.
+#=====================================================================================#
+
+@Bot.on_message(filters.command('referral_stats') & filters.private & filters.user(ADMINS))
+async def referral_stats_command(client: Client, message: Message):
+    """Show referral statistics (admin only)"""
+    all_users = await db.user_data.find().to_list(length=None)
+    top_referrers = []
     
-    try:
-        messages = await get_messages(client, ids)
-    except Exception as e:
-        print(f"Error getting messages: {e}")
-        return await message.reply_text("Failed to retrieve files. Please try again later.")
-        
-    animelord_msgs = []
-    try:
-        settings = await db.get_settings()
-        PROTECT_CONTENT = settings.get('PROTECT_CONTENT', False)
-        HIDE_CAPTION = settings.get('HIDE_CAPTION', False)
-        DISABLE_CHANNEL_BUTTON = settings.get('DISABLE_CHANNEL_BUTTON', False)
-        BUTTON_NAME = settings.get('BUTTON_NAME', None)
-        BUTTON_LINK = settings.get('BUTTON_LINK', None)
-    except Exception as e:
-        print(f"Error getting settings: {e}")
-        PROTECT_CONTENT = False
-        HIDE_CAPTION = False
-        DISABLE_CHANNEL_BUTTON = False
-        BUTTON_NAME = None
-        BUTTON_LINK = None
+    for user in all_users:
+        if 'referrals' in user:
+            user_id = user['_id']
+            try:
+                user_info = await client.get_users(user_id)
+                username = f"@{user_info.username}" if user_info.username else "No username"
+                top_referrers.append((user_id, username, len(user['referrals'])))
+            except Exception:
+                top_referrers.append((user_id, "Unknown", len(user['referrals'])))
     
-    for msg in messages:
-        try:
-            caption = "" if HIDE_CAPTION else (
-                CUSTOM_CAPTION.format(
-                    previouscaption="" if not msg.caption else msg.caption.html,
-                    filename=msg.document.file_name
-                ) if bool(CUSTOM_CAPTION) and bool(msg.document)
-                else ("" if not msg.caption else msg.caption.html))
-                
-            reply_markup = None if DISABLE_CHANNEL_BUTTON or not msg.reply_markup else msg.reply_markup
-            
-            if BUTTON_NAME and BUTTON_LINK and not DISABLE_CHANNEL_BUTTON:
-                custom_button = InlineKeyboardMarkup([[InlineKeyboardButton(BUTTON_NAME, url=BUTTON_LINK)]])
-                reply_markup = custom_button if not reply_markup else InlineKeyboardMarkup(
-                    reply_markup.inline_keyboard + custom_button.inline_keyboard)
-                    
-            try:
-                copied_msg = await msg.copy(
-                    chat_id=message.from_user.id, 
-                    caption=caption, 
-                    parse_mode=ParseMode.HTML, 
-                    reply_markup=reply_markup, 
-                    protect_content=PROTECT_CONTENT)
-                animelord_msgs.append(copied_msg)
-            except FloodWait as e:
-                await asyncio.sleep(e.x)
-                copied_msg = await msg.copy(
-                    chat_id=message.from_user.id, 
-                    caption=caption, 
-                    parse_mode=ParseMode.HTML, 
-                    reply_markup=reply_markup, 
-                    protect_content=PROTECT_CONTENT)
-                animelord_msgs.append(copied_msg)
-            except Exception as e:
-                print(f"Failed to send message {msg.id}: {e}")
-        except Exception as e:
-            print(f"Error processing message {msg.id if msg else 'unknown'}: {e}")
-            
-    await handle_auto_delete(client, message, animelord_msgs)
+    # Sort by most referrals
+    top_referrers.sort(key=lambda x: x[2], reverse=True)
+    
+    response = ["<b>📊 Top Referrers:</b>"]
+    for i, (user_id, username, count) in enumerate(top_referrers[:10], 1):
+        response.append(f"{i}. {username} (ID: {user_id}) - {count} referrals")
+    
+    total_referrals = sum([x[2] for x in top_referrers])
+    response.append(f"\n<b>Total Referrals:</b> {total_referrals}")
+    
+    await message.reply_text("\n".join(response))
 
-async def handle_auto_delete(client: Client, message: Message, sent_messages: list) -> None:
-    """Handle auto-deletion of sent files if enabled"""
-    try:
-        auto_delete_mode = await db.get_auto_delete_mode()
-        FILE_AUTO_DELETE = await db.get_del_timer()
-        
-        if auto_delete_mode and FILE_AUTO_DELETE > 0:
-            notification_msg = await message.reply(
-                f"This file will be deleted in {get_exp_time(FILE_AUTO_DELETE).lower()}.")
-            await asyncio.sleep(FILE_AUTO_DELETE)
-            
-            for msg in sent_messages:    
-                if msg:
-                    try:    
-                        await msg.delete()  
-                    except Exception as e:
-                        print(f"Error deleting message {msg.id}: {e}")
-                        
-            try:
-                reload_url = f"https://t.me/{client.username}?start={message.command[1]}" if message.command and len(message.command) > 1 else None
-                keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Get file again", url=reload_url)]]) if reload_url else None
-                await notification_msg.edit(
-                    "Your video/file is successfully deleted!\n\nClick below button to get your deleted video/file.",
-                    reply_markup=keyboard)
-            except Exception as e:
-                print(f"Error updating notification: {e}")
-    except Exception as e:
-        print(f"Error in auto-delete process: {e}")
 
-async def send_welcome_message(client: Client, message: Message) -> None:
-    """Send welcome message and animations"""
-    try:
-        m = await message.reply_text("<blockquote><b>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...</b></blockquote>")
-        await asyncio.sleep(0.4)
-        await m.edit_text("<blockquote><b>Checking...</b></blockquote>")
-        await asyncio.sleep(0.5)
-        await m.edit_text("<blockquote>🎊</blockquote>")
-        await asyncio.sleep(0.5)
-        await m.edit_text("<blockquote>⚡</blockquote>")
-        await asyncio.sleep(0.5)
-        await m.edit_text("<blockquote><b>Starting...</b></blockquote>")
-        await asyncio.sleep(0.4)
-        await m.delete()
-    except Exception as e:
-        print(f"Error with start animation: {e}")
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+# All rights reserved.
+#=====================================================================================#
 
-    if STICKER_ID:
-        try:
-            m = await message.reply_sticker(STICKER_ID)
-            await asyncio.sleep(1)
-            await m.delete()
-        except Exception as e:
-            print(f"Error sending sticker: {e}")
 
-    reply_markup = InlineKeyboardMarkup([
-        [InlineKeyboardButton("◉ ʜᴇʟᴘ ◉", callback_data="help"), 
-         InlineKeyboardButton("◉ ᴀʙᴏᴜᴛ ◉", callback_data="about")],
-        [InlineKeyboardButton("◉ ᴄʜᴀɴɴᴇʟꜱ ◉", callback_data="channels"), 
-         InlineKeyboardButton("◉ ᴘʀᴇᴍɪᴜᴍ ◉", callback_data="seeplans")]
+
+# Custom filter for timer input
+async def timer_input_filter(_, __, message: Message):
+    chat_id = message.chat.id
+    state = await db.get_temp_state(chat_id)
+    if state == "awaiting_timer_input" and message.text and message.text.isdigit():
+        return True
+    return False
+
+# Custom filter for force-sub states
+async def fsub_state_filter(_, __, message: Message):
+    chat_id = message.chat.id
+    state = await db.get_temp_state(chat_id)
+    if state not in ["awaiting_add_channel_input", "awaiting_remove_channel_input"]:
+        return False
+    if not message.text:
+        return False
+    is_valid_input = message.text.lower() == "all" or all(
+        part.startswith("-") and part[1:].isdigit() for part in message.text.split()
+    )
+    return is_valid_input
+
+# Function to show auto-delete settings
+async def show_auto_delete_settings(client: Bot, chat_id: int, message_id: int = None):
+    auto_delete_mode = await db.get_auto_delete_mode()
+    delete_timer = await db.get_del_timer()
+    mode_status = "Enabled ✅" if auto_delete_mode else "Disabled ❌"
+    timer_text = get_readable_time(delete_timer)
+    
+    settings_text = (
+        "» <b>Auto Delete Settings</b>\n\n"
+        f"<blockquote>» <b>Auto Delete Mode:</b> {mode_status}</blockquote>\n"
+        f"<blockquote>» <b>Delete Timer:</b> {timer_text}</blockquote>\n\n"
+        "<b>Click buttons below to change settings</b>"
+    )
+    
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("Toggle Mode", callback_data="auto_toggle"),
+            InlineKeyboardButton("Set Timer", callback_data="auto_set_timer")
+        ],
+        [
+            InlineKeyboardButton("Refresh", callback_data="auto_refresh"),
+            InlineKeyboardButton("Back", callback_data="auto_back")
+        ]
     ])
     
-    try:
-        await asyncio.sleep(0.5)
-        selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-        await message.reply_photo(
-            photo=selected_image,
-            caption=START_MSG.format(
-                first=message.from_user.first_name,
-                last=message.from_user.last_name if message.from_user.last_name else "",
-                username=None if not message.from_user.username else '@' + message.from_user.username,
-                mention=message.from_user.mention,
-                id=message.from_user.id
-            ),
-            reply_markup=reply_markup
-        )
-    except Exception as e:
-        print(f"Error sending start photo: {e}")
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    
+    if message_id:
         try:
-            await message.reply_text(
-                START_MSG.format(
-                    first=message.from_user.first_name,
-                    last=message.from_user.last_name if message.from_user.last_name else "",
-                    username=None if not message.from_user.username else '@' + message.from_user.username,
-                    mention=message.from_user.mention,
-                    id=message.from_user.id
-                ),
-                reply_markup=reply_markup
+            await client.edit_message_media(
+                chat_id=chat_id,
+                message_id=message_id,
+                media=InputMediaPhoto(media=selected_image, caption=settings_text),
+                reply_markup=keyboard
             )
-        except Exception as e:
-            print(f"Fallback start message failed: {e}")
+        except Exception:
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=settings_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
+    else:
+        try:
+            await client.send_photo(
+                chat_id=chat_id,
+                photo=selected_image,
+                caption=settings_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
+        except Exception:
+            await client.send_message(
+                chat_id=chat_id,
+                text=settings_text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.HTML
+            )
 
-async def not_joined(client: Client, message: Message) -> None:
-    """Handle users who haven't joined required channels"""
-    temp = await message.reply("<blockquote><b>Checking Subscription...</b></blockquote>")
-    user_id = message.from_user.id
-    buttons = []
+# Function to show force-sub settings
+async def show_force_sub_settings(client: Bot, chat_id: int, message_id: int = None):
     settings = await db.get_settings()
-    count = 0
+    force_sub_enabled = settings.get('FORCE_SUB_ENABLED', True)
+    mode_status = "🟢 Enabled" if force_sub_enabled else "🔴 Disabled"
     
-    try:
-        all_channels = await db.show_channels()
-        if not settings.get('FORCE_SUB_ENABLED', True) or not all_channels:
-            await temp.delete()
-            return await start_command(client, message)
-
-        for total, chat_id in enumerate(all_channels, start=1):
-            if await db.get_channel_temp_off(chat_id):
-                continue
-                
-            mode = await db.get_channel_mode(chat_id)
-            await message.reply_chat_action(ChatAction.TYPING)
-            
-            if not await is_sub(client, user_id, chat_id):
-                try:
-                    if chat_id in chat_data_cache:
-                        data = chat_data_cache[chat_id]
-                    else:
-                        try:
-                            data = await client.get_chat(chat_id)
-                            chat_data_cache[chat_id] = data
-                        except Exception as e:
-                            if "USERNAME_NOT_OCCUPIED" in str(e):
-                                await db.rem_channel(chat_id)
-                                continue
-                            else:
-                                raise e
-
-                    name = data.title
-
-                    if mode == "on":
-                        invite = await client.create_chat_invite_link(
-                            chat_id=chat_id,
-                            creates_join_request=True,
-                            expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None)
-                        link = invite.invite_link
-                    else:
-                        if data.username:
-                            link = f"https://t.me/{data.username}"
-                        else:
-                            invite = await client.create_chat_invite_link(
-                                chat_id=chat_id,
-                                expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None)
-                            link = invite.invite_link
-
-                    buttons.append([InlineKeyboardButton(text=f"{name}", url=link)])
-                    count += 1
-                    await temp.edit(f"<blockquote><b>Checking {count}...</b></blockquote>")
-                except Exception as e:
-                    continue
-                    
-        if count == 0:
-            await temp.delete()
-            return await start_command(client, message)
-
-        buttons.append([InlineKeyboardButton(text='Check again', callback_data="check_sub")])
-            
-        await message.reply_photo(
-            photo=FORCE_PIC,
-            caption=FORCE_MSG.format(
-                first=message.from_user.first_name,
-                last=message.from_user.last_name if message.from_user.last_name else "",
-                username=None if not message.from_user.username else '@' + message.from_user.username,
-                mention=message.from_user.mention,
-                id=message.from_user.id
-            ),
-            reply_markup=InlineKeyboardMarkup(buttons))
-            
-    except Exception as e:
-        await temp.edit(f"<blockquote><b>Error, contact developer @Mehediyt69\nReason: {e}</b></blockquote>")
-        await asyncio.sleep(5)
-        await temp.delete()
-        return await start_command(client, message)
-    finally:
-        await temp.delete()
-
-@Bot.on_callback_query(filters.regex(r"^check_sub"))
-async def check_sub_callback(client: Client, callback: CallbackQuery) -> None:
-    """Check if user has joined required channels"""
-    user_id = callback.from_user.id
-    message = callback.message
-    if await is_subscribed(client, user_id):
-        await message.delete()
-        await start_command(client, callback.message)
+    settings_text = (
+        f"<b>›› Force Sub Settings</b>\n\n"
+        f"<blockquote><b>Force Sub Mode:</b> {mode_status}</blockquote>\n\n"
+    )
+    
+    channels = await db.show_channels()
+    if not channels:
+        settings_text += "<blockquote><i>No channels configured yet.</i></blockquote>"
     else:
-        await callback.answer("You still haven't joined all required channels. Please join and try again.")
-        await not_joined(client, message)
-
-@Bot.on_message(filters.command('myplan') & filters.private)
-async def check_plan(client: Client, message: Message) -> None:
-    """Check user's premium plan status"""
-    user_id = message.from_user.id
-    status_message = await check_user_plan(user_id)
-    await message.reply_text(status_message)
-
-@Bot.on_message(filters.command('addPremium') & filters.private & filters.user(ADMINS))
-async def add_premium_user_command(client: Client, msg: Message) -> None:
-    """Add premium user (admin only)"""
-    if len(msg.command) != 4:
-        await msg.reply_text(
-            "<blockquote><b>Usage:</b></blockquote>\n /addpremium <user_id> <time_value> <time_unit>\n\n"
-            "Example: /addpremium 123456789 1 month",
-        )
-        return
+        settings_text += "<blockquote><b>⚡ Force-sub Channels:</b></blockquote>\n\n"
+        for ch_id in channels[:5]:  # Show only first 5 channels
+            try:
+                chat = await client.get_chat(ch_id)
+                temp_off = await db.get_channel_temp_off(ch_id)
+                status = "🔴 Off" if temp_off else "🟢 On"
+                link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
+                settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code> ({status})</b></blockquote>\n"
+            except Exception:
+                settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
         
-    try:
-        user_id = int(msg.command[1])
-        time_value = int(msg.command[2])
-        time_unit = msg.command[3].lower()
-        expiration_time = await add_premium(user_id, time_value, time_unit)
-        await msg.reply_text(
-            f"User {user_id} added as a premium user for {time_value} {time_unit}.\n"
-            f"Expiration time: {expiration_time}.",
-        )
-        await client.send_message(
-            chat_id=user_id,
-            text=(
-                f"<blockquote><b>Premium Activated!</b></blockquote>\n\n"
-                f"<b>You have received premium access for {time_value} {time_unit}.</b>\n"
-                f"<b>Expires in: {expiration_time}</b>"
-            ))
-    except ValueError:
-        await msg.reply_text("<blockquote><b>Invalid input...</b></blockquote>")
-    except Exception as e:
-        await msg.reply_text(f"An error occurred: {str(e)}")
-
-@Bot.on_message(filters.command('remove_premium') & filters.private & filters.user(ADMINS))
-async def pre_remove_user(client: Client, msg: Message) -> None:
-    """Remove premium user (admin only)"""
-    if len(msg.command) != 2:
-        await msg.reply_text("<blockquote><b>Usage:</b></blockquote> /remove_premium user_id")
-        return
-        
-    try:
-        user_id = int(msg.command[1])
-        await remove_premium(user_id)
-        await msg.reply_text(f"<blockquote><b>User {user_id} has been removed...</b></blockquote>")
-    except ValueError:
-        await msg.reply_text("User id must be an integer or not available in database.")
-
-@Bot.on_message(filters.command('premium_users') & filters.private & filters.user(ADMINS))
-async def list_premium_users_command(client: Client, message: Message) -> None:
-    """List all premium users (admin only)"""
-    from pytz import timezone
-    ist = timezone("Asia/Dhaka")
-    premium_users_cursor = collection.find({})
-    premium_user_list = ['Active premium users in database:']
-    current_time = datetime.now(ist)
+        if len(channels) > 5:
+            settings_text += f"<blockquote><i>...and {len(channels) - 5} more.</i></blockquote>\n"
     
-    async for user in premium_users_cursor:
-        user_id = user["user_id"]
-        expiration_timestamp = user["expiration_timestamp"]
+    buttons = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("Add Channels", callback_data="fsub_add_channel"),
+            InlineKeyboardButton("Remove Channels", callback_data="fsub_remove_channel")
+        ],
+        [
+            InlineKeyboardButton("Toggle Mode", callback_data="fsub_toggle_mode")
+        ],
+        [
+            InlineKeyboardButton("Single Off", callback_data="fsub_single_off"),
+            InlineKeyboardButton("Fully Off", callback_data="fsub_fully_off")
+        ],
+        [
+            InlineKeyboardButton("Channels List", callback_data="fsub_channels_list")
+        ],
+        [
+            InlineKeyboardButton("Refresh", callback_data="fsub_refresh"),
+            InlineKeyboardButton("Close", callback_data="fsub_close")
+        ]
+    ])
+    
+    selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+    
+    if message_id:
         try:
-            expiration_time = datetime.fromisoformat(expiration_timestamp).astimezone(ist)
-            remaining_time = expiration_time - current_time
-            if remaining_time.total_seconds() <= 0:
-                await collection.delete_one({"user_id": user_id})
-                continue
-                
-            user_info = await client.get_users(user_id)
-            username = user_info.username if user_info.username else "no username"
-            mention = user_info.mention
-            days, hours, minutes, seconds = (
-                remaining_time.days,
-                remaining_time.seconds // 3600,
-                (remaining_time.seconds // 60) % 60,
-                remaining_time.seconds % 60,
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=message_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
             )
-            expiry_info = f"{days}d {hours}h {minutes}m {seconds}s left"
-            premium_user_list.append(
-                f"User id: {user_id}\n"
-                f"User: @{username}\n"
-                f"Name: {mention}\n"
-                f"Expiry: {expiry_info}")
-        except Exception as e:
-            premium_user_list.append(
-                f"User id: {user_id}\n"
-                f"Error: Unable to fetch user details ({str(e)})")
-                
-    if len(premium_user_list) == 1:
-        await message.reply_text("No active premium users found in database.")
+        except Exception:
+            await client.send_message(
+                chat_id=chat_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
     else:
-        await message.reply_text("\n\n".join(premium_user_list), parse_mode=None)
+        try:
+            await client.send_photo(
+                chat_id=chat_id,
+                photo=selected_image,
+                caption=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML
+            )
+        except Exception:
+            await client.send_message(
+                chat_id=chat_id,
+                text=settings_text,
+                reply_markup=buttons,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
 
-@Bot.on_message(filters.command("count") & filters.private & filters.user(ADMINS))
-async def total_verify_count_cmd(client: Client, message: Message) -> None:
-    """Show verification count (admin only)"""
-    total = await db.get_total_verify_count()
-    await message.reply_text(f"<blockquote><b>Total verified tokens today: {total}</b></blockquote>")
+@Bot.on_message(filters.command('auto_delete') & filters.private & admin) # Added `& admin` back
+async def auto_delete_settings(client: Bot, message: Message):
+    await show_auto_delete_settings(client, message.chat.id)
 
-@Bot.on_message(filters.command('commands') & filters.private & filters.user(ADMINS))
-async def bcmd(client: Client, message: Message) -> None:        
-    """Show available commands (admin only)"""
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("close", callback_data="close")]])
-    await message.reply_text(text=CMD_TXT, reply_markup=reply_markup, quote=True)
+@Bot.on_message(filters.command('forcesub') & filters.private & admin)
+async def force_sub_settings(client: Bot, message: Message):
+    await show_force_sub_settings(client, message.chat.id)
 
-@Bot.on_message(filters.command('premium_cmd') & filters.private & filters.user(ADMINS))
-async def premium_cmd(client: Client, message: Message) -> None:
-    """Show premium commands (admin only)"""
-    reply_text = (
-        "<blockquote><b>Use these commands to get premium users related commands.</b>\n\n"
-        "<b>Other commands:</b></blockquote>\n"
-        "- /addpremium - <b>Grant premium access [admin]</b>\n"
-        "- /remove_premium - <b>Revoke premium access [admin]</b>\n"
-        "- /premium_users - <b>List premium users [admin]</b>")
-    reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("close", callback_data="close")]])
-    await message.reply_text(reply_text, reply_markup=reply_markup)
+# Modify the cb_handler to check for admin status for specific callbacks
+@Bot.on_callback_query(filters.regex(r"^(help|about|home|premium|close|channels|start|info|auto_delete|forcesub|extramenu|seeplans|source)"))
+@Bot.on_callback_query(filters.regex(r"^(rfs_ch_|rfs_toggle_|fsub_|auto_|set_|remove_)") & admin)  # Ensure admin filter is applied
+async def cb_handler(client: Bot, query: CallbackQuery):
+    data = query.data
+    user = query.from_user
+
+    async def safe_edit_media(image, caption, markup):
+        try:
+            await query.message.edit_media(
+                media=InputMediaPhoto(media=image, caption=caption),
+                reply_markup=markup
+            )
+        except Exception:
+            try:
+                await query.message.edit_text(caption, reply_markup=markup)
+            except Exception:
+                await query.answer("Operation failed, please try again", show_alert=True)
+
+    try:
+        if data == "help":
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home'),
+                    InlineKeyboardButton("• ᴄʟᴏꜱᴇ •", callback_data='close')
+                ]
+            ])
+            caption = HELP_TXT.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await safe_edit_media(selected_image, caption, reply_markup)
+       
+        elif data == "extramenu":
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("• ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ •", callback_data="auto_delete"),
+                    InlineKeyboardButton("• ꜰɪʟᴇ ꜱᴇᴛᴛɪɴɢꜱ •", callback_data="fsettings")
+                ],
+                [
+                    InlineKeyboardButton("• ғᴏʀᴄᴇ ꜱᴜʙ •", callback_data="forcesub")
+                ],
+                [
+                    InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home'),
+                    InlineKeyboardButton('• ᴄʟᴏꜱᴇ •', callback_data='close')
+                ]
+            ])
+            caption = START_MSG.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await safe_edit_media(selected_image, caption, reply_markup)
+        
+        elif data == "auto_delete":
+            member = await client.get_chat_member(query.message.chat.id, user.id)
+            if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+                   await query.answer("❌ Only admins can use this feature.", show_alert=True)
+                   return
+            await auto_delete_settings(client, query.message)
+            await query.answer("Auto-Delete Settings")
+
+        elif data == "forcesub":
+            member = await client.get_chat_member(query.message.chat.id, user.id)
+            if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+                    await query.answer("❌ Only admins can use this feature.", show_alert=True)
+                    return
+            await force_sub_settings(client, query.message)
+            await query.answer("Force-Sub Settings")
+
+        elif data == "home":
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("• ʜᴇʟᴘ •", callback_data="help"),
+                    InlineKeyboardButton("• ᴀʙᴏᴜᴛ •", callback_data="about")
+                ],
+                [
+                    InlineKeyboardButton("• ᴄʜᴀɴɴᴇʟꜱ •", url="https://t.me/CornXvilla"),
+                    InlineKeyboardButton("• ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")
+                ],
+                [
+                    InlineKeyboardButton('• ᴇxᴛʀᴀ ꜰᴇᴀᴛᴜʀᴇꜱ •', callback_data='extramenu')
+                ]
+            ])
+            caption = START_MSG.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await safe_edit_media(selected_image, caption, reply_markup)
+
+        elif data == "about":
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton('• ᴄʜᴀɴɴᴇʟꜱ •', callback_data='channels'),
+                    InlineKeyboardButton("• ᴄʀᴇᴅɪᴛ •", callback_data='info')
+                ],
+                [
+                    InlineKeyboardButton('• ꜱᴏᴜʀᴄᴇ •', callback_data='source'),
+                    InlineKeyboardButton("• ʜᴏᴍᴇ •", callback_data='home')
+                ]
+            ])
+            caption = ABOUT_TXT.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await safe_edit_media(selected_image, caption, reply_markup)
+
+        elif data == "info":
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton('• ᴏᴡɴᴇʀ •', url='https://t.me/MrXeonTG'),
+                    InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home')
+                ]
+            ])
+            caption = CREDIT_INFO.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await safe_edit_media(selected_image, caption, reply_markup)
+
+        elif data == "channels":
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton('• ᴍᴏᴠɪᴇꜱ •', url='http://t.me/MovieNationSpot'),
+                    InlineKeyboardButton('• ꜱᴇʀɪᴇꜱ •', url='https://t.me/SeriesNationSpot')
+                ],
+                [
+                    InlineKeyboardButton('• ᴀɴɪᴍᴇꜱ •', url='https://t.me/AnimeXeon'),
+                    InlineKeyboardButton('• ᴀᴅᴜʟᴛ •', url='https://t.me/CornXvilla')
+                ],
+                [
+                    InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home'),
+                    InlineKeyboardButton('• ᴄʟᴏꜱᴇ •', callback_data='close')
+                ]
+            ])
+            caption = ABOUT_TXT.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await safe_edit_media(selected_image, caption, reply_markup)
+
+        elif data == "premium":
+            try:
+                await query.message.delete()
+                await client.send_photo(
+                    chat_id=query.message.chat.id,
+                    photo=QR_PIC,
+                    caption=(
+                        f"👋 {query.from_user.username if query.from_user.username else 'user'}\n\n"
+                        f"💸 Premium Plans:\n\n"
+                        f"○ {PRICE1} For 0 months premium\n\n"
+                        f"○ {PRICE2} For 1 month premium\n\n"
+                        f"○ {PRICE3} For 3 months premium\n\n"
+                        f"○ {PRICE4} For 6 months premium\n\n"
+                        f"○ {PRICE5} For 1 year premium\n\n\n"
+                        f"💰 After payment send screenshot to - <code>{UPI_ID}</code>\n\n\n"
+                        f"⚠️ Premium users get unlimited file storage\n\n\n"
+                        f"⌛ Message screenshot with payment details & UTR number"
+                    ),
+                    reply_markup=InlineKeyboardMarkup([
+                        [
+                            InlineKeyboardButton("Help", callback_data="help"),
+                            InlineKeyboardButton("See Plans", callback_data="seeplans")
+                        ],
+                        [
+                            InlineKeyboardButton("Bot Info", callback_data="info"),
+                            InlineKeyboardButton("24/7 Support", url=SCREENSHOT_URL)
+                        ]
+                    ])
+                )
+            except Exception:
+                await query.answer("Failed to show premium plans", show_alert=True)
+
+        elif data == "seeplans":
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton('• ʙᴜʏ ɴᴏᴡ •', url='https://t.me/Xeonflixadmin'),
+                    InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home')
+                ]
+            ])
+            caption = PREPLANSS_TXT.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await safe_edit_media(selected_image, caption, reply_markup)
+
+        elif data == "source":
+            selected_image = random.choice(RANDOM_IMAGES)
+            reply_markup = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton('• ᴏᴡɴᴇʀ •', url='https://t.me/MrXeonTG'),
+                    InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home')
+                ]
+            ])
+            caption = SOURCE_TXT.format(
+                first=user.first_name,
+                last=user.last_name if user.last_name else "",
+                username=None if not user.username else '@' + user.username,
+                mention=user.mention,
+                id=user.id
+            )
+            await safe_edit_media(selected_image, caption, reply_markup)
+
+        elif data == "close":
+            try:
+                await query.message.delete()
+                if query.message.reply_to_message:
+                    await query.message.reply_to_message.delete()
+            except Exception:
+                pass
+
+        elif data.startswith("auto_"):
+            # This block will now only be executed if the 'admin' filter passes
+            if data == "auto_toggle":
+                current_mode = await db.get_auto_delete_mode()
+                new_mode = not current_mode
+                await db.set_auto_delete_mode(new_mode)
+                await show_auto_delete_settings(client, query.message.chat.id, query.message.id)
+                await query.answer(f"Auto Delete Mode {'Enabled' if new_mode else 'Disabled'}!")
+            
+            elif data == "auto_set_timer":
+                await db.set_temp_state(query.message.chat.id, "awaiting_timer_input")
+                try:
+                    await query.message.reply_photo(
+                        photo=random.choice(RANDOM_IMAGES),
+                        caption=(
+                            "<blockquote><b>Please provide the duration in seconds for the delete timer.</b></blockquote>\n"
+                            "<blockquote><b>Example: 300 (for 5 minutes)</b></blockquote>"
+                        ),
+                        parse_mode=ParseMode.HTML
+                    )
+                except Exception:
+                    await query.message.reply(
+                        "<blockquote><b>Please provide the duration in seconds for the delete timer.</b></blockquote>\n"
+                        "<blockquote><b>Example: 300 (for 5 minutes)</b></blockquote>",
+                        parse_mode=ParseMode.HTML
+                    )
+                await query.answer("Enter the duration!")
+            
+            elif data == "auto_refresh":
+                await show_auto_delete_settings(client, query.message.chat.id, query.message.id)
+                await query.answer("Settings refreshed!")
+            
+            elif data == "auto_back":
+                await db.set_temp_state(query.message.chat.id, "")
+                await query.message.delete()
+                await query.answer("Back to previous menu!")
+
+        elif data.startswith("fsub_"):
+            # This block will now only be executed if the 'admin' filter passes
+            if data == "fsub_add_channel":
+                await db.set_temp_state(query.message.chat.id, "awaiting_add_channel_input")
+                await client.edit_message_text(
+                    chat_id=query.message.chat.id,
+                    message_id=query.message.id,
+                    text="<blockquote><b>Give me the channel IDs (space-separated).</b>\n<b>Example: -1001234567890 -1000987654321</b></blockquote>",
+                    reply_markup=InlineKeyboardMarkup([
+                        [
+                            InlineKeyboardButton("Back", callback_data="fsub_back"),
+                            InlineKeyboardButton("Close", callback_data="fsub_close")
+                        ]
+                    ]),
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+                await query.answer("Provide the channel IDs (space-separated).")
+
+            elif data == "fsub_remove_channel":
+                await db.set_temp_state(query.message.chat.id, "awaiting_remove_channel_input")
+                await client.edit_message_text(
+                    chat_id=query.message.chat.id,
+                    message_id=query.message.id,
+                    text="<blockquote><b>Give me the channel IDs (space-separated) or type '<code>all</code>' to remove all channels.</b></blockquote>",
+                    reply_markup=InlineKeyboardMarkup([
+                        [
+                            InlineKeyboardButton("Back", callback_data="fsub_back"),
+                            InlineKeyboardButton("Close", callback_data="fsub_close")
+                        ]
+                    ]),
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+                await query.answer("Provide the channel IDs (space-separated) or type 'all'.")
+
+            elif data == "fsub_toggle_mode":
+                temp = await query.message.reply("<b><i>Wait a sec...</i></b>", quote=True)
+                channels = await db.show_channels()
+                if not channels:
+                    await temp.edit("<blockquote><b>❌ No force-sub channels found.</b></blockquote>")
+                    await query.answer()
+                    return
+                buttons = []
+                for ch_id in channels:
+                    try:
+                        chat = await client.get_chat(ch_id)
+                        mode = await db.get_channel_mode(ch_id)
+                        status = "🟢" if mode == "on" else "🔴"
+                        title = f"{status} {chat.title}"
+                        buttons.append([InlineKeyboardButton(title, callback_data=f"rfs_ch_{ch_id}")])
+                    except Exception:
+                        buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"rfs_ch_{ch_id}")])
+                buttons.append([InlineKeyboardButton("Close ✖️", callback_data="fsub_close")])
+                await temp.edit(
+                    "<blockquote><b>⚡ Select a channel to toggle force-sub mode:</b></blockquote>",
+                    reply_markup=InlineKeyboardMarkup(buttons),
+                    disable_web_page_preview=True
+                )
+                await query.answer()
+
+            elif data == "fsub_channels_list":
+                channels = await db.show_channels()
+                settings_text = "<b>›› Force-sub Channels List:</b>\n\n"
+                if not channels:
+                    settings_text += "<blockquote><i>No channels configured yet.</i></blockquote>"
+                else:
+                    for ch_id in channels:
+                        try:
+                            chat = await client.get_chat(ch_id)
+                            link = await client.export_chat_invite_link(ch_id) if not chat.username else f"https://t.me/{chat.username}"
+                            settings_text += f"<blockquote><b><a href='{link}'>{chat.title}</a> - <code>{ch_id}</code></b></blockquote>\n"
+                        except Exception:
+                            settings_text += f"<blockquote><b><code>{ch_id}</code> — <i>Unavailable</i></b></blockquote>\n"
+
+                buttons = InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("Back", callback_data="fsub_back"),
+                        InlineKeyboardButton("Close", callback_data="fsub_close")
+                    ]
+                ])
+
+                try:
+                    await client.edit_message_text(
+                        chat_id=query.message.chat.id,
+                        message_id=query.message.id,
+                        text=settings_text,
+                        reply_markup=buttons,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True
+                    )
+                except Exception:
+                    await client.send_message(
+                        chat_id=query.message.chat.id,
+                        text=settings_text,
+                        reply_markup=buttons,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True
+                    )
+                await query.answer("Showing channels list!")
+
+            elif data == "fsub_single_off":
+                temp = await query.message.reply("<b><i>Wait a sec...</i></b>", quote=True)
+                channels = await db.show_channels()
+                if not channels:
+                    await temp.edit("<blockquote><b>❌ No force-sub channels found.</b></blockquote>")
+                    await query.answer()
+                    return
+                buttons = []
+                for ch_id in channels:
+                    try:
+                        chat = await client.get_chat(ch_id)
+                        temp_off = await db.get_channel_temp_off(ch_id)
+                        status = "🔴 Off" if temp_off else "🟢 On"
+                        title = f"{status} {chat.title}"
+                        buttons.append([InlineKeyboardButton(title, callback_data=f"fsub_temp_off_{ch_id}")])
+                    except Exception:
+                        buttons.append([InlineKeyboardButton(f"⚠️ {ch_id} (Unavailable)", callback_data=f"fsub_temp_off_{ch_id}")])
+                buttons.append([InlineKeyboardButton("Close ✖️", callback_data="fsub_close")])
+                await temp.edit(
+                    "<blockquote><b>⚡ Select a channel to toggle temporary off mode:</b></blockquote>",
+                    reply_markup=InlineKeyboardMarkup(buttons),
+                    disable_web_page_preview=True
+                )
+                await query.answer()
+
+            elif data == "fsub_fully_off":
+                settings = await db.get_settings()
+                force_sub_enabled = settings.get('FORCE_SUB_ENABLED', True)
+                mode_status = "🟢 Enabled" if force_sub_enabled else "🔴 Disabled"
+                settings_text = (
+                    f"<b>›› Force Sub Fully Off Settings:</b>\n\n"
+                    f"<blockquote><b>Force Sub Mode: {mode_status}</b></blockquote>\n\n"
+                    "<b>Click below buttons to change settings</b>"
+                )
+                buttons = InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("Disable ❌" if force_sub_enabled else "Enable ✅", callback_data="fsub_toggle_full"),
+                        InlineKeyboardButton("Refresh", callback_data="fsub_full_refresh")
+                    ],
+                    [
+                        InlineKeyboardButton("Back", callback_data="fsub_back"),
+                        InlineKeyboardButton("Close", callback_data="fsub_close")
+                    ]
+                ])
+                selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
+                try:
+                    await client.edit_message_media(
+                        chat_id=query.message.chat.id,
+                        message_id=query.message.id,
+                        media=InputMediaPhoto(media=selected_image, caption=settings_text),
+                        reply_markup=buttons
+                    )
+                except Exception:
+                    await client.edit_message_text(
+                        chat_id=query.message.chat.id,
+                        message_id=query.message.id,
+                        text=settings_text,
+                        reply_markup=buttons,
+                        parse_mode=ParseMode.HTML
+                    )
+                await query.answer("Showing fully off settings!")
+
+            elif data == "fsub_toggle_full":
+                settings = await db.get_settings()
+                current_mode = settings.get('FORCE_SUB_ENABLED', True)
+                new_mode = not current_mode
+                await db.update_setting('FORCE_SUB_ENABLED', new_mode)
+                await show_force_sub_settings(client, query.message.chat.id, query.message.id)
+                await query.answer(f"Force-sub mode {'enabled' if new_mode else 'disabled'}!")
+
+            elif data == "fsub_full_refresh":
+                await show_force_sub_settings(client, query.message.chat.id, query.message.id)
+                await query.answer("Settings refreshed!")
+
+            elif data == "fsub_refresh":
+                await show_force_sub_settings(client, query.message.chat.id, query.message.id)
+                await query.answer("Settings refreshed!")
+
+            elif data == "fsub_close":
+                await db.set_temp_state(query.message.chat.id, "")
+                await query.message.delete()
+                await query.answer("Settings closed!")
+
+            elif data == "fsub_back":
+                await db.set_temp_state(query.message.chat.id, "")
+                await show_force_sub_settings(client, query.message.chat.id, query.message.id)
+                await query.answer("Back to settings!")
+
+            elif data.startswith("fsub_temp_off_"):
+                ch_id = int(query.data.split("_")[-1])
+                try:
+                    current_temp_off = await db.get_channel_temp_off(ch_id)
+                    new_temp_off = not current_temp_off
+                    await db.set_channel_temp_off(ch_id, new_temp_off)
+                    chat = await client.get_chat(ch_id)
+                    status = "🔴 Off" if new_temp_off else "🟢 On"
+                    await query.message.edit_text(
+                        f"<blockquote><b>✅ Temporary mode toggled for channel:</b></blockquote>\n\n"
+                        f"<blockquote><b>Name:</b> <a href='https://t.me/{chat.username}'>{chat.title}</a></blockquote>\n"
+                        f"<blockquote><b>ID:</b> <code>{ch_id}</code></blockquote>\n"
+                        f"<blockquote><b>Mode:</b> {status} {'Disabled' if new_temp_off else 'Enabled'}</blockquote>",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("Back", callback_data="fsub_single_off")]
+                        ]),
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True
+                    )
+                    await query.answer(f"Channel {ch_id} {'disabled' if new_temp_off else 'enabled'} temporarily!")
+                except Exception as e:
+                    await query.message.edit_text(
+                        f"<blockquote><b>❌ Failed to toggle temporary mode for channel:</b></blockquote>\n<code>{ch_id}</code>\n\n<i>{e}</i>",
+                        parse_mode=ParseMode.HTML
+                    )
+                    await query.answer()
+
+        elif data.startswith("rfs_ch_"):
+            ch_id = int(query.data.split("_")[-1])
+            try:
+                current_mode = await db.get_channel_mode(ch_id)
+                new_mode = "off" if current_mode == "on" else "on"
+                await db.set_channel_mode(ch_id, new_mode)
+                chat = await client.get_chat(ch_id)
+                status = "🟢" if new_mode == "on" else "🔴"
+                await query.message.edit_text(
+                    f"<blockquote><b>✅ Mode toggled for channel:</b></blockquote>\n\n"
+                    f"<blockquote><b>Name:</b> <a href='https://t.me/{chat.username}'>{chat.title}</a></blockquote>\n"
+                    f"<blockquote><b>ID:</b> <code>{ch_id}</code></blockquote>\n"
+                    f"<blockquote><b>Mode:</b> {status} {'Enabled' if new_mode == 'on' else 'Disabled'}</blockquote>",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("Back", callback_data="fsub_toggle_mode")]
+                    ]),
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+                await query.answer(f"Force-sub {'enabled' if new_mode == 'on' else 'disabled'} for channel {ch_id}")
+            except Exception as e:
+                await query.message.edit_text(
+                    f"<blockquote><b>❌ Failed to toggle mode for channel:</b></blockquote>\n<code>{ch_id}</code>\n\n<i>{e}</i>",
+                    parse_mode=ParseMode.HTML
+                )
+                await query.answer()
+
+        elif data.startswith("set_") and data.split("_")[1] in ["start", "force"]:
+            type = data.split("_")[1]
+            try:
+                await db.set_temp_state(query.message.chat.id, f"set_{type}")
+                await query.message.reply_text(f"Please send the image you want to set as {type} image.")
+            except Exception:
+                await query.answer("Failed to set state", show_alert=True)
+
+        elif data.startswith("remove_"):
+            type = data.split("_")[1]
+            try:
+                images = await db.get_images(type)
+                if not images:
+                    await query.message.reply_text(f"There are no {type} images set.")
+                else:
+                    nums = list(range(1, len(images) + 1))
+                    text = f"Current {type} images: {', '.join(map(str, nums))}\nTo remove a single image, use /rev_{type} <number>\nTo remove all, use /rev_all_{type}"
+                    await query.message.reply_text(text)
+            except Exception:
+                await query.answer("Failed to get image list", show_alert=True)
+
+    except Exception as e:
+        await query.answer("An unexpected error occurred", show_alert=True)
+    
+    # Do not call query.answer() here again as it's already called in most cases within the try block.
+    # If the block above does not answer the query (e.g., if an unexpected exception occurs
+    # and no specific answer is provided), Pyrogram will automatically answer it.
+
+
+@Bot.on_message(filters.private & admin & filters.create(timer_input_filter), group=2)
+async def set_timer(client: Bot, message: Message):
+    chat_id = message.chat.id
+    try:
+        duration = int(message.text)
+        if duration <= 0:
+            raise ValueError("Duration must be a positive integer")
+        await db.set_del_timer(duration)
+        new_timer = await db.get_del_timer()
+        if new_timer == duration:
+            try:
+                await message.reply_photo(
+                    photo=random.choice(RANDOM_IMAGES),
+                    caption=f"<blockquote><b>Delete Timer has been set to {get_readable_time(duration)}.</b></blockquote>",
+                    parse_mode=ParseMode.HTML
+                )
+            except Exception:
+                await message.reply(
+                    f"<blockquote><b>Delete Timer has been set to {get_readable_time(duration)}.</b></blockquote>",
+                    parse_mode=ParseMode.HTML
+                )
+        else:
+            await message.reply(
+                "<blockquote><b>Failed to set the delete timer. Please try again.</b></blockquote>",
+                parse_mode=ParseMode.HTML
+            )
+        await db.set_temp_state(chat_id, "")
+    except ValueError:
+        try:
+            await message.reply_photo(
+                photo=random.choice(RANDOM_IMAGES),
+                caption="<blockquote><b>Please provide a valid positive duration in seconds.</b></blockquote>",
+                parse_mode=ParseMode.HTML
+            )
+        except Exception:
+            await message.reply(
+                "<blockquote><b>Please provide a valid positive duration in seconds.</b></blockquote>",
+                parse_mode=ParseMode.HTML
+            )
+
+@Bot.on_message(filters.private & admin & filters.create(fsub_state_filter), group=1)
+async def handle_channel_input(client: Client, message: Message):
+    chat_id = message.chat.id
+    state = await db.get_temp_state(chat_id)
+    try:
+        if state == "awaiting_add_channel_input":
+            channel_ids = message.text.split()
+            all_channels = await db.show_channels()
+            channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
+            report = ""
+            success_count = 0
+            for channel_id in channel_ids:
+                try:
+                    channel_id = int(channel_id)
+                    if channel_id in channel_ids_only:
+                        report += f"<blockquote><b>Channel already exists:</b> <code>{channel_id}</code></blockquote>\n"
+                        continue
+                    chat = await client.get_chat(channel_id)
+                    if chat.type != ChatType.CHANNEL:
+                        report += f"<blockquote><b>❌ Only public or private channels are allowed:</b> <code>{channel_id}</code></blockquote>\n"
+                        continue
+                    member = await client.get_chat_member(chat.id, "me")
+                    if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+                        report += f"<blockquote><b>❌ Bot must be an admin in that channel:</b> <code>{channel_id}</code></blockquote>\n"
+                        continue
+                    link = await client.export_chat_invite_link(chat.id) if not chat.username else f"https://t.me/{chat.username}"
+                    await db.add_channel(channel_id)
+                    report += f"<blockquote><b>✅ Channel added:</b> <a href='{link}'>{chat.title}</a> - <code>{channel_id}</code></blockquote>\n"
+                    success_count += 1
+                except ValueError:
+                    report += f"<blockquote><b>❌ Invalid channel ID:</b> <code>{channel_id}</code></blockquote>\n"
+                except Exception as e:
+                    report += f"<blockquote><b>❌ Failed to add channel:</b> <code>{channel_id}</code> - <i>{e}</i></blockquote>\n"
+            await message.reply(
+                f"<b>📋 Add Channel Report:</b>\n\n{report}",
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+            await db.set_temp_state(chat_id, "")
+            await show_force_sub_settings(client, chat_id)
+        elif state == "awaiting_remove_channel_input":
+            all_channels = await db.show_channels()
+            if message.text.lower() == "all":
+                if not all_channels:
+                    await message.reply("<blockquote><b>❌ No force-sub channels found.</b></blockquote>")
+                    await db.set_temp_state(chat_id, "")
+                    await show_force_sub_settings(client, chat_id)
+                    return
+                for ch_id in all_channels:
+                    await db.rem_channel(ch_id)
+                await message.reply("<blockquote><b>✅ All force-sub channels removed.</b></blockquote>")
+            else:
+                channel_ids = message.text.split()
+                report = ""
+                for ch_id in channel_ids:
+                    try:
+                        ch_id = int(ch_id)
+                        if ch_id in all_channels:
+                            await db.rem_channel(ch_id)
+                            report += f"<blockquote><b>✅ Channel removed:</b> <code>{ch_id}</code></blockquote>\n"
+                        else:
+                            report += f"<blockquote><b>❌ Channel not found:</b> <code>{ch_id}</code></blockquote>\n"
+                    except ValueError:
+                        report += f"<blockquote><b>❌ Invalid channel ID:</b> <code>{ch_id}</code></blockquote>\n"
+                await message.reply(
+                    f"<b>📋 Remove Channel Report:</b>\n\n{report}",
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+            await db.set_temp_state(chat_id, "")
+            await show_force_sub_settings(client, chat_id)
+    except Exception as e:
+        await message.reply(
+            f"<blockquote><b>❌ Failed to process input:</b></blockquote>\n<code>{message.text}</code>\n\n<i>{e}</i>",
+            parse_mode=ParseMode.HTML
+        )
+        await db.set_temp_state(chat_id, "")
+        await show_force_sub_settings(client, chat_id)
+
+@Bot.on_chat_member_updated()
+async def handle_Chatmembers(client: Client, chat_member_updated: ChatMemberUpdated):    
+    chat_id = chat_member_updated.chat.id
+    if await db.reqChannel_exist(chat_id):
+        old_member = chat_member_updated.old_chat_member
+        if not old_member:
+            return
+        if old_member.status == ChatMemberStatus.MEMBER:
+            user_id = old_member.user.id
+            if await db.req_user_exist(chat_id, user_id):
+                await db.del_req_user(chat_id, user_id)
+
+@Bot.on_chat_join_request()
+async def handle_join_request(client: Client, chat_join_request):
+    chat_id = chat_join_request.chat.id
+    user_id = chat_join_request.from_user.id
+    if await db.reqChannel_exist(chat_id):
+        mode = await db.get_channel_mode(chat_id)
+        if mode == "on" and not await db.req_user_exist(chat_id, user_id):
+            await db.req_user(chat_id, user_id)
+            try:
+                await client.approve_chat_join_request(chat_id, user_id)
+            except Exception:
+                pass
+
+@Bot.on_message(filters.command('addchnl') & filters.private & admin)
+async def add_force_sub(client: Client, message: Message):
+    temp = await message.reply("<b><i>Waiting...</i></b>", quote=True)
+    args = message.text.split(maxsplit=1)
+    if len(args) != 2:
+        buttons = [[InlineKeyboardButton("Close", callback_data="fsub_close")]]
+        await temp.edit(
+            "<blockquote><b>Usage:</b></blockquote>\n<code>/addchnl -100XXXXXXXXXX</code>\n\n"
+            "<b>Add only one channel at a time.</b>",
+            reply_markup=InlineKeyboardMarkup(buttons),
+            parse_mode=ParseMode.HTML
+        )
+        return
+    try:
+        channel_id = int(args[1])
+        all_channels = await db.show_channels()
+        channel_ids_only = [cid if isinstance(cid, int) else cid[0] for cid in all_channels]
+        if channel_id in channel_ids_only:
+            await temp.edit(f"<blockquote><b>Channel already exists:</b></blockquote>\n <blockquote><code>{channel_id}</code></blockquote>")
+            return
+        chat = await client.get_chat(channel_id)
+        if chat.type != ChatType.CHANNEL:
+            await temp.edit("<b>❌ Only public or private channels are allowed.</b>")
+            return
+        member = await client.get_chat_member(chat.id, "me")
+        if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+            await temp.edit("<b>❌ Bot must be an admin in that channel.</b>")
+            return
+        link = await client.export_chat_invite_link(chat.id) if not chat.username else f"https://t.me/{chat.username}"
+        await db.add_channel(channel_id)
+        await temp.edit(
+            f"<blockquote><b>✅ Force-sub Channel added successfully!</b></blockquote>\n\n"
+            f"<blockquote><b>Name:</b> <a href='{link}'>{chat.title}</a></blockquote>\n"
+            f"<blockquote><b>ID: <code>{channel_id}</code></b></blockquote>",
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+    except ValueError:
+        await temp.edit("<blockquote><b>❌ Invalid channel ID!</b></blockquote>")
+    except Exception as e:
+        await temp.edit(f"<blockquote><b>❌ Failed to add channel:</b></blockquote>\n<code>{args[1]}</code>\n\n<i>{e}</i>", parse_mode=ParseMode.HTML)
+
+#
+# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
+#
+# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
+# and is released under the MIT License.
+# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
+#
+# All rights reserved.
