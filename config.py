@@ -56,22 +56,43 @@ SHORT_MSG = "<b>⌯ Here is Your Download Link, Must Watch Tutorial Before Click
 SHORTENER_PIC = os.environ.get("SHORTENER_PIC", "https://telegra.ph/file/ec17880d61180d3312d6a.jpg")
 # --------------------------------------------
 
-# Add these to config.py
-REFERRAL_REWARD_DAYS = 7  # Number of days premium benefit lasts per successful referral
-REFERRAL_REQUIREMENT = 5  # Number of referrals needed to get premium benefits
-REFERRAL_REWARD_HOURS = 24  # Hours of premium access per successful referral
+# Referral System Configuration
+REFERRAL_REWARD_HOURS = 24  # Hours of premium per successful referral
+REFERRAL_REQUIREMENT = 5    # Number of referrals needed for reward
+REFERRAL_BONUS_DAYS = 2     # Bonus days for special promotions
 
-# Add this to the start message if you want to show referral info
 START_MSG = os.environ.get("START_MESSAGE", """<blockquote><b>ʜᴇʟʟᴏ {first}</b></blockquote>
 
 <blockquote><b>ɪ ᴀᴍ ᴘʀᴇᴍɪᴜᴍ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ, ɪ ᴄᴀɴ ᴘʀᴏᴠɪᴅᴇ ᴘʀɪᴠᴀᴛᴇ ꜰɪʟᴇꜱ ᴛʜʀᴏᴜɢʜ ᴀ ꜱᴘᴇᴄɪꜰɪᴄ ʟɪɴᴋ..!</b></blockquote>
 
 <blockquote><b>🎁 ʀᴇꜰᴇʀʀᴀʟ ʙᴏɴᴜꜱ:</b>
-❏ ɢᴇᴛ {reward_hours} ʜᴏᴜʀꜱ ᴏꜰ ᴘʀᴇᴍɪᴜᴍ ꜰᴏʀ ᴇᴀᴄʜ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ ʀᴇꜰᴇʀʀᴀʟ
-❏ ɴᴏ ʟɪɴᴋ ꜱʜᴏʀᴛᴇɴᴇʀ ᴅᴜʀɪɴɢ ʀᴇᴡᴀʀᴅ ᴘᴇʀɪᴏᴅ
-❏ ʀᴇꜰᴇʀ {required_refs} ᴜꜱᴇʀꜱ ᴛᴏ ɢᴇᴛ ꜱᴛᴀʀᴛᴇᴅ</blockquote>
+• ɢᴇᴛ {hours} ʜᴏᴜʀꜱ ᴏꜰ ᴘʀᴇᴍɪᴜᴍ ꜰᴏʀ ᴇᴠᴇʀʏ {req} ꜰʀɪᴇɴᴅꜱ ʏᴏᴜ ʀᴇꜰᴇʀ
+• ɴᴏ ʟɪɴᴋ ꜱʜᴏʀᴛᴇɴᴇʀꜱ ᴅᴜʀɪɴɢ ʀᴇᴡᴀʀᴅ ᴘᴇʀɪᴏᴅ</blockquote>
 
-<b>ᴜꜱᴇ /ref ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ʀᴇꜰᴇʀʀᴀʟ ʟɪɴᴋ</b>""")
+<b>ᴜꜱᴇ /ref ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ʀᴇꜰᴇʀʀᴀʟ ʟɪɴᴋ</b>""".format(
+    hours=REFERRAL_REWARD_HOURS,
+    req=REFERRAL_REQUIREMENT
+))
+
+REFERRAL_MSG = """<b>🎁 <u>Referral Program</u></b>
+
+<blockquote>🔹 <b>How it works:</b>
+• Share your referral link with friends
+• When they join using your link, you get credit
+• Every {required} successful referrals = {hours} hours of premium benefits
+• Premium benefits bypass all link shorteners</blockquote>
+
+<blockquote>✨ <b>Your Referral Link:</b>
+<code>{referral_link}</code></blockquote>
+
+<blockquote>📊 <b>Your Stats:</b>
+• Total Referrals: {ref_count}
+• Next Reward: {remaining_refs} more referrals needed</blockquote>
+
+<blockquote>⏳ <b>Current Status:</b>
+{reward_status}</blockquote>
+
+<b>Click below to share your link easily!</b>"""
 
 PREPLANSS_TXT = """<b>👋 ʜᴇʏ {first}
     
