@@ -1,3 +1,4 @@
+#
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
 #
 # This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
@@ -10,159 +11,14 @@ import asyncio
 import random
 from datetime import datetime, timedelta
 from pyrogram import Client, filters
-from pyrogram.enums import ParseMode, ChatAction, ChatMemberStatus, ChatType
-from pyrogram.types import (
-    Message, 
-    InlineKeyboardMarkup, 
-    InlineKeyboardButton, 
-    CallbackQuery,
-    InputMediaPhoto,
-    ChatMemberUpdated,
-    ChatJoinRequest
-)
+from pyrogram.enums import ParseMode, ChatAction
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated
-
 from bot import Bot
 from config import *
 from helper_func import *
 from database.database import *
 from database.db_premium import *
-
-
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-# All rights reserved.
-#=====================================================================================#
-
-
-# Add this new command handler
-@Bot.on_message(filters.command('ref') & filters.private)
-async def referral_command(client: Client, message: Message):
-    """Handle referral commands"""
-    user_id = message.from_user.id
-    referral_link = f"https://t.me/{client.username}?start=ref_{user_id}"
-    
-    # Check if user has active referral reward
-    reward_expiry = await db.get_referral_reward(user_id)
-    has_reward = reward_expiry and reward_expiry > datetime.utcnow()
-    
-    # Get referral count
-    referrals = await db.get_referrals(user_id)
-    ref_count = len(referrals)
-    
-    reply_text = (
-        f"<b>🎁 Your Referral Link:</b>\n<code>{referral_link}</code>\n\n"
-        f"<b>📊 Stats:</b>\n"
-        f"• Total Referrals: {ref_count}\n"
-        f"• Required for Reward: {REFERRAL_REQUIREMENT}\n\n"
-    )
-    
-    if has_reward:
-        remaining_time = reward_expiry - datetime.utcnow()
-        days = remaining_time.days
-        hours = remaining_time.seconds // 3600
-        minutes = (remaining_time.seconds % 3600) // 60
-        reply_text += (
-            f"<b>⭐ Active Reward:</b>\n"
-            f"• Premium benefits active\n"
-            f"• Time remaining: {days}d {hours}h {minutes}m\n\n"
-            f"<i>You currently bypass all link shorteners!</i>"
-        )
-    elif ref_count >= REFERRAL_REQUIREMENT:
-        reply_text += (
-            "<b>⚠️ You have enough referrals but no active reward!</b>\n"
-            "<i>Complete one more referral to renew your reward period.</i>"
-        )
-    else:
-        needed = REFERRAL_REQUIREMENT - ref_count
-        reply_text += (
-            f"<b>🔹 You need {needed} more referral(s) to get premium benefits</b>\n\n"
-            "<i>Each successful referral gives you premium benefits for a limited time!</i>"
-        )
-    
-    await message.reply_text(
-        reply_text,
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("Share Link", url=f"https://t.me/share/url?url={referral_link}")]
-        ])
-    )
-
-# Modify the start_command to handle referral links
-async def start_command(client: Client, message: Message) -> None:
-    """Handle /start command with comprehensive error handling"""
-    try:
-        user_id = message.from_user.id
-        text = message.text
-        
-        # Check if this is a referral link
-        if len(text.split()) > 1 and text.split()[1].startswith('ref_'):
-            referrer_id = int(text.split('_')[1])
-            if referrer_id != user_id:  # Prevent self-referral
-                await db.add_referral(referrer_id, user_id)
-                
-                # Check if referrer qualifies for reward
-                referrals = await db.get_referrals(referrer_id)
-                if len(referrals) % REFERRAL_REQUIREMENT == 0:
-                    reward_expiry = datetime.utcnow() + timedelta(hours=REFERRAL_PREMIUM_HOURS)
-                    await db.set_referral_reward(referrer_id, reward_expiry)
-                    try:
-                        await client.send_message(
-                            chat_id=referrer_id,
-                            text=f"🎉 Congratulations! You've received {REFERRAL_PREMIUM_HOURS} hours of premium benefits from your referral!\n\n"
-                                 f"Your reward will expire at {reward_expiry.strftime('%Y-%m-%d %H:%M:%S UTC')}"
-                        )
-                    except Exception:
-                        pass
-        
-        # Rest of your existing start_command code...
-        is_premium = await is_premium_user(user_id)
-        banned_users = await db.get_ban_users()
-        
-        if user_id in banned_users:
-            return await message.reply_text(
-                "You are banned from using this bot.\n\nContact support if you think this is a mistake.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Contact Support", url=BAN_SUPPORT)]])
-            )
-        
-        # Check for referral reward status
-        reward_expiry = await db.get_referral_reward(user_id)
-        has_reward = reward_expiry and reward_expiry > datetime.utcnow()
-        
-        # Modified premium check to include referral rewards
-        effective_premium = is_premium or has_reward
-        
-        if not await is_subscribed(client, user_id):
-            return await not_joined(client, message)
-            
-        FILE_AUTO_DELETE = await db.get_del_timer()
-        
-        if not await db.present_user(user_id):
-            try:
-                await db.add_user(user_id)
-            except Exception as e:
-                print(f"Error adding user to database: {e}")
-
-        if len(text.split()) > 1:
-            await handle_file_request(client, message, text, effective_premium, user_id)
-        else:
-            await send_welcome_message(client, message)
-    except Exception as e:
-        print(f"Critical error in start_command: {e}")
-        await message.reply_text("An error occurred. Please try again later.")
-
-
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-# All rights reserved.
-#=====================================================================================#
-
-#
-# Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
-#
-# This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
-# and is released under the MIT License.
-# Please see < https://github.com/AnimeLord-Bots/FileStore/blob/master/LICENSE >
-#
-# All rights reserved.
-
 
 # Constants
 STICKER_ID = "CAACAgUAAxkBAAIE8mgq9m8MiaFWYUeppQiXveQBAZaYAAKrBAACvu-4V0dQs1WLoficHgQ"
@@ -368,13 +224,11 @@ async def send_welcome_message(client: Client, message: Message) -> None:
         m = await message.reply_text("<blockquote><b>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...</b></blockquote>")
         await asyncio.sleep(0.4)
         await m.edit_text("<blockquote><b>Checking...</b></blockquote>")
-        await asyncio.sleep(0.5)
-        await m.edit_text("<blockquote>🎊</blockquote>")
-        await asyncio.sleep(0.5)
-        await m.edit_text("<blockquote>⚡</blockquote>")
-        await asyncio.sleep(0.5)
-        await m.edit_text("<blockquote><b>Starting...</b></blockquote>")
         await asyncio.sleep(0.4)
+        await m.edit_text("<blockquote>⚡</blockquote>")
+        await asyncio.sleep(0.4)
+        await m.edit_text("<blockquote><b>Starting...</b></blockquote>")
+        await asyncio.sleep(0.5)
         await m.delete()
     except Exception as e:
         print(f"Error with start animation: {e}")
@@ -382,7 +236,7 @@ async def send_welcome_message(client: Client, message: Message) -> None:
     if STICKER_ID:
         try:
             m = await message.reply_sticker(STICKER_ID)
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
             await m.delete()
         except Exception as e:
             print(f"Error sending sticker: {e}")
@@ -390,7 +244,7 @@ async def send_welcome_message(client: Client, message: Message) -> None:
     reply_markup = InlineKeyboardMarkup([
         [InlineKeyboardButton("◉ ʜᴇʟᴘ ◉", callback_data="help"), 
          InlineKeyboardButton("◉ ᴀʙᴏᴜᴛ ◉", callback_data="about")],
-        [InlineKeyboardButton("◉ ᴄʜᴀɴɴᴇʟꜱ ◉", callback_data="channels"), 
+        [InlineKeyboardButton("◉ ꜱᴜᴘᴘᴏʀᴛ ◉", callback_data="channels"), 
          InlineKeyboardButton("◉ ᴘʀᴇᴍɪᴜᴍ ◉", callback_data="seeplans")]
     ])
     
