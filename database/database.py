@@ -1,3 +1,4 @@
+#
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
 #
 # This file is part of < https://github.com/AnimeLord-Bots/FileStore > project,
@@ -11,39 +12,6 @@ import logging
 import os
 from os import environ, getenv
 from datetime import datetime, timedelta
-
-
-# Add these methods to the Mehedi class in database.py
-
-async def add_referral(self, referrer_id: int, referred_id: int):
-    """Add a referral relationship"""
-    await self.user_data.update_one(
-        {'_id': referrer_id},
-        {'$addToSet': {'referrals': referred_id}},
-        upsert=True
-    )
-    logger.info(f"Added referral: {referred_id} referred by {referrer_id}")
-
-async def get_referrals(self, user_id: int):
-    """Get list of referrals for a user"""
-    user = await self.user_data.find_one({'_id': user_id})
-    return user.get('referrals', []) if user else []
-
-async def set_referral_reward(self, user_id: int, reward_expiry: datetime):
-    """Set referral reward expiry time"""
-    await self.user_data.update_one(
-        {'_id': user_id},
-        {'$set': {'referral_reward_expiry': reward_expiry}},
-        upsert=True
-    )
-    logger.info(f"Set referral reward for user {user_id} until {reward_expiry}")
-
-async def get_referral_reward(self, user_id: int):
-    """Get referral reward expiry time"""
-    user = await self.user_data.find_one({'_id': user_id})
-    if user and 'referral_reward_expiry' in user:
-        return user['referral_reward_expiry']
-    return None
 
 logger = logging.getLogger(__name__)
 
