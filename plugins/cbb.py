@@ -280,7 +280,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     InlineKeyboardButton("• ᴀʙᴏᴜᴛ •", callback_data="about")
                 ],
                 [
-                    InlineKeyboardButton("• ᴄʜᴀɴɴᴇʟꜱ •", url="https://t.me/CornXvilla"),
+                    InlineKeyboardButton("• ᴜᴘᴅᴀᴛᴇꜱ •", url="https://t.me/CornXvilla"),
                     InlineKeyboardButton("• ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")
                 ],
                 [
@@ -304,7 +304,7 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     InlineKeyboardButton("• ᴄʀᴇᴅɪᴛ •", callback_data='info')
                 ],
                 [
-                    InlineKeyboardButton('• ꜱᴏᴜʀᴄᴇ •', callback_data='source'),
+                    InlineKeyboardButton('• close •', callback_data='close'),
                     InlineKeyboardButton("• ʜᴏᴍᴇ •", callback_data='home')
                 ]
             ])
@@ -358,38 +358,6 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                 id=user.id
             )
             await safe_edit_media(selected_image, caption, reply_markup)
-
-        elif data == "premium":
-            try:
-                await query.message.delete()
-                await client.send_photo(
-                    chat_id=query.message.chat.id,
-                    photo=QR_PIC,
-                    caption=(
-                        f"👋 {query.from_user.username if query.from_user.username else 'user'}\n\n"
-                        f"💸 Premium Plans:\n\n"
-                        f"○ {PRICE1} For 0 months premium\n\n"
-                        f"○ {PRICE2} For 1 month premium\n\n"
-                        f"○ {PRICE3} For 3 months premium\n\n"
-                        f"○ {PRICE4} For 6 months premium\n\n"
-                        f"○ {PRICE5} For 1 year premium\n\n\n"
-                        f"💰 After payment send screenshot to - <code>{UPI_ID}</code>\n\n\n"
-                        f"⚠️ Premium users get unlimited file storage\n\n\n"
-                        f"⌛ Message screenshot with payment details & UTR number"
-                    ),
-                    reply_markup=InlineKeyboardMarkup([
-                        [
-                            InlineKeyboardButton("Help", callback_data="help"),
-                            InlineKeyboardButton("See Plans", callback_data="seeplans")
-                        ],
-                        [
-                            InlineKeyboardButton("Bot Info", callback_data="info"),
-                            InlineKeyboardButton("24/7 Support", url=SCREENSHOT_URL)
-                        ]
-                    ])
-                )
-            except Exception:
-                await query.answer("Failed to show premium plans", show_alert=True)
 
         elif data == "seeplans":
             selected_image = random.choice(RANDOM_IMAGES)
