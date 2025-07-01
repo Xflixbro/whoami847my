@@ -59,7 +59,7 @@ SHORTENER_PIC = os.environ.get("SHORTENER_PIC", "https://telegra.ph/file/ec17880
 # Add these to config.py
 REFERRAL_REWARD_DAYS = 7  # Number of days premium benefit lasts per successful referral
 REFERRAL_REQUIREMENT = 5  # Number of referrals needed to get premium benefits
-REFERRAL_PREMIUM_HOURS = 24  # Hours of premium access per successful referral
+REFERRAL_REWARD_HOURS = 24  # Hours of premium access per successful referral
 
 # Add this to the start message if you want to show referral info
 START_MSG = os.environ.get("START_MESSAGE", """<blockquote><b>ʜᴇʟʟᴏ {first}</b></blockquote>
