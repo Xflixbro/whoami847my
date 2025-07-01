@@ -16,11 +16,10 @@ from pyrogram.enums import ParseMode
 import sys
 from datetime import datetime
 import logging
-#ᴀɴɪᴍᴇ ʟᴏʀᴅ
 from config import *
 from database.database import db  # Updated import
 
-name = """『A N I M E _ L O R D』"""
+name = """『X E O N F L I X _ B O T』"""
 
 # Configure custom logging formatter to display only the message
 logging.basicConfig(
@@ -71,7 +70,7 @@ class Bot(Client):
             sys.exit()
 
         self.set_parse_mode(ParseMode.HTML)
-        self.LOGGER.info(f"ʙᴏᴛ ɪs ᴀʟɪᴠᴇ..!\n\nᴄʀᴇᴀᴛᴇᴅ ʙʏ \n 『ᴀɴɪᴍᴇ-ʟᴏʀᴅ-ʙᴏᴛ』\nʙᴏᴛ ᴅᴇᴘʟᴏʏᴇᴅ ʙʏ @ᴡʜᴏ-ᴀᴍ-ɪ\nʙᴏᴛ ɪs ᴀʟɪᴠᴇ..! ᴍᴀᴅᴇ ʙʏ @ᴀɴɪᴍᴇ ʟᴏʀᴅ\nʙᴏᴛ ɪs ɴᴏᴡ ᴀʟɪᴠᴇ. ᴛʜᴀɴᴋs ᴛᴏ @ᴡʜᴏ-ᴀᴍ-ɪ\n▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄\n|------------------『A N I M E  L O R D』----------------------|\n▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀\n               ◈◈◈◈◈◈ ɪ_s_ᴀ_ʟ_ɪ_ᴠ_ᴇ ◈◈◈◈◈◈  \n                       ▼   ᴀᴄᴄᴇssɪɴɢ   ▼  \n                         ███████] 99%")
+        self.LOGGER.info(f"ʙᴏᴛ ɪs ᴀʟɪᴠᴇ..!\n\nᴄʀᴇᴀᴛᴇᴅ ʙʏ \n 『ᴀɴɪᴍᴇ-ʟᴏʀᴅ-ʙᴏᴛ』\nʙᴏᴛ ᴅᴇᴘʟᴏʏᴇᴅ ʙʏ @ᴡʜᴏ-ᴀᴍ-ɪ\nʙᴏᴛ ɪs ᴀʟɪᴠᴇ..! ᴍᴀᴅᴇ ʙʏ @ᴀɴɪᴍᴇ ʟᴏʀᴅ\nʙᴏᴛ ɪs ɴᴏᴡ ᴀʟɪᴠᴇ. ᴛʜᴀɴᴋs ᴛᴏ @ᴡʜᴏ-ᴀᴍ-ɪ\n▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄\n|------------------『X E O N F L I X  B O T』----------------------|\n▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀▄▀\n               ◈◈◈◈◈◈ ɪ_s_ᴀ_ʟ_ɪ_ᴠ_ᴇ ◈◈◈◈◈◈  \n                       ▼   ᴀᴄᴄᴇssɪɴɢ   ▼  \n                         ███████] 99%")
         self.username = usr_bot_me.username
 
         # sᴛᴀʀᴛ ᴡᴇʙ sᴇʀᴠᴇʀ
@@ -80,7 +79,7 @@ class Bot(Client):
         await web.TCPSite(app, "0.0.0.0", PORT).start()
 
         try:
-            await self.send_message(OWNER_ID, text=f"<b><blockquote>ʙᴏᴛ ʀᴇsᴛᴀʀᴛᴇᴅ ʙʏ @ᴀɴɪᴍᴇ_ʟᴏʀᴅ_ʙᴏᴛ</blockquote></b>")
+            await self.send_message(OWNER_ID, text=f"<b><blockquote>ʙᴏᴛ ʀᴇsᴛᴀʀᴛᴇᴅ ʙʏ @XeOnFlIx</blockquote></b>")
         except Exception as e:
             self.LOGGER.warning(f"ғᴀɪʟᴇᴅ ᴛᴏ sᴇɴᴅ sᴛᴀʀᴛᴜᴘ ᴍᴇssᴀɢᴇ ᴛᴏ OWNER_ID: {str(e)}")
 
