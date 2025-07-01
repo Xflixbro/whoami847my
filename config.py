@@ -51,31 +51,18 @@ RANDOM_IMAGES = [
 SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "publicearn.online")
 SHORTLINK_API = os.environ.get("SHORTLINK_API", "de08290b12d9e34191f3a057070a50a18187fff3")
 TUT_VID = os.environ.get("TUT_VID", "https://t.me/hwdownload/3")
-SHORT_MSG = "<b>⌯ Here is Your Download Link, Must Watch Tutorial Before Clicking On Download...</b>"
+SHORT_MSG = """<b>📊 ʜᴇʏ ʙʀᴏ/sɪs, 
+
+‼️ ɢᴇᴛ ᴀʟʟ ꜰɪʟᴇꜱ ɪɴ ᴀ ꜱɪɴɢʟᴇ ʟɪɴᴋ ‼️
+
+⌯ ʏᴏᴜʀ ʟɪɴᴋ ɪꜱ ʀᴇᴀᴅʏ, ᴋɪɴᴅʟʏ ᴄʟɪᴄᴋ ᴏɴ ᴏᴘᴇɴ ʟɪɴᴋ ʙᴜᴛᴛᴏɴ...</b>"""
 
 SHORTENER_PIC = os.environ.get("SHORTENER_PIC", "https://telegra.ph/file/ec17880d61180d3312d6a.jpg")
 # --------------------------------------------
 
-# Add these to config.py
-REFERRAL_REWARD_DAYS = 7  # Number of days premium benefit lasts per successful referral
-REFERRAL_REQUIREMENT = 5  # Number of referrals needed to get premium benefits
-REFERRAL_REWARD_HOURS = 24  # Hours of premium access per successful referral
-
-# Add this to the start message if you want to show referral info
-START_MSG = os.environ.get("START_MESSAGE", """<blockquote><b>ʜᴇʟʟᴏ {first}</b></blockquote>
-
-<blockquote><b>ɪ ᴀᴍ ᴘʀᴇᴍɪᴜᴍ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ, ɪ ᴄᴀɴ ᴘʀᴏᴠɪᴅᴇ ᴘʀɪᴠᴀᴛᴇ ꜰɪʟᴇꜱ ᴛʜʀᴏᴜɢʜ ᴀ ꜱᴘᴇᴄɪꜰɪᴄ ʟɪɴᴋ..!</b></blockquote>
-
-<blockquote><b>🎁 ʀᴇꜰᴇʀʀᴀʟ ʙᴏɴᴜꜱ:</b>
-❏ ɢᴇᴛ {reward_hours} ʜᴏᴜʀꜱ ᴏꜰ ᴘʀᴇᴍɪᴜᴍ ꜰᴏʀ ᴇᴀᴄʜ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟ ʀᴇꜰᴇʀʀᴀʟ
-❏ ɴᴏ ʟɪɴᴋ ꜱʜᴏʀᴛᴇɴᴇʀ ᴅᴜʀɪɴɢ ʀᴇᴡᴀʀᴅ ᴘᴇʀɪᴏᴅ
-❏ ʀᴇꜰᴇʀ {required_refs} ᴜꜱᴇʀꜱ ᴛᴏ ɢᴇᴛ ꜱᴛᴀʀᴛᴇᴅ</blockquote>
-
-<b>ᴜꜱᴇ /ref ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ʀᴇꜰᴇʀʀᴀʟ ʟɪɴᴋ</b>""")
-
 PREPLANSS_TXT = """<b>👋 ʜᴇʏ {first}
     
-<blockquote>🎁 ᴘʀᴇᴍɪᴜᴍ ʙᴇɴɪꜰɪᴛꜱ
+<blockquote expandable>🎁 ᴘʀᴇᴍɪᴜᴍ ʙᴇɴɪꜰɪᴛꜱ
 
 ❏ ɴᴏ ʟɪɴᴋ ꜱʜᴏʀᴛᴇɴᴇʀ
 ❏ ɢᴇᴛ ᴅɪʀᴇᴄᴛ ғɪʟᴇs   
@@ -84,7 +71,7 @@ PREPLANSS_TXT = """<b>👋 ʜᴇʏ {first}
 ❏ ꜰᴜʟʟ ᴀᴅᴍɪɴ sᴜᴘᴘᴏʀᴛ
 ❏ ʙᴇꜱᴛ ᴠᴀʟᴜᴇ ꜰᴏʀ ᴍᴏɴᴇʏ
 ❏ ᴘʀɪᴏʀɪᴛʏ ᴄᴏɴᴛᴇɴᴛ
-❏ ᴇxᴄʟᴜꜱɪᴠᴇ ᴅɪꜱᴄᴏᴜɴᴛꜱ </blockquote>
+❏ ᴇxᴄʟᴜꜱɪᴠᴇ ᴅɪꜱᴄᴏᴜɴᴛꜱ</blockquote>
 
 <blockquote>🎖️ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴꜱ 
 
@@ -94,32 +81,23 @@ PREPLANSS_TXT = """<b>👋 ʜᴇʏ {first}
 ❏ 𝟶𝟼 ᴍᴏɴᴛʜ ➠ INR 649/$49
 ❏ 09 ᴍᴏɴᴛʜ ➠ INR 899/$79 </blockquote>
 
-<blockquote>🌟 <b>Referral Program</b>
-• Get {ref_hours} hours premium for every {ref_req} friends you refer
-• No link shorteners during reward period
-• Unlimited referral bonuses</blockquote>
-
 🏷️ <a href="https://t.me/Xeonflixadmin_bot">𝗖𝗹𝗶𝗰𝗸 𝗛𝗲𝗿𝗲 𝗧𝗼 𝗕𝘂𝘆 𝗣𝗿𝗲𝗺𝗶𝘂𝗺</a>
 
-ɴᴏᴛᴇ: ᴜꜱᴅ ʀᴀᴛᴇꜱ ᴀʀᴇ ꜱᴇᴛ ꜱʟɪɢʜᴛʟʏ ʜɪɢʜᴇʀ ᴅᴜᴇ ᴛᴏ ɪɴᴛᴇʀɴᴀᴛɪᴏɴᴀʟ ᴛʀᴀɴꜱᴀᴄᴛɪᴏɴ ᴀɴᴅ ꜱᴇʀᴠɪᴄᴇ ꜰᴇᴇꜱ.</b>""".format(
-    first="{first}",
-    ref_hours=REFERRAL_REWARD_HOURS,
-    ref_req=REFERRAL_REQUIREMENT
-)
+ɴᴏᴛᴇ: ᴜꜱᴅ ʀᴀᴛᴇꜱ ᴀʀᴇ ꜱᴇᴛ ꜱʟɪɢʜᴛʟʏ ʜɪɢʜᴇʀ ᴅᴜᴇ ᴛᴏ ɪɴᴛᴇʀɴᴀᴛɪᴏɴᴀʟ ᴛʀᴀɴꜱᴀᴄᴛɪᴏɴ ᴀɴᴅ ꜱᴇʀᴠɪᴄᴇ ꜰᴇᴇꜱ.</b>"""
 
-SOURCE_TXT = """<b>
-⚠️ ᴛʜɪꜱ ɪꜱ ɴᴏᴛ ᴀɴ ᴏᴘᴇɴ sᴏᴜʀᴄᴇ ᴘʀᴏᴊᴇᴄᴛ
-- ꜱᴏᴜʀᴄᴇ ᴄᴏᴅᴇ - <a href="https://t.me/+y6mFtiS5JQFkNThl">ʜᴇʀᴇ</a></b>"""
     
 CREDIT_INFO = """
-<b>⍟───[ ᴍʏ ᴄʀᴇᴅɪᴛꜱ ]───⍟
+<b>⍟───[ ᴍʏ ᴄʀᴇᴅɪᴛꜱ & ɪɴꜰᴏ ]───⍟
+➥ ᴛʜɪꜱ ɪꜱ ᴀ ᴘʀɪᴠᴀᴛᴇ sᴏᴜʀᴄᴇ ᴄᴏᴅᴇ ᴘʀᴏᴊᴇᴄᴛ
 ➥ ᴏᴡɴᴇʀ : <a href='t.me/Xeonflixadmin'>xᴇᴏɴ</a>
 ➥ ʙᴀꜱᴇ ᴄᴏᴅᴇ : <a href='t.me/cosmic_freak'>ʏᴀᴛᴏ</a>
 ➥ ᴇxᴛʀᴀ ꜰᴇᴀᴛᴜʀᴇꜱ ᴄᴏᴅᴇ : <a href='t.me/MrXeonTG'>ɢᴏᴊᴏ ꜱᴀᴛᴏʀᴜ</a>
+➥ ꜱᴏᴜʀᴄᴇ ᴄᴏᴅᴇ : <a href="https://t.me/+y6mFtiS5JQFkNThl">ʜᴇʀᴇ</a>
 ➥ ᴛʜᴀɴᴋꜱ ᴛᴏ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a>​</b>"""
 
 # --------------------------------------------
 HELP_TXT = os.environ.get("HELP_TXT","<blockquote><b>ʜᴇʟʟᴏ {first}<b/></blockquote>\n\n<b><blockquote>◈ ᴛʜɪs ɪs ᴀɴ ғɪʟᴇ ᴛᴏ ʟɪɴᴋ ʙᴏᴛ ᴡᴏʀᴋ ғᴏʀ @MehediYT69\n\n❏ ʙᴏᴛ ᴄᴏᴍᴍᴀɴᴅs\n├/start : sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ\n├/about : ᴏᴜʀ Iɴғᴏʀᴍᴀᴛɪᴏɴ\n├/commands : ꜰᴏʀ ɢᴇᴛ ᴀʟʟ ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs ʟɪꜱᴛ\n└/help : ʜᴇʟᴘ ʀᴇʟᴀᴛᴇᴅ ʙᴏᴛ\n\n sɪᴍᴘʟʏ ᴄʟɪᴄᴋ ᴏɴ ʟɪɴᴋ ᴀɴᴅ sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ ᴊᴏɪɴ ʙᴏᴛʜ ᴄʜᴀɴɴᴇʟs ᴀɴᴅ ᴛʀʏ ᴀɢᴀɪɴ ᴛʜᴀᴛs ɪᴛ.....!\n\n ᴅᴇᴠᴇʟᴏᴘᴇᴅ ʙʏ <a href=https://t.me/Anime_Lord_Bots>Aɴɪᴍᴇ Lᴏʀᴅ</a></blockquote></b>")
+
 
 ABOUT_TXT = """<blockquote expandable>★ Dᴇᴠᴇʟᴏᴘᴇʀ : <a href="https://t.me/MrXeonTg">ᴍʀ xᴇᴏɴ</a>
 ★ ᴍʏ ʙᴇsᴛ ғʀɪᴇɴᴅ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a>
@@ -130,6 +108,7 @@ ABOUT_TXT = """<blockquote expandable>★ Dᴇᴠᴇʟᴏᴘᴇʀ : <a href="htt
 ★ ʙᴜɪʟᴅ ꜱᴛᴀᴛᴜꜱ : ᴠ5.4.1 [ᴀᴅᴠᴀɴᴄᴇ ғᴇᴀᴛᴜʀᴇs]</blockquote>"""
 
 # --------------------------------------------
+START_MSG = os.environ.get("START_MESSAGE", "<blockquote><b>ʜᴇʟʟᴏ {first}</b></blockquote>\n\n<blockquote><b>ɪ ᴀᴍ ᴘʀᴇᴍɪᴜᴍ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ, ɪ ᴄᴀɴ ᴘʀᴏᴠɪᴅᴇ ᴘʀɪᴠᴀᴛᴇ ꜰɪʟᴇꜱ ᴛʜʀᴏᴜɢʜ ᴀ ꜱᴘᴇᴄɪꜰɪᴄ ʟɪɴᴋ..!</blockquote></b>")
 FORCE_MSG = os.environ.get("FORCE_SUB_MESSAGE", "<blockquote><b>ʜᴇʟʟᴏ {first}</b></blockquote>\n\n<blockquote><b>ᴊᴏɪɴ ᴏᴜʀ ᴄʜᴀɴɴᴇʟs ᴀɴᴅ ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴏɴ ʀᴇʟᴏᴀᴅ button ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ʀᴇǫᴜᴇꜱᴛᴇᴅ ꜰɪʟᴇ.</b></blockquote>")
 
 CMD_TXT = """<blockquote><b>» ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs:</b></blockquote>
@@ -145,31 +124,21 @@ CMD_TXT = """<blockquote><b>» ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs:</b></blockqu
 <b>›› /auto_delete :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ sᴇᴛ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ
 <b>›› /fsettings :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ᴍᴀɴᴀɢᴇ ғᴏʀᴄᴇ sᴜʙsᴄʀɪᴘᴛɪᴏɴs
 <b>›› /premium_cmd :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ᴍᴀɴᴀɢᴇ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs
-<b>›› /broadcast_cmd :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀᴢᴇs
+<b>›› /broadcast_cmd :</b> ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴛᴏ ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇs
 <b>›› /myplan :</b> ᴄʜᴇᴄᴋ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ sᴛᴀᴛᴜs & ᴅᴇᴛᴀɪʟs
-<b>›› /count :</b> ᴛʀᴀᴄᴋ sʜᴏʀᴛɴᴇʀ ᴄʟɪᴄᴋs & ᴀɴᴀʟʏᴛɪᴄs
-<b>›› /ref :</b> ɢᴇᴛ ʏᴏᴜʀ ʀᴇꜰᴇʀʀᴀʟ ʟɪɴᴋ ᴀɴᴅ sᴛᴀᴛs
-<b>›› /referral_stats :</b> ᴠɪᴇᴡ ʀᴇꜰᴇʀʀᴀʟ sᴛᴀᴛɪsᴛɪᴄs (ᴀᴅᴍɪɴ ᴏɴʟʏ)"""
+<b>›› /count :</b> ᴛʀᴀᴄᴋ sʜᴏʀᴛɴᴇʀ ᴄʟɪᴄᴋs & ᴀɴᴀʟʏᴛɪᴄs"""
 
 CUSTOM_CAPTION = os.environ.get("CUSTOM_CAPTION", "<b>• ʙʏ @Anime_Lord_Official</b>")
+# --------------------------------------------
+# Set true if you want Disable your Channel Posts Share button
+# --------------------------------------------
+BOT_STATS_TEXT = "<b>BOT FUCKTIME</b>\n{uptime}"
+USER_REPLY_TEXT = "ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!"
 
 # ==========================(BUY PREMIUM)====================#
 OWNER_TAG = os.environ.get("OWNER_TAG", "Aɴɪᴍᴇ Lᴏʀᴅ")
-UPI_ID = os.environ.get("UPI_ID", "yourname@upi")  # Replace with your valid UPI ID
-QR_PIC = os.environ.get("QR_PIC", "https://telegra.ph/file/3e83c69804826b3cba066.jpg")
-SCREENSHOT_URL = os.environ.get("SCREENSHOT_URL", "t.me/mehediyt69")
 
-# Time and its price
-# 7 Days
-PRICE1 = os.environ.get("PRICE1", "0 rs")
-# 1 Month
-PRICE2 = os.environ.get("PRICE2", "60 rs")
-# 3 Month
-PRICE3 = os.environ.get("PRICE3", "150 rs")
-# 6 Month
-PRICE4 = os.environ.get("PRICE4", "280 rs")
-# 1 Year
-PRICE5 = os.environ.get("PRICE5", "550 rs")
+# ====================(END)========================#
 
 # Default settings (loaded dynamically in bot.py)
 PROTECT_CONTENT = False
