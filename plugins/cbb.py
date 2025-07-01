@@ -376,23 +376,6 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             )
             await safe_edit_media(selected_image, caption, reply_markup)
 
-        elif data == "source":
-            selected_image = random.choice(RANDOM_IMAGES)
-            reply_markup = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton('• ᴏᴡɴᴇʀ •', url='https://t.me/MrXeonTG'),
-                    InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home')
-                ]
-            ])
-            caption = SOURCE_TXT.format(
-                first=user.first_name,
-                last=user.last_name if user.last_name else "",
-                username=None if not user.username else '@' + user.username,
-                mention=user.mention,
-                id=user.id
-            )
-            await safe_edit_media(selected_image, caption, reply_markup)
-
         elif data == "close":
             try:
                 await query.message.delete()
