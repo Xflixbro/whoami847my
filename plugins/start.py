@@ -208,39 +208,43 @@ async def handle_auto_delete(client: Client, message: Message, sent_messages: li
                         print(f"Error deleting message {msg.id}: {e}")
                         
             try:
-                reload_url = f"https://t.me/{client.username}?start={message.command[1]}" if message.command and len(message.command) > 1 else None
-                keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("Get file again", url=reload_url)]]) if reload_url else None
-                await notification_msg.edit(
-                    "🗑️ Pʀᴇᴠɪᴏᴜs Fɪʟᴇ Hᴀs Bᴇᴇɴ Dᴇʟᴇᴛᴇᴅ\n\nClick below button to get your deleted video/file.",
-                    reply_markup=keyboard)
+                await notification_msg.edit("🗑️ Pʀᴇᴠɪᴏᴜs Fɪʟᴇ Hᴀs Bᴇᴇɴ Sᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ Dᴇʟᴇᴛᴇᴅ. Tʜᴀɴᴋ Yᴏᴜ Fᴏʀ Uꜱɪɴɢ Oᴜʀ Sᴇʀᴠɪᴄᴇ. ✅")
             except Exception as e:
                 print(f"Error updating notification: {e}")
     except Exception as e:
         print(f"Error in auto-delete process: {e}")
 
 async def send_welcome_message(client: Client, message: Message) -> None:
-    """Send welcome message and animations"""
+    """Send welcome message with typing animation"""
     try:
-        m = await message.reply_text("<blockquote><b>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...</b></blockquote>")
-        await asyncio.sleep(0.4)
-        await m.edit_text("<blockquote><b>Checking...</b></blockquote>")
-        await asyncio.sleep(0.4)
-        await m.edit_text("<blockquote>⚡</blockquote>")
-        await asyncio.sleep(0.4)
-        await m.edit_text("<blockquote><b>Starting...</b></blockquote>")
-        await asyncio.sleep(0.5)
+        # Send typing action
+        await client.send_chat_action(message.chat.id, ChatAction.TYPING)
+        await asyncio.sleep(1)  # Simulate typing delay
+        
+        # Animation sequence
+        m = await message.reply_text("ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna...")
+        await asyncio.sleep(0.3)
+        await m.edit_text("ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...")
+        await asyncio.sleep(0.3)
+        await m.edit_text("⚡ Preparing your experience...")
+        await asyncio.sleep(0.3)
         await m.delete()
+        
     except Exception as e:
         print(f"Error with start animation: {e}")
 
+    # Sticker animation
     if STICKER_ID:
         try:
-            m = await message.reply_sticker(STICKER_ID)
+            await client.send_chat_action(message.chat.id, ChatAction.CHOOSE_STICKER)
             await asyncio.sleep(0.5)
+            m = await message.reply_sticker(STICKER_ID)
+            await asyncio.sleep(1.5)  # Show sticker longer
             await m.delete()
         except Exception as e:
             print(f"Error sending sticker: {e}")
 
+    # Prepare buttons
     reply_markup = InlineKeyboardMarkup([
         [InlineKeyboardButton("◉ ʜᴇʟᴘ ◉", callback_data="help"), 
          InlineKeyboardButton("◉ ᴀʙᴏᴜᴛ ◉", callback_data="about")],
@@ -248,15 +252,18 @@ async def send_welcome_message(client: Client, message: Message) -> None:
          InlineKeyboardButton("◉ ᴘʀᴇᴍɪᴜᴍ ◉", callback_data="seeplans")]
     ])
     
+    # Send final welcome message
     try:
+        await client.send_chat_action(message.chat.id, ChatAction.UPLOAD_PHOTO)
         await asyncio.sleep(0.5)
+        
         selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
         await message.reply_photo(
             photo=selected_image,
             caption=START_MSG.format(
                 first=message.from_user.first_name,
-                last=message.from_user.last_name if message.from_user.last_name else "",
-                username=None if not message.from_user.username else '@' + message.from_user.username,
+                last=message.from_user.last_name or "",
+                username=f"@{message.from_user.username}" if message.from_user.username else "N/A",
                 mention=message.from_user.mention,
                 id=message.from_user.id
             ),
@@ -265,11 +272,12 @@ async def send_welcome_message(client: Client, message: Message) -> None:
     except Exception as e:
         print(f"Error sending start photo: {e}")
         try:
+            await client.send_chat_action(message.chat.id, ChatAction.TYPING)
             await message.reply_text(
                 START_MSG.format(
                     first=message.from_user.first_name,
-                    last=message.from_user.last_name if message.from_user.last_name else "",
-                    username=None if not message.from_user.username else '@' + message.from_user.username,
+                    last=message.from_user.last_name or "",
+                    username=f"@{message.from_user.username}" if message.from_user.username else "N/A",
                     mention=message.from_user.mention,
                     id=message.from_user.id
                 ),
