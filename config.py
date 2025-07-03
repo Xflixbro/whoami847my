@@ -22,7 +22,7 @@ APP_ID = int(os.environ.get("APP_ID", "15529802"))
 API_HASH = os.environ.get("API_HASH", "92bcb6aa798a6f1feadbc917fccb54d3")
 #--------------------------------------------
 
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002205750726"))  # Your db channel Id
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002162795137"))  # Your db channel Id
 OWNER = os.environ.get("OWNER", "Mrxeontg")  # Owner username without @
 OWNER_ID = int(os.environ.get("OWNER_ID", "821215952"))  # Owner id
 # List of admin user IDs who can change file settings
@@ -30,8 +30,8 @@ ADMINS = [821215952, 7475545668]  # Default is just the owner, add more like [82
 #--------------------------------------------
 PORT = os.environ.get("PORT", "8080")
 #--------------------------------------------
-DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://FileStorexeon1:FileStorexeon1@cluster0.gu4nrph.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
-DB_NAME = os.environ.get("DATABASE_NAME", "Xeonfilestore01")
+DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://SeriesXeonbot:SeriesXeonbot@cluster0.sxdov5x.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+DB_NAME = os.environ.get("DATABASE_NAME", "XFLIX")
 # --------------------------------------------
 FSUB_LINK_EXPIRY = int(getenv("FSUB_LINK_EXPIRY", "10"))  # 0 means no expiry
 BAN_SUPPORT = os.environ.get("BAN_SUPPORT", "https://t.me/CodeflixSupport")
@@ -51,7 +51,7 @@ RANDOM_IMAGES = [
 SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "publicearn.online")
 SHORTLINK_API = os.environ.get("SHORTLINK_API", "de08290b12d9e34191f3a057070a50a18187fff3")
 TUT_VID = os.environ.get("TUT_VID", "https://t.me/hwdownload/3")
-SHORT_MSG = """<b>📊 ʜᴇʏ ʙʀᴏ/sɪs, 
+SHORT_MSG = """<b>📊 ʜᴇʏ ʙʀᴏ
 
 ‼️ ɢᴇᴛ ᴀʟʟ ꜰɪʟᴇꜱ ɪɴ ᴀ ꜱɪɴɢʟᴇ ʟɪɴᴋ ‼️
 
@@ -102,6 +102,7 @@ CREDIT_INFO = """
 <b>⍟───[ ᴍʏ ᴄʀᴇᴅɪᴛꜱ & ɪɴꜰᴏ ]───⍟
 
 ➥ ᴛʜɪꜱ ɪꜱ ᴀ ᴘʀɪᴠᴀᴛᴇ sᴏᴜʀᴄᴇ ᴄᴏᴅᴇ ᴘʀᴏᴊᴇᴄᴛ
+
 ➥ ᴏᴡɴᴇʀ : <a href='t.me/Xeonflixadmin'>xᴇᴏɴ</a>
 ➥ ʙᴀꜱᴇ ᴄᴏᴅᴇ : <a href='t.me/cosmic_freak'>ʏᴀᴛᴏ</a>
 ➥ ᴇxᴛʀᴀ ꜰᴇᴀᴛᴜʀᴇꜱ ᴄᴏᴅᴇ : <a href='t.me/MrXeonTG'>ɢᴏᴊᴏ ꜱᴀᴛᴏʀᴜ</a>
@@ -141,7 +142,7 @@ CMD_TXT = """<blockquote><b>» ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs:</b></blockqu
 <b>›› /myplan :</b> ᴄʜᴇᴄᴋ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ sᴛᴀᴛᴜs & ᴅᴇᴛᴀɪʟs
 <b>›› /count :</b> ᴛʀᴀᴄᴋ sʜᴏʀᴛɴᴇʀ ᴄʟɪᴄᴋs & ᴀɴᴀʟʏᴛɪᴄs"""
 
-CUSTOM_CAPTION = os.environ.get("CUSTOM_CAPTION", "<b>• ʙʏ @Xeonflix</b>")
+CUSTOM_CAPTION = os.environ.get("CUSTOM_CAPTION", "<b>• ʙʏ @Anime_Lord_Official</b>")
 # --------------------------------------------
 # Set true if you want Disable your Channel Posts Share button
 # --------------------------------------------
