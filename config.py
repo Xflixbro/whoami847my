@@ -83,13 +83,13 @@ Oᴜʀ Exᴄʟᴜꜱɪᴠᴇ Oᴛʜᴇʀ Cʜᴀɴɴᴇʟꜱ
 
 Fᴜʟʟ Aᴄᴄᴇꜱꜱ – Uɴʟᴏᴄᴋ Aʟʟ Cʜᴀɴɴᴇʟꜱ Cᴏɴᴛᴇɴᴛ Fɪʟᴇꜱ 
 
-<blockquote>🎖️ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴꜱ 
+<blockquote expandable>🎖️ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴꜱ 
 
 ❏ 𝟶𝟷 ᴍᴏɴᴛʜ ➠ INR 249/$7
 ❏ 𝟶𝟸 ᴍᴏɴᴛʜ ➠ INR 349/$15
 ❏ 𝟶𝟹 ᴍᴏɴᴛʜ ➠ INR 449/$39
 ❏ 𝟶𝟼 ᴍᴏɴᴛʜ ➠ INR 649/$49
-❏ 09 ᴍᴏɴᴛʜ ➠ INR 899/$79 </blockquote>
+❏ 09 ᴍᴏɴᴛʜ ➠ INR 899/$79</blockquote>
 
 Note: Content in these channels is provided through ad-supported links. For direct access to content without ads, you can purchase a premium</b>"""
 
