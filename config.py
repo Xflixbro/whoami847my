@@ -51,11 +51,11 @@ RANDOM_IMAGES = [
 SHORTLINK_URL = os.environ.get("SHORTLINK_URL", "publicearn.online")
 SHORTLINK_API = os.environ.get("SHORTLINK_API", "de08290b12d9e34191f3a057070a50a18187fff3")
 TUT_VID = os.environ.get("TUT_VID", "https://t.me/hwdownload/3")
-SHORT_MSG = """<b>📊 ʜᴇʏ ʙʀᴏ
+SHORT_MSG = """<b>👋 ʜᴇʏ ʙʀᴏ
 
 ‼️ ɢᴇᴛ ᴀʟʟ ꜰɪʟᴇꜱ ɪɴ ᴀ ꜱɪɴɢʟᴇ ʟɪɴᴋ ‼️
 
-⌯ ʏᴏᴜʀ ʟɪɴᴋ ɪꜱ ʀᴇᴀᴅʏ, ᴋɪɴᴅʟʏ ᴄʟɪᴄᴋ ᴏɴ ᴏᴘᴇɴ ʟɪɴᴋ ʙᴜᴛᴛᴏɴ...</b>"""
+⚡ ʏᴏᴜʀ ʟɪɴᴋ ɪꜱ ʀᴇᴀᴅʏ, ᴋɪɴᴅʟʏ ᴄʟɪᴄᴋ ᴏɴ ᴏᴘᴇɴ ʟɪɴᴋ ʙᴜᴛᴛᴏɴ..</b>"""
 
 SHORTENER_PIC = os.environ.get("SHORTENER_PIC", "https://telegra.ph/file/ec17880d61180d3312d6a.jpg")
 # --------------------------------------------
@@ -73,17 +73,15 @@ PREPLANSS_TXT = """<b>👋 ʜᴇʏ {first}
 ❏ ᴘʀɪᴏʀɪᴛʏ ᴄᴏɴᴛᴇɴᴛ
 ❏ ᴇxᴄʟᴜꜱɪᴠᴇ ᴅɪꜱᴄᴏᴜɴᴛꜱ</blockquote>
 
-Our Exclusive other channels
+Oᴜʀ Exᴄʟᴜꜱɪᴠᴇ Oᴛʜᴇʀ Cʜᴀɴɴᴇʟꜱ
 
-• <a href="https://t.me/MovieFlix_Official">Channel I (MovieFlix)</a>
-• <a href="https://t.me/Webseries_Official">Channel II (Webseries)</a>
-• <a href="https://t.me/AnimeFlix_Official">Channel III (AnimeFlix)</a>
-• <a href="https://t.me/AdultZone_Official">Channel IV (AdultZone)</a>
-• <a href="https://t.me/NostalgicZone_Official">Channel V (NostalgicZone)</a>
+ • <a href="https://t.me/Movienation">Channel I</a> (MovieFlix)
+ • <a href="https://t.me/Seriesnation">Channel II</a> (Webseries)
+ • <a href="https://t.me/Anime_xeon">Channel III</a> (AnimeFlix)
+ • <a href="https://t.me/Cornxvilla">Channel IV</a> (AdultZone)
+ • <a href="https://t.me/CartoonNation">Channel V</a> (NostalgicZone)
 
-Full Access – Unlock all channels content files 
-
-Note: Content in these channels is provided through ad-supported links. For direct access to content without ads, you can purchase a premium
+Fᴜʟʟ Aᴄᴄᴇꜱꜱ – Uɴʟᴏᴄᴋ Aʟʟ Cʜᴀɴɴᴇʟꜱ Cᴏɴᴛᴇɴᴛ Fɪʟᴇꜱ 
 
 <blockquote>🎖️ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴꜱ 
 
@@ -93,24 +91,21 @@ Note: Content in these channels is provided through ad-supported links. For dire
 ❏ 𝟶𝟼 ᴍᴏɴᴛʜ ➠ INR 649/$49
 ❏ 09 ᴍᴏɴᴛʜ ➠ INR 899/$79 </blockquote>
 
-🏷️ <a href="https://t.me/Xeonflixadmin_bot">𝗖𝗹𝗶𝗰𝗸 𝗛𝗲𝗿𝗲 𝗧𝗼 𝗕𝘂𝘆 𝗣𝗿𝗲𝗺𝗶𝘂𝗺</a>
-
-ɴᴏᴛᴇ: ᴜꜱᴅ ʀᴀᴛᴇꜱ ᴀʀᴇ ꜱᴇᴛ ꜱʟɪɢʜᴛʟʏ ʜɪɢʜᴇʀ ᴅᴜᴇ ᴛᴏ ɪɴᴛᴇʀɴᴀᴛɪᴏɴᴀʟ ᴛʀᴀɴꜱᴀᴄᴛɪᴏɴ ᴀɴᴅ ꜱᴇʀᴠɪᴄᴇ ꜰᴇᴇꜱ.</b>"""
+Note: Content in these channels is provided through ad-supported links. For direct access to content without ads, you can purchase a premium</b>"""
 
     
 CREDIT_INFO = """
 <b>⍟───[ ᴍʏ ᴄʀᴇᴅɪᴛꜱ & ɪɴꜰᴏ ]───⍟
 
-➥ ᴛʜɪꜱ ɪꜱ ᴀ ᴘʀɪᴠᴀᴛᴇ sᴏᴜʀᴄᴇ ᴄᴏᴅᴇ ᴘʀᴏᴊᴇᴄᴛ
-
 ➥ ᴏᴡɴᴇʀ : <a href='t.me/Xeonflixadmin'>xᴇᴏɴ</a>
 ➥ ʙᴀꜱᴇ ᴄᴏᴅᴇ : <a href='t.me/cosmic_freak'>ʏᴀᴛᴏ</a>
 ➥ ᴇxᴛʀᴀ ꜰᴇᴀᴛᴜʀᴇꜱ ᴄᴏᴅᴇ : <a href='t.me/MrXeonTG'>ɢᴏᴊᴏ ꜱᴀᴛᴏʀᴜ</a>
+➥ ᴛʜᴀɴᴋꜱ ᴛᴏ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a>​
 ➥ ꜱᴏᴜʀᴄᴇ ᴄᴏᴅᴇ : <a href="https://t.me/+y6mFtiS5JQFkNThl">ʜᴇʀᴇ</a>
-➥ ᴛʜᴀɴᴋꜱ ᴛᴏ : <a href='tg://settings'>ᴛʜɪs ᴘᴇʀsᴏɴ</a>​</b>"""
+➥ ᴛʜɪꜱ ɪꜱ ᴀ ᴘʀɪᴠᴀᴛᴇ sᴏᴜʀᴄᴇ ᴄᴏᴅᴇ ᴘʀᴏᴊᴇᴄᴛ</b>"""
 
 # --------------------------------------------
-HELP_TXT = os.environ.get("HELP_TXT","<blockquote><b>ʜᴇʟʟᴏ {first}<b/></blockquote>\n\n<b><blockquote>◈ ᴛʜɪs ɪs ᴀɴ ғɪʟᴇ ᴛᴏ ʟɪɴᴋ ʙᴏᴛ ᴡᴏʀᴋ ғᴏʀ @MehediYT69\n\n❏ ʙᴏᴛ ᴄᴏᴍᴍᴀɴᴅs\n├/start : sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ\n├/about : ᴏᴜʀ Iɴғᴏʀᴍᴀᴛɪᴏɴ\n├/commands : ꜰᴏʀ ɢᴇᴛ ᴀʟʟ ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs ʟɪꜱᴛ\n└/help : ʜᴇʟᴘ ʀᴇʟᴀᴛᴇᴅ ʙᴏᴛ\n\n sɪᴍᴘʟʏ ᴄʟɪᴄᴋ ᴏɴ ʟɪɴᴋ ᴀɴᴅ sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ ᴊᴏɪɴ ʙᴏᴛʜ ᴄʜᴀɴɴᴇʟs ᴀɴᴅ ᴛʀʏ ᴀɢᴀɪɴ ᴛʜᴀᴛs ɪᴛ.....!\n\n ᴅᴇᴠᴇʟᴏᴘᴇᴅ ʙʏ <a href=https://t.me/Anime_Lord_Bots>Aɴɪᴍᴇ Lᴏʀᴅ</a></blockquote></b>")
+HELP_TXT = os.environ.get("HELP_TXT","<blockquote><b>ʜᴇʟʟᴏ {first}<b/></blockquote>\n\n<b><blockquote>◈ ᴛʜɪs ɪs ᴀ ᴘʀᴇᴍɪᴜᴍ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ ғᴏʀ @MrXeontg\n\n❏ ʙᴏᴛ ᴄᴏᴍᴍᴀɴᴅs\n├/start : sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ\n├/about : ᴏᴜʀ Iɴғᴏʀᴍᴀᴛɪᴏɴ\n├/commands : ꜰᴏʀ ɢᴇᴛ ᴀʟʟ ᴀᴅᴍɪɴ ᴄᴏᴍᴍᴀɴᴅs ʟɪꜱᴛ\n└/help : ʜᴇʟᴘ ʀᴇʟᴀᴛᴇᴅ ʙᴏᴛ\n\n sɪᴍᴘʟʏ ᴄʟɪᴄᴋ ᴏɴ ʟɪɴᴋ ᴀɴᴅ sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ ᴊᴏɪɴ ʙᴏᴛʜ ᴄʜᴀɴɴᴇʟs ᴀɴᴅ ᴛʀʏ ᴀɢᴀɪɴ ᴛʜᴀᴛs ɪᴛ.....!\n\n ᴅᴇᴠᴇʟᴏᴘᴇᴅ ʙʏ <a href=https://t.me/Xeonflix>ᴛʜɪs ᴘᴇʀsᴏɴ</a></blockquote></b>")
 
 
 ABOUT_TXT = """<blockquote expandable>★ Dᴇᴠᴇʟᴏᴘᴇʀ : <a href="https://t.me/MrXeonTg">ᴍʀ xᴇᴏɴ</a>
