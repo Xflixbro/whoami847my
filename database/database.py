@@ -300,6 +300,38 @@ class Mehedi:
 # Initialize db with environment variables directly
 db = Mehedi(os.environ.get("DATABASE_URL", ""), os.environ.get("DATABASE_NAME", "animelord"))
 
+
+# Add these methods to your Mehedi class in database.py
+
+async def total_users_count(self):
+    """Count total users in database"""
+    return await self.user_data.count_documents({})
+
+async def total_files_count(self):
+    """Count total files in database"""
+    # This counts documents in the channels collection as a proxy for files
+    # You might need to adjust this based on your actual file storage structure
+    return await self.channel_data.count_documents({})
+
+async def total_storage_used(self):
+    """Calculate approximate storage used by files"""
+    # This is a placeholder - implement actual storage calculation
+    # For MongoDB, you can use db.stats() to get storage info
+    try:
+        stats = await self.db.command("dbstats")
+        return stats.get('storageSize', 0)  # Returns size in bytes
+    except Exception as e:
+        logger.error(f"Error getting storage stats: {e}")
+        return 0
+
+async def get_bot_stats(self):
+    """Get basic bot statistics"""
+    return {
+        'total_users': await self.total_users_count(),
+        'total_files': await self.total_files_count(),
+        'storage_used': await self.total_storage_used()
+    }
+
 #
 # Copyright (C) 2025 by AnimeLord-Bots@Github, < https://github.com/AnimeLord-Bots >.
 #
