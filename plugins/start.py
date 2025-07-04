@@ -215,81 +215,56 @@ async def handle_auto_delete(client: Client, message: Message, sent_messages: li
         print(f"Error in auto-delete process: {e}")
 
 async def send_welcome_message(client: Client, message: Message) -> None:
-    """Send welcome message with typing animation and Pacman game loading"""
+    """Send welcome message with ✨👋⚡ emoji animations"""
     try:
-        # Send typing action
+        # Sparkles typing intro
         await client.send_chat_action(message.chat.id, ChatAction.TYPING)
-        await asyncio.sleep(1)  # Simulate typing delay
+        await asyncio.sleep(0.8)
+        m = await message.reply_text("✨ Initializing magic...")
+        await asyncio.sleep(0.5)
         
-        # Animation sequence
-        m = await message.reply_text("ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna...")
-        await asyncio.sleep(0.3)
-        await m.edit_text("ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna.\nʟᴏᴀᴅɪɴɢ ʏᴏᴜʀ ᴇxᴘᴇʀɪᴇɴᴄᴇ...")
-        await asyncio.sleep(0.3)
-        await m.edit_text("⚡ Preparing your experience...")
-        await asyncio.sleep(0.3)
+        # Wave animation
+        await client.send_chat_action(message.chat.id, ChatAction.TYPING)
+        await m.edit_text("👋 Welcome to Jenna!")
+        await asyncio.sleep(0.5)
+        
+        # Lightning transition
+        await client.send_chat_action(message.chat.id, ChatAction.TYPING)
+        await m.edit_text("⚡ Powering up your experience...")
+        await asyncio.sleep(0.5)
         await m.delete()
         
     except Exception as e:
-        print(f"Error with start animation: {e}")
+        print(f"Error with emoji animation: {e}")
 
-    # Sticker animation
+    # Sticker animation (if available)
     if STICKER_ID:
         try:
             await client.send_chat_action(message.chat.id, ChatAction.CHOOSE_STICKER)
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.3)
             m = await message.reply_sticker(STICKER_ID)
-            await asyncio.sleep(1.5)  # Show sticker longer
+            await asyncio.sleep(1.2)
             await m.delete()
         except Exception as e:
             print(f"Error sending sticker: {e}")
 
-    # Pacman loading animation
-    try:
-        loading_msgs = [
-            "🟡🟡🟡🟡🟡🟡🟡🟡",
-            "ᴄᴏɴɴᴇᴄᴛɪɴɢ ᴛᴏ sᴇʀᴠᴇʀ...",
-            "🟡⚪⚪⚪⚪⚪⚪⚪",
-            "ʟᴏᴀᴅɪɴɢ ɢᴀᴍᴇ ᴀssᴇᴛs...",
-            "🟡🟡⚪⚪⚪⚪⚪⚪",
-            "ɪɴɪᴛɪᴀʟɪᴢɪɴɢ ᴘᴀᴄᴍᴀɴ...",
-            "🟡🟡🟡⚪⚪⚪⚪⚪",
-            "ᴀʟᴍᴏsᴛ ᴛʜᴇʀᴇ...",
-            "🟡🟡🟡🟡⚪⚪⚪⚪",
-            "ʀᴇᴀᴅʏ ᴛᴏ ᴘʟᴀʏ!",
-            "🟡🟡🟡🟡🟡⚪⚪⚪",
-            "ᴡʜᴏᴀ! ɢʜᴏsᴛ ᴀʟᴇʀᴛ!",
-            "🟡🟡🟡🟡🟡🟡⚪⚪",
-            "ᴇᴀᴛɪɴɢ ᴅᴏᴛs...",
-            "🟡🟡🟡🟡🟡🟡🟡⚪",
-            "ʟᴀsᴛ ʟᴇᴠᴇʟ...",
-            "🟡🟡🟡🟡🟡🟡🟡🟡",
-            "🎮 PACMAN READY! 🎮"
-        ]
-        
-        loading_msg = await message.reply_text("🎮 Starting Pacman Game...")
-        for i in range(0, len(loading_msgs), 2):
-            await asyncio.sleep(0.3)
-            await loading_msg.edit_text(loading_msgs[i])
-            await asyncio.sleep(0.3)
-            await loading_msg.edit_text(loading_msgs[i+1])
-        await loading_msg.delete()
-    except Exception as e:
-        print(f"Error with Pacman animation: {e}")
-
-    # Prepare buttons
+    # Prepare emoji buttons
     reply_markup = InlineKeyboardMarkup([
-        [InlineKeyboardButton("◉ ʜᴇʟᴘ ◉", callback_data="help"), 
-         InlineKeyboardButton("◉ ᴀʙᴏᴜᴛ ◉", callback_data="about")],
-        [InlineKeyboardButton("◉ ꜱᴜᴘᴘᴏʀᴛ ◉", callback_data="channels"), 
-         InlineKeyboardButton("◉ ᴘʀᴇᴍɪᴜᴍ ◉", callback_data="seeplans")]
+        [InlineKeyboardButton("✨ ʜᴇʟᴘ", callback_data="help"), 
+         InlineKeyboardButton("👋 ᴀʙᴏᴜᴛ", callback_data="about")],
+        [InlineKeyboardButton("⚡ ꜱᴜᴘᴘᴏʀᴛ", callback_data="channels"), 
+         InlineKeyboardButton("💎 ᴘʀᴇᴍɪᴜᴍ", callback_data="seeplans")]
     ])
     
-    # Send final welcome message
+    # Send final welcome with special chat action
     try:
-        # Change to playing game action instead of upload photo
-        await client.send_chat_action(message.chat.id, ChatAction.PLAYING)
-        await asyncio.sleep(0.5)
+        # Show ✨👋⚡ sequence before sending
+        for emoji in ["✨", "👋", "⚡"]:
+            await client.send_chat_action(message.chat.id, ChatAction.TYPING)
+            await asyncio.sleep(0.3)
+            temp_msg = await message.reply_text(f"{emoji}")
+            await asyncio.sleep(0.3)
+            await temp_msg.delete()
         
         selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
         await message.reply_photo(
@@ -306,7 +281,7 @@ async def send_welcome_message(client: Client, message: Message) -> None:
     except Exception as e:
         print(f"Error sending start photo: {e}")
         try:
-            await client.send_chat_action(message.chat.id, ChatAction.PLAYING)
+            await client.send_chat_action(message.chat.id, ChatAction.TYPING)
             await message.reply_text(
                 START_MSG.format(
                     first=message.from_user.first_name,
