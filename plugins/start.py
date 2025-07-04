@@ -215,7 +215,7 @@ async def handle_auto_delete(client: Client, message: Message, sent_messages: li
         print(f"Error in auto-delete process: {e}")
 
 async def send_welcome_message(client: Client, message: Message) -> None:
-    """Send welcome message with typing animation"""
+    """Send welcome message with typing animation and Pacman game loading"""
     try:
         # Send typing action
         await client.send_chat_action(message.chat.id, ChatAction.TYPING)
@@ -224,7 +224,7 @@ async def send_welcome_message(client: Client, message: Message) -> None:
         # Animation sequence
         m = await message.reply_text("ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna...")
         await asyncio.sleep(0.3)
-        await m.edit_text("ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna.\nʜᴏᴘᴇ ʏᴏᴜ'ʀᴇ ᴅᴏɪɴɢ ᴡᴇʟʟ...")
+        await m.edit_text("ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna.\nʟᴏᴀᴅɪɴɢ ʏᴏᴜʀ ᴇxᴘᴇʀɪᴇɴᴄᴇ...")
         await asyncio.sleep(0.3)
         await m.edit_text("⚡ Preparing your experience...")
         await asyncio.sleep(0.3)
@@ -244,6 +244,39 @@ async def send_welcome_message(client: Client, message: Message) -> None:
         except Exception as e:
             print(f"Error sending sticker: {e}")
 
+    # Pacman loading animation
+    try:
+        loading_msgs = [
+            "🟡🟡🟡🟡🟡🟡🟡🟡",
+            "ᴄᴏɴɴᴇᴄᴛɪɴɢ ᴛᴏ sᴇʀᴠᴇʀ...",
+            "🟡⚪⚪⚪⚪⚪⚪⚪",
+            "ʟᴏᴀᴅɪɴɢ ɢᴀᴍᴇ ᴀssᴇᴛs...",
+            "🟡🟡⚪⚪⚪⚪⚪⚪",
+            "ɪɴɪᴛɪᴀʟɪᴢɪɴɢ ᴘᴀᴄᴍᴀɴ...",
+            "🟡🟡🟡⚪⚪⚪⚪⚪",
+            "ᴀʟᴍᴏsᴛ ᴛʜᴇʀᴇ...",
+            "🟡🟡🟡🟡⚪⚪⚪⚪",
+            "ʀᴇᴀᴅʏ ᴛᴏ ᴘʟᴀʏ!",
+            "🟡🟡🟡🟡🟡⚪⚪⚪",
+            "ᴡʜᴏᴀ! ɢʜᴏsᴛ ᴀʟᴇʀᴛ!",
+            "🟡🟡🟡🟡🟡🟡⚪⚪",
+            "ᴇᴀᴛɪɴɢ ᴅᴏᴛs...",
+            "🟡🟡🟡🟡🟡🟡🟡⚪",
+            "ʟᴀsᴛ ʟᴇᴠᴇʟ...",
+            "🟡🟡🟡🟡🟡🟡🟡🟡",
+            "🎮 PACMAN READY! 🎮"
+        ]
+        
+        loading_msg = await message.reply_text("🎮 Starting Pacman Game...")
+        for i in range(0, len(loading_msgs), 2):
+            await asyncio.sleep(0.3)
+            await loading_msg.edit_text(loading_msgs[i])
+            await asyncio.sleep(0.3)
+            await loading_msg.edit_text(loading_msgs[i+1])
+        await loading_msg.delete()
+    except Exception as e:
+        print(f"Error with Pacman animation: {e}")
+
     # Prepare buttons
     reply_markup = InlineKeyboardMarkup([
         [InlineKeyboardButton("◉ ʜᴇʟᴘ ◉", callback_data="help"), 
@@ -254,7 +287,8 @@ async def send_welcome_message(client: Client, message: Message) -> None:
     
     # Send final welcome message
     try:
-        await client.send_chat_action(message.chat.id, ChatAction.UPLOAD_PHOTO)
+        # Change to playing game action instead of upload photo
+        await client.send_chat_action(message.chat.id, ChatAction.PLAYING)
         await asyncio.sleep(0.5)
         
         selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
@@ -272,7 +306,7 @@ async def send_welcome_message(client: Client, message: Message) -> None:
     except Exception as e:
         print(f"Error sending start photo: {e}")
         try:
-            await client.send_chat_action(message.chat.id, ChatAction.TYPING)
+            await client.send_chat_action(message.chat.id, ChatAction.PLAYING)
             await message.reply_text(
                 START_MSG.format(
                     first=message.from_user.first_name,
@@ -501,9 +535,3 @@ async def premium_cmd(client: Client, message: Message) -> None:
         "- /premium_users - <b>List premium users [admin]</b>")
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("close", callback_data="close")]])
     await message.reply_text(reply_text, reply_markup=reply_markup)
-
-@Bot.on_message(filters.command('stats') & filters.private & filters.user(ADMINS))
-async def show_stats(client: Client, message: Message):
-    """Show bot statistics (admin only)"""
-    stats = await get_bot_stats()
-    await message.reply_text(stats, parse_mode=ParseMode.HTML)
