@@ -501,3 +501,9 @@ async def premium_cmd(client: Client, message: Message) -> None:
         "- /premium_users - <b>List premium users [admin]</b>")
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("close", callback_data="close")]])
     await message.reply_text(reply_text, reply_markup=reply_markup)
+
+@Bot.on_message(filters.command('stats') & filters.private & filters.user(ADMINS))
+async def show_stats(client: Client, message: Message):
+    """Show bot statistics (admin only)"""
+    stats = await generate_stats_message(client)
+    await message.reply_text(stats, parse_mode=ParseMode.HTML)
