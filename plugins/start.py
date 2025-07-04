@@ -256,15 +256,10 @@ async def send_welcome_message(client: Client, message: Message) -> None:
          InlineKeyboardButton("💎 ᴘʀᴇᴍɪᴜᴍ", callback_data="seeplans")]
     ])
     
-    # Send final welcome with special chat action
+    # Send final welcome message
     try:
-        # Show ✨👋⚡ sequence before sending
-        for emoji in ["✨", "👋", "⚡"]:
-            await client.send_chat_action(message.chat.id, ChatAction.TYPING)
-            await asyncio.sleep(0.3)
-            temp_msg = await message.reply_text(f"{emoji}")
-            await asyncio.sleep(0.3)
-            await temp_msg.delete()
+        await client.send_chat_action(message.chat.id, ChatAction.PLAYING)
+        await asyncio.sleep(0.5)
         
         selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
         await message.reply_photo(
@@ -281,7 +276,7 @@ async def send_welcome_message(client: Client, message: Message) -> None:
     except Exception as e:
         print(f"Error sending start photo: {e}")
         try:
-            await client.send_chat_action(message.chat.id, ChatAction.TYPING)
+            await client.send_chat_action(message.chat.id, ChatAction.PLAYING)
             await message.reply_text(
                 START_MSG.format(
                     first=message.from_user.first_name,
