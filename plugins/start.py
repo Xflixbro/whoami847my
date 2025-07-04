@@ -215,8 +215,17 @@ async def handle_auto_delete(client: Client, message: Message, sent_messages: li
         print(f"Error in auto-delete process: {e}")
 
 async def send_welcome_message(client: Client, message: Message) -> None:
-    """Send welcome message with ✨👋⚡ emoji animations"""
+    """Send welcome message with 💞 big emoji first, then ✨👋⚡ animations for /start command"""
+    # Check if this is a /start command
+    if not message.text or not message.text.startswith("/start"):
+        return
+    
     try:
+        # First send big heart emoji
+        heart_msg = await message.reply_text("💞", reply_to_message_id=message.id)
+        await asyncio.sleep(0.8)
+        await heart_msg.delete()
+        
         # Sparkles typing intro
         await client.send_chat_action(message.chat.id, ChatAction.TYPING)
         await asyncio.sleep(0.8)
@@ -225,7 +234,7 @@ async def send_welcome_message(client: Client, message: Message) -> None:
         
         # Wave animation
         await client.send_chat_action(message.chat.id, ChatAction.TYPING)
-        await m.edit_text("👋 Welcome to Jenna!")
+        await m.edit_text("👋 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna..!")
         await asyncio.sleep(0.5)
         
         # Lightning transition
