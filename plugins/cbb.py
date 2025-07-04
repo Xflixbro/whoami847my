@@ -273,10 +273,10 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             await query.answer("Force-Sub Settings")
 
         elif data == "home":
-            try:
-               # Show typing action before displaying home menu
-               await client.send_chat_action(callback_query.message.chat.id, ChatAction.TYPING)
-               await asyncio.sleep(0.5)  # Short delay for realistic typing effect
+           try:
+             # Show typing action before displaying home menu
+            await client.send_chat_action(callback_query.message.chat.id, ChatAction.TYPING)
+            await asyncio.sleep(0.5)  # Short delay for realistic typing effect
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
