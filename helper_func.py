@@ -12,6 +12,46 @@ from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
 from shortzy import Shortzy
 from pyrogram.errors import FloodWait
 from database.database import *
+import psutil
+from datetime import datetime
+
+async def generate_stats_message(client):
+    """Generate a comprehensive stats message"""
+    try:
+        # Get database stats
+        db_stats = await db.get_bot_stats()
+        
+        # Get system information
+        cpu_usage = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        ram_usage = f"{memory.used/1024/1024:.2f} MB / {memory.total/1024/1024:.2f} MB"
+        
+        # Get uptime
+        uptime = datetime.now() - client.uptime
+        uptime_str = str(uptime).split('.')[0]  # Remove microseconds
+        
+        # Format storage
+        storage_used = db_stats['storage_used']
+        storage_str = f"{storage_used/1024/1024:.2f} MB" if storage_used < 1024*1024*1024 else f"{storage_used/1024/1024/1024:.2f} GB"
+        
+        stats_text = f"""
+<b>📊 Bᴏᴛ Sᴛᴀᴛɪsᴛɪᴄs 📊</b>
+
+<u>📈 Usᴀɢᴇ Sᴛᴀᴛs</u>
+» ᴛᴏᴛᴀʟ ᴜsᴇʀs: <code>{db_stats['total_users']}</code>
+» ᴛᴏᴛᴀʟ ꜰɪʟᴇs: <code>{db_stats['total_files']}</code>
+» ᴜsᴇᴅ sᴛᴏʀᴀɢᴇ: <code>{storage_str}</code>
+
+<u>🤖 Bᴏᴛ Dᴇᴛᴀɪʟs 🤖</u>
+» ᴜᴘᴛɪᴍᴇ: <code>{uptime_str}</code>
+» ʀᴀᴍ: <code>{ram_usage} ({memory.percent}%)</code>
+» ᴄᴘᴜ: <code>{cpu_usage}%</code>
+"""
+        return stats_text
+    except Exception as e:
+        logger.error(f"Error generating stats: {e}")
+        return "⚠️ Error fetching bot statistics"
+
 
 async def check_admin(filter, client, update):
     try:
