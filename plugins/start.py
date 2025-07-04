@@ -505,5 +505,5 @@ async def premium_cmd(client: Client, message: Message) -> None:
 @Bot.on_message(filters.command('stats') & filters.private & filters.user(ADMINS))
 async def show_stats(client: Client, message: Message):
     """Show bot statistics (admin only)"""
-    stats = await generate_stats_message(client)
+    stats = await get_bot_stats()
     await message.reply_text(stats, parse_mode=ParseMode.HTML)
