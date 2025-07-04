@@ -215,28 +215,8 @@ async def handle_auto_delete(client: Client, message: Message, sent_messages: li
         print(f"Error in auto-delete process: {e}")
 
 async def send_welcome_message(client: Client, message: Message) -> None:
-    """Send welcome message with animated 💞 emoji and ✨👋⚡ animations for /start"""
-    if not message.text or not message.text.startswith("/start"):
-        return
-    
+    """Send welcome message with ✨👋⚡ emoji animations and ❤️ footer reaction"""
     try:
-        # Big heart emoji animation sequence
-        heart_sizes = ["💞", "💞💞", "💞💞💞", "💞💞", "💞"]  # Pulse animation
-        heart_msg = None
-        
-        for size in heart_sizes:
-            if heart_msg:
-                try:
-                    await heart_msg.edit_text(size)
-                except:
-                    heart_msg = await message.reply_text(size)
-            else:
-                heart_msg = await message.reply_text(size)
-            await asyncio.sleep(0.3)
-        
-        await asyncio.sleep(0.5)
-        await heart_msg.delete()
-        
         # Sparkles typing intro
         await client.send_chat_action(message.chat.id, ChatAction.TYPING)
         await asyncio.sleep(0.8)
@@ -282,7 +262,7 @@ async def send_welcome_message(client: Client, message: Message) -> None:
         await asyncio.sleep(0.5)
         
         selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-        await message.reply_photo(
+        welcome_msg = await message.reply_photo(
             photo=selected_image,
             caption=START_MSG.format(
                 first=message.from_user.first_name,
@@ -293,11 +273,28 @@ async def send_welcome_message(client: Client, message: Message) -> None:
             ),
             reply_markup=reply_markup
         )
+        
+        # Big heart animation footer reaction
+        heart_animation = ["❤️", "❤️‍🔥", "💖", "💘", "💝", "💗", "💓", "💞"]
+        for _ in range(3):  # Repeat animation 3 times
+            for heart in heart_animation:
+                try:
+                    await welcome_msg.edit_reply_markup(
+                        InlineKeyboardMarkup([
+                            *reply_markup.inline_keyboard,  # Keep original buttons
+                            [InlineKeyboardButton(heart*8, callback_data="heart_animation")]
+                        ])
+                    )
+                    await asyncio.sleep(0.3)
+                except Exception as e:
+                    print(f"Heart animation error: {e}")
+                    break
+        
     except Exception as e:
         print(f"Error sending start photo: {e}")
         try:
             await client.send_chat_action(message.chat.id, ChatAction.PLAYING)
-            await message.reply_text(
+            welcome_msg = await message.reply_text(
                 START_MSG.format(
                     first=message.from_user.first_name,
                     last=message.from_user.last_name or "",
@@ -307,6 +304,27 @@ async def send_welcome_message(client: Client, message: Message) -> None:
                 ),
                 reply_markup=reply_markup
             )
+            
+            # Fallback text heart animation
+            heart_animation = ["❤️", "❤️‍🔥", "💖", "💘", "💝", "💗", "💓", "💞"]
+            for _ in range(3):
+                for heart in heart_animation:
+                    try:
+                        await welcome_msg.edit_text(
+                            text=START_MSG.format(
+                                first=message.from_user.first_name,
+                                last=message.from_user.last_name or "",
+                                username=f"@{message.from_user.username}" if message.from_user.username else "N/A",
+                                mention=message.from_user.mention,
+                                id=message.from_user.id
+                            ) + f"\n\n{heart*8}",
+                            reply_markup=reply_markup
+                        )
+                        await asyncio.sleep(0.3)
+                    except Exception as e:
+                        print(f"Text heart animation error: {e}")
+                        break
+                        
         except Exception as e:
             print(f"Fallback start message failed: {e}")
 
