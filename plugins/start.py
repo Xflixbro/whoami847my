@@ -215,15 +215,26 @@ async def handle_auto_delete(client: Client, message: Message, sent_messages: li
         print(f"Error in auto-delete process: {e}")
 
 async def send_welcome_message(client: Client, message: Message) -> None:
-    """Send welcome message with 💞 big emoji first, then ✨👋⚡ animations for /start command"""
-    # Check if this is a /start command
+    """Send welcome message with animated 💞 emoji and ✨👋⚡ animations for /start"""
     if not message.text or not message.text.startswith("/start"):
         return
     
     try:
-        # First send big heart emoji
-        heart_msg = await message.reply_text("💞", reply_to_message_id=message.id)
-        await asyncio.sleep(0.8)
+        # Big heart emoji animation sequence
+        heart_sizes = ["💞", "💞💞", "💞💞💞", "💞💞", "💞"]  # Pulse animation
+        heart_msg = None
+        
+        for size in heart_sizes:
+            if heart_msg:
+                try:
+                    await heart_msg.edit_text(size)
+                except:
+                    heart_msg = await message.reply_text(size)
+            else:
+                heart_msg = await message.reply_text(size)
+            await asyncio.sleep(0.3)
+        
+        await asyncio.sleep(0.5)
         await heart_msg.delete()
         
         # Sparkles typing intro
