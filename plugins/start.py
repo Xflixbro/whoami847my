@@ -25,6 +25,19 @@ STICKER_ID = "CAACAgUAAxkBAAIE8mgq9m8MiaFWYUeppQiXveQBAZaYAAKrBAACvu-4V0dQs1WLof
 BAN_SUPPORT = f"{BAN_SUPPORT}"
 TUT_VID = f"{TUT_VID}"
 
+# Emoji reactions and message effects
+EMOJI_MODE = True
+REACTIONS = ["👍", "😍", "🔥", "🎉", "❤️", "⚡"]
+MESSAGE_EFFECT_IDS = [
+    5104841245755180586,  # 🔥
+    5107584321108051014,  # 👍
+    5044134455711629726,  # ❤️
+    5046509860389126442,  # 🎉
+    5104858069142078462,  # 👎
+    5046589136895476101,  # 💩
+]
+
+
 # Cache for chat data
 chat_data_cache = {}
 
@@ -53,6 +66,14 @@ async def start_command(client: Client, message: Message) -> None:
     try:
         user_id = message.from_user.id
         is_premium = await is_premium_user(user_id)
+      
+        # Add emoji reaction if enabled
+        if EMOJI_MODE
+            try:
+                await message.react(emoji=random.choice(REACTIONS), big=True)
+            except Exception as e:
+                print(f"Error sending emoji reaction: {e}")
+
         banned_users = await db.get_ban_users()
         
         if user_id in banned_users:
@@ -215,8 +236,15 @@ async def handle_auto_delete(client: Client, message: Message, sent_messages: li
         print(f"Error in auto-delete process: {e}")
 
 async def send_welcome_message(client: Client, message: Message) -> None:
-    """Send welcome message with ✨👋⚡ emoji animations and ❤️ footer reaction"""
+    """Send welcome message with ✨👋⚡ emoji animations and effects"""
     try:
+        # Add emoji reaction if enabled
+        if EMOJI_MODE:
+            try:
+                await message.react(emoji=random.choice(REACTIONS), big=True)
+            except Exception as e:
+                print(f"Error sending emoji reaction: {e}")
+
         # Sparkles typing intro
         await client.send_chat_action(message.chat.id, ChatAction.TYPING)
         await asyncio.sleep(0.8)
@@ -225,7 +253,7 @@ async def send_welcome_message(client: Client, message: Message) -> None:
         
         # Wave animation
         await client.send_chat_action(message.chat.id, ChatAction.TYPING)
-        await m.edit_text("👋 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ Jenna..!")
+        await m.edit_text("👋 Welcome back Jenna..!")
         await asyncio.sleep(0.5)
         
         # Lightning transition
@@ -250,19 +278,19 @@ async def send_welcome_message(client: Client, message: Message) -> None:
 
     # Prepare emoji buttons
     reply_markup = InlineKeyboardMarkup([
-        [InlineKeyboardButton("✨ ʜᴇʟᴘ", callback_data="help"), 
-         InlineKeyboardButton("👋 ᴀʙᴏᴜᴛ", callback_data="about")],
-        [InlineKeyboardButton("⚡ ꜱᴜᴘᴘᴏʀᴛ", callback_data="channels"), 
-         InlineKeyboardButton("💎 ᴘʀᴇᴍɪᴜᴍ", callback_data="seeplans")]
+        [InlineKeyboardButton("✨ Help", callback_data="help"), 
+         InlineKeyboardButton("👋 About", callback_data="about")],
+        [InlineKeyboardButton("⚡ Channels", callback_data="channels"), 
+         InlineKeyboardButton("💝 Premium", callback_data="seeplans")]
     ])
     
-    # Send final welcome message
+    # Send final welcome message with random message effect
     try:
         await client.send_chat_action(message.chat.id, ChatAction.PLAYING)
         await asyncio.sleep(0.5)
         
         selected_image = random.choice(RANDOM_IMAGES) if RANDOM_IMAGES else START_PIC
-        welcome_msg = await message.reply_photo(
+        await message.reply_photo(
             photo=selected_image,
             caption=START_MSG.format(
                 first=message.from_user.first_name,
@@ -271,30 +299,14 @@ async def send_welcome_message(client: Client, message: Message) -> None:
                 mention=message.from_user.mention,
                 id=message.from_user.id
             ),
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
+            message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
         )
-        
-        # Big heart animation footer reaction
-        heart_animation = ["❤️", "❤️‍🔥", "💖", "💘", "💝", "💗", "💓", "💞"]
-        for _ in range(3):  # Repeat animation 3 times
-            for heart in heart_animation:
-                try:
-                    await welcome_msg.edit_reply_markup(
-                        InlineKeyboardMarkup([
-                            *reply_markup.inline_keyboard,  # Keep original buttons
-                            [InlineKeyboardButton(heart*8, callback_data="heart_animation")]
-                        ])
-                    )
-                    await asyncio.sleep(0.3)
-                except Exception as e:
-                    print(f"Heart animation error: {e}")
-                    break
-        
     except Exception as e:
         print(f"Error sending start photo: {e}")
         try:
             await client.send_chat_action(message.chat.id, ChatAction.PLAYING)
-            welcome_msg = await message.reply_text(
+            await message.reply_text(
                 START_MSG.format(
                     first=message.from_user.first_name,
                     last=message.from_user.last_name or "",
@@ -302,29 +314,9 @@ async def send_welcome_message(client: Client, message: Message) -> None:
                     mention=message.from_user.mention,
                     id=message.from_user.id
                 ),
-                reply_markup=reply_markup
+                reply_markup=reply_markup,
+                message_effect_id=random.choice(MESSAGE_EFFECT_IDS)
             )
-            
-            # Fallback text heart animation
-            heart_animation = ["❤️", "❤️‍🔥", "💖", "💘", "💝", "💗", "💓", "💞"]
-            for _ in range(3):
-                for heart in heart_animation:
-                    try:
-                        await welcome_msg.edit_text(
-                            text=START_MSG.format(
-                                first=message.from_user.first_name,
-                                last=message.from_user.last_name or "",
-                                username=f"@{message.from_user.username}" if message.from_user.username else "N/A",
-                                mention=message.from_user.mention,
-                                id=message.from_user.id
-                            ) + f"\n\n{heart*8}",
-                            reply_markup=reply_markup
-                        )
-                        await asyncio.sleep(0.3)
-                    except Exception as e:
-                        print(f"Text heart animation error: {e}")
-                        break
-                        
         except Exception as e:
             print(f"Fallback start message failed: {e}")
 
