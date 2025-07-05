@@ -68,7 +68,7 @@ async def start_command(client: Client, message: Message) -> None:
         is_premium = await is_premium_user(user_id)
       
         # Add emoji reaction if enabled
-        if EMOJI_MODE
+        if EMOJI_MODE:
             try:
                 await message.react(emoji=random.choice(REACTIONS), big=True)
             except Exception as e:
