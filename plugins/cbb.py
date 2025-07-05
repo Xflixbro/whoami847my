@@ -276,15 +276,15 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("• ʜᴇʟᴘ •", callback_data="help"),
-                    InlineKeyboardButton("• ᴀʙᴏᴜᴛ •", callback_data="about")
+                    InlineKeyboardButton("✨ ʜᴇʟᴘ", callback_data="help"),
+                    InlineKeyboardButton("👋 ᴀʙᴏᴜᴛ", callback_data="about")
                 ],
                 [
-                    InlineKeyboardButton("• ᴜᴘᴅᴀᴛᴇꜱ •", url="https://t.me/CornXvilla"),
-                    InlineKeyboardButton("• ᴘʀᴇᴍɪᴜᴍ •", callback_data="seeplans")
+                    InlineKeyboardButton("⚡ ꜱᴜᴘᴘᴏʀᴛ", url="https://t.me/CornXvilla"),
+                    InlineKeyboardButton("💎 ᴘʀᴇᴍɪᴜᴍ", callback_data="seeplans")
                 ],
                 [
-                    InlineKeyboardButton('• ᴇxᴛʀᴀ ꜰᴇᴀᴛᴜʀᴇꜱ •', callback_data='extramenu')
+                    InlineKeyboardButton('👾 ᴇxᴛʀᴀ ꜰᴇᴀᴛᴜʀᴇꜱ', callback_data='extramenu')
                 ]
             ])
             caption = START_MSG.format(
@@ -304,8 +304,8 @@ async def cb_handler(client: Bot, query: CallbackQuery):
                     InlineKeyboardButton("• ᴄʀᴇᴅɪᴛ •", callback_data='info')
                 ],
                 [
-                    InlineKeyboardButton('• close •', callback_data='close'),
-                    InlineKeyboardButton("• ʜᴏᴍᴇ •", callback_data='home')
+                    InlineKeyboardButton('❌ ᴄʟᴏꜱᴇ', callback_data='close'),
+                    InlineKeyboardButton("🏠 ʜᴏᴍᴇ •", callback_data='home')
                 ]
             ])
             caption = ABOUT_TXT.format(
@@ -338,16 +338,16 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton('• ᴍᴏᴠɪᴇꜱ •', url='http://t.me/MovieNationSpot'),
-                    InlineKeyboardButton('• ꜱᴇʀɪᴇꜱ •', url='https://t.me/SeriesNationSpot')
+                    InlineKeyboardButton('📮 ᴍᴏᴠɪᴇꜱ', url='http://t.me/MovieNationSpot'),
+                    InlineKeyboardButton('📮 ꜱᴇʀɪᴇꜱ', url='https://t.me/SeriesNationSpot')
                 ],
                 [
-                    InlineKeyboardButton('• ᴀɴɪᴍᴇꜱ •', url='https://t.me/AnimeXeon'),
-                    InlineKeyboardButton('• ᴀᴅᴜʟᴛ •', url='https://t.me/CornXvilla')
+                    InlineKeyboardButton('📮 ᴀɴɪᴍᴇꜱ', url='https://t.me/AnimeXeon'),
+                    InlineKeyboardButton('📮 ᴀᴅᴜʟᴛ', url='https://t.me/CornXvilla')
                 ],
                 [
-                    InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home'),
-                    InlineKeyboardButton('• ᴄʟᴏꜱᴇ •', callback_data='close')
+                    InlineKeyboardButton('🏠 ʜᴏᴍᴇ', callback_data='home'),
+                    InlineKeyboardButton('❌ ᴄʟᴏꜱᴇ', callback_data='close')
                 ]
             ])
             caption = ABOUT_TXT.format(
@@ -363,8 +363,8 @@ async def cb_handler(client: Bot, query: CallbackQuery):
             selected_image = random.choice(RANDOM_IMAGES)
             reply_markup = InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton('• ʙᴜʏ ɴᴏᴡ •', url='https://t.me/Xeonflixadmin'),
-                    InlineKeyboardButton('• ʜᴏᴍᴇ •', callback_data='home')
+                    InlineKeyboardButton('💎 ʙᴜʏ ɴᴏᴡ', url='https://t.me/Xeonflixadmin'),
+                    InlineKeyboardButton('🏠 ʜᴏᴍᴇ', callback_data='home')
                 ]
             ])
             caption = PREPLANSS_TXT.format(
